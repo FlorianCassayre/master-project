@@ -3,13 +3,14 @@ package masterproject
 import lisa.kernel.fol.FOL._
 import lisa.kernel.proof.SequentCalculus.*
 import lisa.kernel.proof.{SCProof, SCProofChecker}
+import lisa.kernel.Printer
 
 import scala.collection.View
 
 /**
  * The proof step finder module.
  */
-object ProofStepFinder {
+object SCProofStepFinder {
 
   final case class NoProofStepFound(message: String) extends Exception(message)
 
@@ -29,21 +30,21 @@ object ProofStepFinder {
   def proofStepFinder(proof: SCProof, conclusion: Sequent, premises: Seq[Int] = Seq.empty): SCProof = {
     // In the future we might want to add a `strict` flag to allow the user to detect useless steps, oddly organized proofs, etc.
 
-    require(premises.forall(proof.steps.indices.contains))
+    require(premises.forall(i => proof.steps.indices.contains(i) || proof.imports.indices.contains(-(i + 1))))
 
     val checker = SCProofChecker.checkSingleSCStep
     val Sequent(left, right) = conclusion
 
     val SCProof(steps, _) = proof
-    val searchedSteps = premises.map(i => (proof.steps(i), i))
+    val searchedSteps = premises.map(i => (proof.getSequent(i), i))
 
     if (right.isEmpty) {
       throw NoProofStepFound("Cannot prove a right-empty sequent")
     }
 
-    val rewritten = premises.distinct.find(i => isSameSequent(conclusion, proof.steps(i).bot))
+    val rewritten = premises.distinct.find(i => isSameSequent(conclusion, proof.getSequent(i)))
     if (rewritten.nonEmpty) {
-      if (proof.steps(rewritten.get).bot != conclusion) {
+      if (rewritten.get < 0 || proof.getSequent(rewritten.get) != conclusion) {
         // We still need to rewrite the conclusion to match the desired conclusion
         proof.withNewSteps(IndexedSeq(Rewrite(conclusion, rewritten.get)))
       } else {
@@ -139,13 +140,13 @@ object ProofStepFinder {
               leftBinaryConnectors(Iff).view.map((l, r) => LeftIff(conclusion, i, l, r)),
               leftNegConnectors.view.map(u => LeftNot(conclusion, i, u)),
               leftBinders(Forall).view.flatMap(b =>
-                s.bot.left.view.flatMap(inverseInstantiation(b.inner, _, Some(b.bound)).flatten.map(t => LeftForall(conclusion, i, b.inner, b.bound, t)))
+                s.left.view.flatMap(inverseInstantiation(b.inner, _, Some(b.bound)).flatten.map(t => LeftForall(conclusion, i, b.inner, b.bound, t)))
               ),
               leftBinders(Exists).view.map(b => LeftExists(conclusion, i, b.inner, b.bound)),
-              collectExistsOneDef(s.bot.left).map { case (x, phi) => LeftExistsOne(conclusion, i, phi, x) },
+              collectExistsOneDef(s.left).map { case (x, phi) => LeftExistsOne(conclusion, i, phi, x) },
               View(Weakening(conclusion, i)),
 
-              s.bot.left.view.map(f => LeftRefl(conclusion, i, f)),
+              s.left.view.map(f => LeftRefl(conclusion, i, f)),
 
               // Right rules
               rightBinaryConnectors(Or).view.map((l, r) => RightOr(conclusion, i, l, r)),
@@ -154,14 +155,14 @@ object ProofStepFinder {
 
               rightBinders(Forall).view.map(b => RightForall(conclusion, i, b.inner, b.bound)),
               rightBinders(Exists).view.flatMap(b =>
-                s.bot.right.view.flatMap(inverseInstantiation(b.inner, _, Some(b.bound)).flatten.map(t => RightExists(conclusion, i, b.inner, b.bound, t)))
+                s.right.view.flatMap(inverseInstantiation(b.inner, _, Some(b.bound)).flatten.map(t => RightExists(conclusion, i, b.inner, b.bound, t)))
               ),
-              collectExistsOneDef(s.bot.right).map { case (x, phi) => RightExistsOne(conclusion, i, phi, x) },
+              collectExistsOneDef(s.right).map { case (x, phi) => RightExistsOne(conclusion, i, phi, x) },
               View(Weakening(conclusion, i)),
 
               // Substitutions
               leftEquals.view.flatMap(pair => View(pair, pair.swap)).flatMap { case (ss, tt) =>
-                s.bot.left.flatMap(ts =>
+                s.left.flatMap(ts =>
                   View(
                     LeftSubstEq(conclusion, i, ss, tt, inverseTermSubstitution(ts, ss, phi), phi),
                     RightSubstEq(conclusion, i, ss, tt, inverseTermSubstitution(ts, ss, phi), phi)
@@ -169,7 +170,7 @@ object ProofStepFinder {
                 )
               },
               leftBinaryConnectors(Iff).view.flatMap(pair => View(pair, pair.swap)).flatMap { case (l, r) =>
-                s.bot.left.flatMap(g =>
+                s.left.flatMap(g =>
                   View(
                     LeftSubstIff(conclusion, i, l, r, inverseFormulaSubstitution(g, l, psi), psi),
                     RightSubstIff(conclusion, i, l, r, inverseFormulaSubstitution(g, l, psi), psi),
@@ -186,12 +187,12 @@ object ProofStepFinder {
             View(
               // Cut rule
               for {
-                f <- s1.bot.right.view
-                f2 <- s2.bot.left.view
+                f <- s1.right.view
+                f2 <- s2.left.view
                 if isSame(f, f2)
-                if isSameSet(left + f, s1.bot.left union s2.bot.left)
-                if isSameSet(right + f, s2.bot.right union s1.bot.right)
-                if s2.bot.left.contains(f) && s1.bot.right.contains(f)
+                if isSameSet(left + f, s1.left union s2.left)
+                if isSameSet(right + f, s2.right union s1.right)
+                if s2.left.contains(f) && s1.right.contains(f)
               } yield Cut(conclusion, i, j, f),
 
               // Left rules

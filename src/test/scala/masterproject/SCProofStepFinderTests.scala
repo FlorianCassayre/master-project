@@ -11,7 +11,7 @@ import masterproject.SCProofBuilder.*
 import util.chaining.*
 import scala.util.{Failure, Success, Try}
 
-class ProofStepFinderTests extends AnyFunSuite {
+class SCProofStepFinderTests extends AnyFunSuite {
 
   test("Proof steps reconstruction") {
     // These tests ensure that all the kernel proof steps can be generated
