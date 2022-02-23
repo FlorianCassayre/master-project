@@ -57,6 +57,7 @@ object MonadicSCProofBuilder {
       }
     } yield t
   }
+  def subproof(proof: SCProof, display: Boolean): MonadicSCProofBuilder[(Sequent, Int)] = subproof(for (_ <- put(proof); r <- modify(identity)) yield (), display)
   def create(builder: MonadicSCProofBuilder[Unit]): SCProof = builder.execState(SCProof())
 
   implicit def sequentToProofBuilder(sequent: Sequent): MonadicSCProofBuilder[(Sequent, Int)] = append(sequent)
