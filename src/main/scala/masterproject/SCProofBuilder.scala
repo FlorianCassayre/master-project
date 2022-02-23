@@ -1,10 +1,8 @@
 package masterproject
 
-//import lisa.kernel.proof.RunningTheory.Axiom
 import lisa.kernel.proof.SCProof
 import lisa.kernel.proof.SequentCalculus.Sequent
-//import lisa.settheory.AxiomaticSetTheory.Axiom
-//import lisa.KernelHelpers.*
+import lisa.settheory.AxiomaticSetTheory.Axiom
 import masterproject.SCProofBuilder.SCAnyProofStep
 
 object SCProofBuilder {
@@ -14,7 +12,8 @@ object SCProofBuilder {
   implicit class SequentBy(s: Sequent) {
     def by(premises: Int*): SCAnyProofStep = SCAnyProofStep(s, premises, Seq.empty)
     def justifiedBy(sequents: Sequent*): SCAnyProofStep = SCAnyProofStep(s, Seq.empty, sequents)
-    //def justifiedBy(axiom: Axiom): SCAnyProofStep = SCAnyProofStep(s, Seq.empty, Seq(() |- axiom))
+    def justifiedBy(axiom: Axiom): SCAnyProofStep = SCAnyProofStep(s, Seq.empty, Seq(Sequent(Set.empty, Set(axiom))))
+    def justified: SCAnyProofStep = SCAnyProofStep(s, Seq.empty, Seq(s))
   }
   implicit def sequentToCoreProofStep(s: Sequent): SCAnyProofStep = SCAnyProofStep(s, Seq.empty, Seq.empty)
 

@@ -48,13 +48,15 @@ object MonadicSCProofBuilder {
       SCProofStepFinder.proofStepFinder(p.copy(imports = newImports), anyStep.conclusion, anyStep.premises ++ usedImportsIndices.map(i => -(i + 1)))
     })) yield t
   def append(sequent: Sequent): MonadicSCProofBuilder[(Sequent, Int)] = append(SCAnyProofStep(sequent, Seq.empty, Seq.empty))
-  /*def subproof(builder: MonadicSCProofBuilder[Unit], display: Boolean = true): MonadicSCProofBuilder[(Sequent, Int)] = {
+  def subproof(builder: MonadicSCProofBuilder[Unit], display: Boolean = true): MonadicSCProofBuilder[(Sequent, Int)] = {
     val sp = create(builder)
     for {
-      _ <- append(SCSubproof(sp, sp.imports.indices.map(i => -(i + 1)), display))
-      t <- modify(p => p.copy(imports = sp.imports)) // TODO might not be enough (what if the proof contains imports?)
+      t <- modify { p =>
+        val newImports = p.imports ++ (sp.imports.diff(p.imports))
+        p.copy(imports = newImports).withNewSteps(IndexedSeq(SCSubproof(sp, sp.imports.map(imprt => -(newImports.indexOf(imprt) + 1)), display)))
+      }
     } yield t
-  }*/
+  }
   def create(builder: MonadicSCProofBuilder[Unit]): SCProof = builder.execState(SCProof())
 
   implicit def sequentToProofBuilder(sequent: Sequent): MonadicSCProofBuilder[(Sequent, Int)] = append(sequent)

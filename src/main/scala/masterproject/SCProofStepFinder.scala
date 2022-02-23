@@ -162,22 +162,17 @@ object SCProofStepFinder {
 
               // Substitutions
               leftEquals.view.flatMap(pair => View(pair, pair.swap)).flatMap { case (ss, tt) =>
-                s.left.flatMap(ts =>
-                  View(
-                    LeftSubstEq(conclusion, i, ss, tt, inverseTermSubstitution(ts, ss, phi), phi),
-                    RightSubstEq(conclusion, i, ss, tt, inverseTermSubstitution(ts, ss, phi), phi)
-                  )
-                )
+                View(
+                  s.left.map(ts => LeftSubstEq(conclusion, i, ss, tt, inverseTermSubstitution(ts, ss, phi), phi)),
+                  s.right.map(ts => RightSubstEq(conclusion, i, ss, tt, inverseTermSubstitution(ts, ss, phi), phi)),
+                ).flatten
               },
               leftBinaryConnectors(Iff).view.flatMap(pair => View(pair, pair.swap)).flatMap { case (l, r) =>
-                s.left.flatMap(g =>
-                  View(
-                    LeftSubstIff(conclusion, i, l, r, inverseFormulaSubstitution(g, l, psi), psi),
-                    RightSubstIff(conclusion, i, l, r, inverseFormulaSubstitution(g, l, psi), psi),
-                  )
-                )
+                View(
+                  s.left.map(g => LeftSubstIff(conclusion, i, l, r, inverseFormulaSubstitution(g, l, psi), psi)),
+                  s.right.map(g => RightSubstIff(conclusion, i, l, r, inverseFormulaSubstitution(g, l, psi), psi)),
+                ).flatten
               }
-
             ).flatten
           }
 
