@@ -12,11 +12,11 @@ import masterproject.SCProofBuilder.SCAnyProofStep
 case class ProofGoal(hypotheses: IndexedSeq[Formula], goal: Formula)
 case class ProofState(goals: IndexedSeq[ProofGoal])
 
-sealed abstract class ProofGoalDiff
-case class ProofGoalUpdateGoal(newGoal: Formula, newHypotheses: IndexedSeq[Formula]) extends ProofGoalDiff
-case class ProofGoalUpdateHypothesis(hypothesisIndex: Int, newHypotheses: IndexedSeq[Formula]) extends ProofGoalDiff
+sealed abstract class ProofGoalUpdate
+case class UpdateGoal(newGoal: Formula, newHypotheses: IndexedSeq[Formula]) extends ProofGoalUpdate
+case class UpdateHypothesis(hypothesisIndex: Int, newHypotheses: IndexedSeq[Formula]) extends ProofGoalUpdate
 
-case class ProofStateDiff(goalIndex: Int, replacement: IndexedSeq[ProofGoalDiff])
+case class ProofStateDiff(goalIndex: Int, replacement: IndexedSeq[ProofGoalUpdate])
 
 /*
 Each tactic can update one `ProofGoal` at a time.
@@ -37,7 +37,7 @@ case class TacticAssume(goalIndex: Int) extends Tactic {
   override def apply(state: ProofState): Option[TacticResult] = {
     state.goals(goalIndex).goal match {
       case ConnectorFormula(`Implies`, Seq(a, b)) =>
-        Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(ProofGoalUpdateGoal(b, IndexedSeq(a))))))
+        Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(UpdateGoal(b, IndexedSeq(a))))))
       case _ => None
     }
   }
@@ -45,7 +45,7 @@ case class TacticAssume(goalIndex: Int) extends Tactic {
 
 case class TacticWeakenHypothesis(goalIndex: Int, hypothesisIndex: Int) extends Tactic {
   override def apply(state: ProofState): Option[TacticResult] =
-    Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(ProofGoalUpdateHypothesis(hypothesisIndex, IndexedSeq())))))
+    Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(UpdateHypothesis(hypothesisIndex, IndexedSeq())))))
 }
 
 case class TacticEliminate(goalIndex: Int) extends Tactic {
@@ -67,21 +67,47 @@ case class TacticDestructHypothesis(goalIndex: Int, hypothesisIndex: Int) extend
     hypothesis match {
       case ConnectorFormula(`And`, seq) if seq.sizeIs >= 2 =>
         Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(
-          ProofGoalUpdateHypothesis(hypothesisIndex, IndexedSeq(seq.head, if(seq.sizeIs == 2) seq.tail.head else ConnectorFormula(`And`, seq.tail))),
+          UpdateHypothesis(hypothesisIndex, IndexedSeq(seq.head, if(seq.sizeIs == 2) seq.tail.head else ConnectorFormula(`And`, seq.tail))),
         ))))
       case _ => None
     }
   }
 }
 
-case class TacticOrLeftHypothesis(goalIndex: Int, hypothesisIndex: Int) extends Tactic {
+case class TacticDestructGoal(goalIndex: Int) extends Tactic {
+  override def apply(state: ProofState): Option[TacticResult] = {
+    val objective = state.goals(goalIndex)
+    objective.goal match {
+      case ConnectorFormula(`And`, seq) if seq.sizeIs >= 2 =>
+        Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(
+          UpdateGoal(seq.head, IndexedSeq.empty),
+          UpdateGoal(if(seq.sizeIs == 2) seq.tail.head else ConnectorFormula(And, seq.tail), IndexedSeq.empty)
+        ))))
+      case _ => None
+    }
+  }
+}
+
+case class TacticOrHypothesis(goalIndex: Int, hypothesisIndex: Int) extends Tactic {
   override def apply(state: ProofState): Option[TacticResult] = {
     val objective = state.goals(goalIndex)
     val hypothesis = objective.hypotheses(hypothesisIndex)
     hypothesis match {
       case ConnectorFormula(`Or`, Seq(a, b)) => Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(
-        ProofGoalUpdateHypothesis(hypothesisIndex, IndexedSeq(a)),
-        ProofGoalUpdateHypothesis(hypothesisIndex, IndexedSeq(b)),
+        UpdateHypothesis(hypothesisIndex, IndexedSeq(a)),
+        UpdateHypothesis(hypothesisIndex, IndexedSeq(b)),
+      ))))
+      case _ => None
+    }
+  }
+}
+
+case class TacticOrNGoal(goalIndex: Int, n: Int) extends Tactic {
+  override def apply(state: ProofState): Option[TacticResult] = {
+    val objective = state.goals(goalIndex)
+    objective.goal match {
+      case ConnectorFormula(`Or`, seq) if seq.sizeIs >= 2 && seq.indices.contains(n) => Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(
+        UpdateGoal(seq(n), IndexedSeq.empty),
       ))))
       case _ => None
     }
@@ -96,9 +122,23 @@ def prettyProofGoal(proofGoal: ProofGoal): String = {
 }
 
 def prettyProofState(proofState: ProofState): String = {
-  proofState.goals.zipWithIndex.map { case (goal, i) =>
-    Seq(s"goal #$i:", prettyProofGoal(goal)).mkString("\n")
-  }.mkString("\n\n")
+  if(proofState.goals.isEmpty) {
+    "[no goals left]"
+  } else {
+    proofState.goals.zipWithIndex.map { case (goal, i) =>
+      Seq(s"goal #$i:", prettyProofGoal(goal)).mkString("\n")
+    }.mkString("\n\n")
+  }
+}
+
+def prettyFrame(string: String, verticalPadding: Int = 0, horizontalPadding: Int = 2): String = {
+  val (space, vertical, horizontal, corner) = (' ', '|', '-', '+')
+  val lines = string.split("\n")
+  val maxLength = lines.map(_.length).max
+  val bottomAndTop = (corner +: Seq.fill(maxLength + 2 * horizontalPadding)(horizontal) :+ corner).mkString
+  val bottomAndTopMargin = (vertical +: Seq.fill(maxLength + 2 * horizontalPadding)(space) :+ vertical).mkString
+  val linesMargin = lines.map(line => Seq(vertical) ++ Seq.fill(horizontalPadding)(space) ++ line.toCharArray ++ Seq.fill(maxLength - line.length + horizontalPadding)(space) ++ Seq(vertical)).map(_.mkString)
+  (Seq(bottomAndTop) ++ Seq.fill(verticalPadding)(bottomAndTopMargin) ++ linesMargin ++ Seq.fill(verticalPadding)(bottomAndTopMargin) ++ Seq(bottomAndTop)).mkString("\n")
 }
 
 def replaceInArray[T](array: IndexedSeq[T], i: Int, replacement: IndexedSeq[T]): IndexedSeq[T] =
@@ -108,9 +148,9 @@ def mutateState(state: ProofState, tacticResult: TacticResult): ProofState = {
   val diff = tacticResult.diff
   val goal = state.goals(diff.goalIndex)
   val added = diff.replacement.map {
-    case ProofGoalUpdateGoal(newGoal, newHypotheses) =>
-      ProofGoal(replaceInArray(goal.hypotheses, 0, newHypotheses), newGoal)
-    case ProofGoalUpdateHypothesis(hypothesisIndex, newHypotheses) =>
+    case UpdateGoal(newGoal, newHypotheses) =>
+      ProofGoal(goal.hypotheses ++ newHypotheses, newGoal)
+    case UpdateHypothesis(hypothesisIndex, newHypotheses) =>
       goal.copy(hypotheses = replaceInArray(goal.hypotheses, hypothesisIndex, newHypotheses))
   }
   ProofState(replaceInArray(state.goals, diff.goalIndex, added))
@@ -153,13 +193,41 @@ def reconstructProof(conclusion: Formula, seq: Seq[Tactic]): SCProofBuilder =
 
   // ---
 
-  val conclusion: Formula = (a /\ b) ==> a
+  val conclusion: Formula = a ==> (b ==> (a /\ b))
   val steps: IndexedSeq[Tactic] = IndexedSeq(
     TacticAssume(0),
-    TacticDestructHypothesis(0, 0),
+    TacticAssume(0),
+    TacticDestructGoal(0),
     TacticWeakenHypothesis(0, 1),
     TacticEliminate(0),
+    TacticWeakenHypothesis(0, 0),
+    TacticEliminate(0),
   )
+
+  //
+
+  val initialState = formulaToProofState(conclusion)
+  println(prettyFrame(prettyProofState(initialState)))
+  val finalState = steps.foldLeft(initialState) { (state, tactic) =>
+    println()
+    println(s"> $tactic")
+    tactic(state) match {
+      case Some(result) =>
+        val newState = mutateState(state, result)
+        println()
+        println(prettyFrame(prettyProofState(newState)))
+        newState
+      case None =>
+        throw new Exception("Failed to apply this tactic")
+    }
+  }
+  println()
+  println("---------------------")
+  println()
+
+  if(finalState.goals.nonEmpty) {
+    throw new Exception(s"All tactics were applied successfully but the proof is incomplete (${finalState.goals.size} goal(s) remaining)")
+  }
 
   val builder = reconstructProof(conclusion, steps)
 
