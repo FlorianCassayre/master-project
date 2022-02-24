@@ -33,4 +33,6 @@ case class SCProofBuilder(steps: IndexedSeq[SCAnyProofStep]) {
     }
     proof
   }
+
+  def withNewSteps(newSteps: SCAnyProofStep*): SCProofBuilder = SCProofBuilder(steps ++ newSteps)
 }
