@@ -12,4 +12,6 @@ scalacOptions ++= Seq(
 lazy val lisa = RootProject(file("lisa"))
 lazy val root = (project in file(".")).dependsOn(lisa)
 
+libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1"
+
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.10" % "test"
