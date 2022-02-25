@@ -51,8 +51,8 @@ import lisa.kernel.proof.SCProofChecker
 
   val builder = reconstructProof(conclusion, steps)
 
-  builder.steps.map(s => s"${Printer.prettySequent(s.conclusion)} by ${s.premises.mkString(", ")}").foreach(println)
-  println()
+  /*builder.steps.map(s => s"${Printer.prettySequent(s.conclusion)} by ${s.premises.mkString(", ")}").foreach(println)
+  println()*/
 
   val scproof = builder.build
 

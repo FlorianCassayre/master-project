@@ -19,6 +19,7 @@ object GoalBasedProofSystemREPL {
     "destruct_goal" -> { case Seq(goalIndex) => TacticDestructGoal(goalIndex) },
     "or_hypothesis" -> { case Seq(goalIndex, hypothesisIndex) => TacticOrHypothesis(goalIndex, hypothesisIndex) },
     "or_n_goal" -> { case Seq(goalIndex, n) => TacticOrNGoal(goalIndex, n) },
+    "solver" -> { case Seq(goalIndex) => TacticPropositionalSolver(goalIndex) },
   )
 
   @main def repl(): Unit = {
@@ -45,29 +46,46 @@ object GoalBasedProofSystemREPL {
       var state: ProofState = formulaToProofState(formula)
       var tacticsUsed: IndexedSeq[Tactic] = IndexedSeq.empty
 
+      var history: Seq[(ProofState, IndexedSeq[Tactic])] = Seq.empty
+
       while(state.goals.nonEmpty) {
         println(prettyFrame(prettyProofState(state)))
         println()
         var tactic: Tactic = null
         while(tactic == null) {
-          print("Select a tactic to apply: ")
+          print("Select a tactic to apply (or < to undo the previous step): ")
           val input = scanner.nextLine()
-          val parts = input.split("\\s+").toIndexedSeq
-          val tacticName = parts.head
-          if(parts.tail.forall(_.forall(_.isDigit))) {
-            val arguments = parts.tail.map(_.toInt)
-            availableTactics.get(tacticName) match {
-              case Some(f) =>
-                f.unapply(arguments) match {
-                  case Some(result) => tactic = result
-                  case None =>
-                    println(s"Incorrect number of arguments for tactic $tacticName, please try again.")
-                }
-              case None =>
-                println("No registered tactic with this name, please try again.")
+          if(input.trim == "<") {
+            history match {
+              case (newState, newTacticsUsed) +: tail =>
+                state = newState
+                tacticsUsed = newTacticsUsed
+                history = tail
+                println("Undid one tactic.")
+                println()
+                println(prettyFrame(prettyProofState(state)))
+                println()
+              case _ =>
+                println("Cannot undo, this is already the first step.")
             }
           } else {
-            println("Invalid tactic arguments format, please try again.")
+            val parts = input.split("\\s+").toIndexedSeq
+            val tacticName = parts.head
+            if(parts.tail.forall(_.forall(_.isDigit))) {
+              val arguments = parts.tail.map(_.toInt)
+              availableTactics.get(tacticName) match {
+                case Some(f) =>
+                  f.unapply(arguments) match {
+                    case Some(result) => tactic = result
+                    case None =>
+                      println(s"Incorrect number of arguments for tactic $tacticName, please try again.")
+                  }
+                case None =>
+                  println("No registered tactic with this name, please try again.")
+              }
+            } else {
+              println("Invalid tactic arguments format, please try again.")
+            }
           }
         }
 
@@ -77,6 +95,7 @@ object GoalBasedProofSystemREPL {
 
         tactic(state) match {
           case Some(result) =>
+            history = (state, tacticsUsed) +: history
             state = mutateState(state, result)
             tacticsUsed = tacticsUsed :+ tactic
           case None =>

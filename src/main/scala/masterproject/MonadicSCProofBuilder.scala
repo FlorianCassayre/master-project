@@ -40,14 +40,14 @@ object MonadicSCProofBuilder {
   private def put(s: SCProof): MonadicSCProofBuilder[Unit] = MonadicSCProofBuilder(_ => (s, ()))
   def modify(ss: SCProof => SCProof): MonadicSCProofBuilder[(Sequent, Int)] = for {s <- get; _ <- put(ss(s)); p <- get} yield (p.conclusion, p.steps.size - 1)
   def append(step: SCProofStep): MonadicSCProofBuilder[(Sequent, Int)] = for (t <- modify(p => p.withNewSteps(IndexedSeq(step)))) yield t
-  def append(anyStep: SCAnyProofStep): MonadicSCProofBuilder[(Sequent, Int)] =
+  def append(anyStep: SCImplicitProofStep): MonadicSCProofBuilder[(Sequent, Int)] =
     for (t <- modify(p => {
       val newImports = p.imports ++ anyStep.imports.filter(imprt => !p.imports.exists(isSameSequent(imprt, _)))
       // This must always succeed:
       val usedImportsIndices = anyStep.imports.map(imprt => newImports.zipWithIndex.find { case (otherImports, _) => isSameSequent(imprt, otherImports) }.get._2)
       SCProofStepFinder.proofStepFinder(p.copy(imports = newImports), anyStep.conclusion, anyStep.premises ++ usedImportsIndices.map(i => -(i + 1)))
     })) yield t
-  def append(sequent: Sequent): MonadicSCProofBuilder[(Sequent, Int)] = append(SCAnyProofStep(sequent, Seq.empty, Seq.empty))
+  def append(sequent: Sequent): MonadicSCProofBuilder[(Sequent, Int)] = append(SCImplicitProofStep(sequent, Seq.empty, Seq.empty))
   def subproof(builder: MonadicSCProofBuilder[Unit], display: Boolean = true): MonadicSCProofBuilder[(Sequent, Int)] = {
     val sp = create(builder)
     for {
@@ -61,7 +61,7 @@ object MonadicSCProofBuilder {
   def create(builder: MonadicSCProofBuilder[Unit]): SCProof = builder.execState(SCProof())
 
   implicit def sequentToProofBuilder(sequent: Sequent): MonadicSCProofBuilder[(Sequent, Int)] = append(sequent)
-  implicit def anyStepToProofBuilder(anyStep: SCAnyProofStep): MonadicSCProofBuilder[(Sequent, Int)] = append(anyStep)
+  implicit def anyStepToProofBuilder(anyStep: SCImplicitProofStep): MonadicSCProofBuilder[(Sequent, Int)] = append(anyStep)
   implicit def proofStepToProofBuilder(step: SCProofStep): MonadicSCProofBuilder[(Sequent, Int)] = append(step)
   implicit def proofModifyToProofBuilder(f: SCProof => SCProof): MonadicSCProofBuilder[(Sequent, Int)] = modify(f)
 }

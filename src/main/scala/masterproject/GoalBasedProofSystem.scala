@@ -4,10 +4,11 @@ import lisa.kernel.fol.FOL.*
 import lisa.KernelHelpers.*
 import lisa.kernel.Printer
 import lisa.kernel.Printer.*
-import lisa.kernel.proof.SequentCalculus.Sequent
+import lisa.kernel.proof.SequentCalculus.{Sequent, sequentToFormula}
 import lisa.kernel.proof.{SCProof, SCProofChecker}
 import masterproject.SCProofBuilder
-import masterproject.SCProofBuilder.SCAnyProofStep
+import masterproject.SCProofBuilder.{SCExplicitProofStep, SCHighLevelProofStep, SCImplicitProofStep}
+import proven.tactics.SimplePropositionalSolver
 
 object GoalBasedProofSystem {
 
@@ -29,7 +30,7 @@ object GoalBasedProofSystem {
   - Replace an hypothesis formula by a sequence of formulas
   */
 
-  case class TacticResult(diff: ProofStateDiff /*, f: ShadowProof => ShadowProof*/)
+  case class TacticResult(diff: ProofStateDiff, reconstruct: PartialFunction[(Sequent, Seq[Int]), IndexedSeq[SCHighLevelProofStep]] = (sequent, premises) => IndexedSeq(SCImplicitProofStep(sequent, premises)))
 
   abstract class Tactic {
     def apply(state: ProofState): Option[TacticResult]
@@ -39,7 +40,12 @@ object GoalBasedProofSystem {
     override def apply(state: ProofState): Option[TacticResult] = {
       state.goals(goalIndex).goal match {
         case ConnectorFormula(`Implies`, Seq(a, b)) =>
-          Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(UpdateGoal(b, IndexedSeq(a))))))
+          Some(TacticResult(
+            ProofStateDiff(goalIndex, IndexedSeq(UpdateGoal(b, IndexedSeq(a)))),
+            // Example:
+            //{ case (sequent, Seq(t1)) => IndexedSeq(SCImplicitProofStep(sequent, Seq(t1))) }
+            // Since we're using an implicit step we can optionally omit it
+          ))
         case _ => None
       }
     }
@@ -71,6 +77,10 @@ object GoalBasedProofSystem {
           Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(
             UpdateHypothesis(hypothesisIndex, IndexedSeq(seq.head, if(seq.sizeIs == 2) seq.tail.head else ConnectorFormula(`And`, seq.tail))),
           ))))
+        case ConnectorFormula(`Iff`, Seq(a, b)) =>
+          Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(
+            UpdateHypothesis(hypothesisIndex, IndexedSeq(ConnectorFormula(Implies, Seq(a, b)), ConnectorFormula(Implies, Seq(b, a))))
+          ))))
         case _ => None
       }
     }
@@ -84,6 +94,11 @@ object GoalBasedProofSystem {
           Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(
             UpdateGoal(seq.head, IndexedSeq.empty),
             UpdateGoal(if(seq.sizeIs == 2) seq.tail.head else ConnectorFormula(And, seq.tail), IndexedSeq.empty)
+          ))))
+        case ConnectorFormula(`Iff`, Seq(a, b)) =>
+          Some(TacticResult(ProofStateDiff(goalIndex, IndexedSeq(
+            UpdateGoal(ConnectorFormula(Implies, Seq(a, b)), IndexedSeq.empty),
+            UpdateGoal(ConnectorFormula(Implies, Seq(b, a)), IndexedSeq.empty)
           ))))
         case _ => None
       }
@@ -113,6 +128,20 @@ object GoalBasedProofSystem {
         ))))
         case _ => None
       }
+    }
+  }
+
+  case class TacticPropositionalSolver(goalIndex: Int) extends Tactic {
+    override def apply(state: ProofState): Option[TacticResult] = {
+      val objective = state.goals(goalIndex)
+      val sequent = proofGoalToSequent(objective)
+      val proof = SimplePropositionalSolver.solveSequent(sequent)
+      Some(
+        TacticResult(
+          ProofStateDiff(goalIndex, IndexedSeq.empty),
+          { case (sequent, Seq()) => proof.steps.map(SCExplicitProofStep.apply) }
+        )
+      )
     }
   }
 
@@ -163,7 +192,7 @@ object GoalBasedProofSystem {
   def formulaToProofState(formula: Formula): ProofState = ProofState(IndexedSeq(ProofGoal(IndexedSeq.empty, formula)))
 
   // translation: id -> proof_step
-  def iterate(nextId: Int, state: ProofState, seq: Seq[Tactic], proof: SCProofBuilder, shadow: IndexedSeq[Int], translation: Map[Int, Int]): (SCProofBuilder, Map[Int, Int]) = {
+  def recursiveReconstruction(nextId: Int, state: ProofState, seq: Seq[Tactic], proof: SCProofBuilder, shadow: IndexedSeq[Int], translation: Map[Int, Int]): (SCProofBuilder, Map[Int, Int]) = {
     seq match {
       case tactic +: t =>
         val result = tactic(state).get
@@ -173,11 +202,12 @@ object GoalBasedProofSystem {
         val replacementIds = result.diff.replacement.indices.map(_ + nextId)
         val newShadow = replaceInArray(shadow, updatedGoalIndex, replacementIds)
         val newNextId = nextId + result.diff.replacement.size
-        val (recursiveProof, recursiveTranslation) = iterate(newNextId, newState, t, proof, newShadow, translation)
+        val (recursiveProof, recursiveTranslation) = recursiveReconstruction(newNextId, newState, t, proof, newShadow, translation)
         val stepIndex = recursiveProof.steps.size
         val premises = replacementIds.map(recursiveTranslation)
-        val majorStep = SCAnyProofStep(proofGoalToSequent(state.goals(updatedGoalIndex)), premises, Seq.empty)
-        val newProofWithNewStep = recursiveProof.withNewSteps(majorStep)
+        val sequent = proofGoalToSequent(state.goals(updatedGoalIndex))
+        val reconstructedSteps = result.reconstruct(sequent, premises)
+        val newProofWithNewStep = recursiveProof.withNewSteps(reconstructedSteps: _*)
         (newProofWithNewStep, recursiveTranslation + (id -> (newProofWithNewStep.steps.size - 1)))
       case _ =>
         (proof, translation)
@@ -185,5 +215,5 @@ object GoalBasedProofSystem {
   }
 
   def reconstructProof(conclusion: Formula, seq: Seq[Tactic]): SCProofBuilder =
-    iterate(1, formulaToProofState(conclusion), seq, SCProofBuilder(), IndexedSeq(0), Map.empty)._1
+    recursiveReconstruction(1, formulaToProofState(conclusion), seq, SCProofBuilder(), IndexedSeq(0), Map.empty)._1
 }
