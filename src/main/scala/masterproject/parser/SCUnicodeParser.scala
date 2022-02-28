@@ -13,9 +13,12 @@ object SCUnicodeParser extends SCAbstractParser {
   override protected val SymbolAnd: String = "∧"
   override protected val SymbolNot: String = "¬"
   override protected val SymbolTurnstile: String = "⊢"
+  override protected val SymbolMembership: String = "∈"
+  override protected val SymbolSubset: String = "⊆"
+  override protected val SymbolEmptySet: String = "∅"
 
   lexical.delimiters ++= Seq(
-    SymbolForall, SymbolExists, SymbolExistsOne, SymbolIff, SymbolImplies, SymbolOr, SymbolAnd, SymbolNot, SymbolTurnstile
+    SymbolForall, SymbolExists, SymbolExistsOne, SymbolIff, SymbolImplies, SymbolOr, SymbolAnd, SymbolNot, SymbolTurnstile, SymbolMembership, SymbolSubset, SymbolEmptySet
   )
 
 }

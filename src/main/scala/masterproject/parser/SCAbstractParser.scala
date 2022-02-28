@@ -16,8 +16,13 @@ abstract class SCAbstractParser extends StandardTokenParsers {
   protected val SymbolAnd: String
   protected val SymbolNot: String
   protected val SymbolTurnstile: String
+  protected val SymbolSubset: String
+  protected val SymbolMembership: String
+  protected val SymbolEmptySet: String
 
-  lexical.delimiters ++= Seq("=", ".", "(", ")", "?", ";", ",")
+  lexical.delimiters ++= Seq("=", ".", "(", ")", "{", "}", "?", ";", ",", "~")
+
+  lexical.reserved ++= Seq("P", "U")
 
   private def identifier = ident
 
@@ -25,8 +30,8 @@ abstract class SCAbstractParser extends StandardTokenParsers {
     positioned(identifier ^^ SCParsedConstant.apply) | positioned("?" ~> identifier ^^ SCParsedSchema.apply)
 
   def binder: Parser[SCParsedTermOrFormula] = positioned(
-    (SymbolForall ^^^ SCParsedExists.apply | SymbolExists ^^^ SCParsedExists.apply | SymbolExistsOne ^^^ SCParsedExists.apply) ~
-      identifier ~ "." ~ termOrFormula ^^ { case f ~ b ~ _ ~ t => f(b, t) }
+    (SymbolForall ^^^ SCParsedForall.apply | SymbolExists ^^^ SCParsedExists.apply | SymbolExistsOne ^^^ SCParsedExistsOne.apply) ~
+      rep1sep(identifier, ",") ~ "." ~ termOrFormula ^^ { case f ~ bs ~ _ ~ t => f(bs, t) }
   )
 
   def termOrFormula: Parser[SCParsedTermOrFormula] = positioned(
@@ -41,9 +46,13 @@ abstract class SCAbstractParser extends StandardTokenParsers {
   def termOrFormulaOr: Parser[SCParsedTermOrFormula] =
     positioned(termOrFormulaAnd ~ rep(SymbolOr ~> termOrFormulaAnd) ^^ { case h ~ t => (h +: t).reduceRight(SCParsedOr.apply) })
   def termOrFormulaAnd: Parser[SCParsedTermOrFormula] =
-    positioned(termOrFormulaEqual ~ rep(SymbolAnd ~> termOrFormulaEqual) ^^ { case h ~ t => (h +: t).reduceRight(SCParsedAnd.apply) })
-  def termOrFormulaEqual: Parser[SCParsedTermOrFormula] =
-    positioned(termNot ~ rep("=" ~> termNot) ^^ { case h ~ t => (h +: t).reduceRight(SCParsedEqual.apply) })
+    positioned(termOrFormulaPredicate ~ rep(SymbolAnd ~> termOrFormulaPredicate) ^^ { case h ~ t => (h +: t).reduceRight(SCParsedAnd.apply) })
+  def termOrFormulaPredicate: Parser[SCParsedTermOrFormula] =
+    positioned(termNot ~
+      rep((SymbolMembership ^^^ SCParsedMembership.apply | SymbolSubset ^^^ SCParsedSubset.apply | "~" ^^^ SCParsedSameCardinality.apply | "=" ^^^ SCParsedEqual.apply) ~
+        termNot) ^^ {
+      case t1 ~ ts => ts.foldRight(t1) { case (f ~ tr, tl) => f(tl, tr) }
+    })
 
   def termNot: Parser[SCParsedTermOrFormula] =
     positioned(
@@ -52,8 +61,25 @@ abstract class SCAbstractParser extends StandardTokenParsers {
     )
 
   private def atom: Parser[SCParsedTermOrFormula] = positioned(
-    variableOrSchema ~ ("(" ~> rep1sep(termOrFormula, ",") <~ ")").? ^^ { case v ~ argsOpt => argsOpt.map(SCParsedApplication(v, _)).getOrElse(v) }
-      | "(" ~> termOrFormula <~ ")"
+    ("P" ^^^ SCParsedPower.apply | "U" ^^^ SCParsedUnion.apply) ~ "(" ~ termOrFormula ~ ")" ^^ {
+      case f ~ _ ~ t ~ _ => f(t)
+    }
+      | variableOrSchema ~ ("(" ~> rep1sep(termOrFormula, ",") <~ ")").? ^^ {
+      case v ~ argsOpt => argsOpt.map(SCParsedApplication(v, _)).getOrElse(v)
+    }
+      | "(" ~ termOrFormula ~ ("," ~> termOrFormula <~ ")").? ~ ")" ^^ { case _ ~ t1 ~ opt ~ _ => opt match {
+      case Some(t2) => SCParsedOrderedPair(t1, t2)
+      case None => t1
+    } }
+      | "{" ~> (termOrFormula ~ ("," ~> termOrFormula).?).? <~ "}" ^^ {
+      case Some(t1 ~ opt2) =>
+        opt2 match {
+          case Some(t2) => SCParsedSet2(t1, t2)
+          case None => SCParsedSet1(t1)
+        }
+      case None => SCParsedSet0
+    }
+      | SymbolEmptySet ^^^ SCParsedSet0
   )
 
   private def termOrFormulaSequence: Parser[Seq[SCParsedTermOrFormula]] = repsep(termOrFormula, ";")

@@ -11,13 +11,16 @@ object SCAsciiParser extends SCAbstractParser {
   override protected val SymbolAnd: String = """/\"""
   override protected val SymbolNot: String = "!"
   override protected val SymbolTurnstile: String = "|-"
+  override protected val SymbolMembership: String = "in"
+  override protected val SymbolSubset: String = "sub"
+  override protected val SymbolEmptySet: String = "empty"
 
   lexical.delimiters ++= Seq(
     SymbolIff, SymbolImplies, SymbolOr, SymbolAnd, SymbolNot, SymbolTurnstile
   )
 
   lexical.reserved ++= Seq(
-    SymbolForall, SymbolExists, SymbolExistsOne
+    SymbolForall, SymbolExists, SymbolExistsOne, SymbolMembership, SymbolSubset, SymbolEmptySet
   )
 
 }
