@@ -31,7 +31,7 @@ object GoalBasedProofSystemREPL {
         print("Enter the formula you would like to prove: ")
         val input = scanner.nextLine()
         Try {
-          SCResolver.resolveFormula(SCAsciiParser.parseTermOrFormula(input))
+          SCResolver.resolveTopLevelFormula(SCAsciiParser.parseTermOrFormula(input))
         } match {
           case Success(value) =>
             println()
