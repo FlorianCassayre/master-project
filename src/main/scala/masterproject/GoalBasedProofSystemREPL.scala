@@ -7,7 +7,8 @@ import java.util.Scanner
 import scala.util.{Failure, Success, Try}
 import lisa.kernel.fol.FOL.*
 import lisa.kernel.Printer
-import lisa.kernel.proof.SCProofChecker
+import lisa.kernel.proof.{RunningTheory, SCProofChecker}
+import lisa.settheory.AxiomaticSetTheory
 
 object GoalBasedProofSystemREPL {
 
@@ -22,25 +23,29 @@ object GoalBasedProofSystemREPL {
     string
   }
 
-  val availableTactics: Map[String, PartialFunction[Seq[Int], Tactic]] = Map(
+  val availableTactics: Map[String, PartialFunction[Seq[Any], Tactic]] = Map(
     "assume" -> { case Seq() => TacticAssume },
-    "weaken_hypothesis" -> { case Seq(hypothesisIndex) => TacticWeakenHypothesis(hypothesisIndex) },
+    "weaken_hypothesis" -> { case Seq(hypothesisIndex: Int) => TacticWeakenHypothesis(hypothesisIndex) },
     "eliminate" -> { case Seq() => TacticEliminate },
-    "destruct_hypothesis" -> { case Seq(hypothesisIndex) => TacticDestructHypothesis(hypothesisIndex) },
+    "destruct_hypothesis" -> { case Seq(hypothesisIndex: Int) => TacticDestructHypothesis(hypothesisIndex) },
     "destruct_goal" -> { case Seq() => TacticDestructGoal },
-    "or_hypothesis" -> { case Seq(hypothesisIndex) => TacticOrHypothesis(hypothesisIndex) },
-    "or_n_goal" -> { case Seq(n) => TacticOrNGoal(n) },
+    "or_hypothesis" -> { case Seq(hypothesisIndex: Int) => TacticOrHypothesis(hypothesisIndex) },
+    "or_n_goal" -> { case Seq(n: Int) => TacticOrNGoal(n) },
     "solver" -> { case Seq() => TacticPropositionalSolver },
     "instantiate" -> { case Seq() => TacticInstantiateForall },
+    "axiom" -> { case Seq() => TacticAxiom },
+    "reorder" -> { case Seq(goalIndex: Int) => TacticReorder(goalIndex) },
+    "cut" -> { case Seq(formula: Formula) => TacticCut(formula) }
   )
 
   sealed abstract class REPLState
-  case object StateInitial extends REPLState
+  case class StateInitial(theory: RunningTheory) extends REPLState
   case class StateTactical(
                             formula: Formula,
                             proofState: ProofState,
                             tacticsUsed: IndexedSeq[Tactic],
-                            history: Seq[(ProofState, IndexedSeq[Tactic])]
+                            history: Seq[(ProofState, IndexedSeq[Tactic])],
+                            theory: RunningTheory,
                           ) extends REPLState
 
   case class REPLOutput(private val strings: Seq[String] = Seq.empty) {
@@ -50,10 +55,10 @@ object GoalBasedProofSystemREPL {
   }
 
   def stateOutput(state: REPLState): REPLOutput = state match {
-    case StateInitial =>
+    case StateInitial(_) =>
       REPLOutput()
         .print("Enter the formula you would like to prove: ")
-    case StateTactical(formula, proofState, tacticsUsed, history) =>
+    case StateTactical(_, proofState, _, _, _) =>
       REPLOutput()
         .println()
         .println(prettyFrame(prettyProofState(proofState)))
@@ -62,12 +67,12 @@ object GoalBasedProofSystemREPL {
   }
 
   def stateReducer(state: REPLState, input: String): (REPLState, REPLOutput) = state match {
-    case StateInitial =>
+    case StateInitial(theory) =>
       Try {
         SCResolver.resolveTopLevelFormula(SCAsciiParser.parseTermOrFormula(input))
       } match {
         case Success(formula) =>
-          (StateTactical(formula, formulaToProofState(formula), IndexedSeq.empty, Seq.empty),
+          (StateTactical(formula, formulaToProofState(formula), IndexedSeq.empty, Seq.empty, theory),
             REPLOutput().print(""))
         case Failure(exception) =>
           (state, REPLOutput()
@@ -75,7 +80,7 @@ object GoalBasedProofSystemREPL {
             .println(stacktraceToString(exception))
             .println())
       }
-    case state @ StateTactical(formula, proofState, tacticsUsed, history) =>
+    case state @ StateTactical(formula, proofState, tacticsUsed, history, theory) =>
       if(input.trim == "<") {
         history match {
           case (newProofState, newTacticsUsed) +: tail =>
@@ -86,61 +91,70 @@ object GoalBasedProofSystemREPL {
             (state, REPLOutput().println("Cannot undo, this is already the first step."))
         }
       } else {
-        val parts = input.split("\\s+").toIndexedSeq
+        val parts = input.split("\\s+", 2).toIndexedSeq
         val tacticName = parts.head
-        if(parts.tail.forall(_.forall(_.isDigit))) {
-          val arguments = parts.tail.map(_.toInt)
-          availableTactics.get(tacticName) match {
-            case Some(f) =>
-              f.unapply(arguments) match {
-                case Some(tactic) =>
-                  val output = REPLOutput().println().println(s"> $tactic")
-
-                  tactic(proofState) match {
-                    case Some(result) =>
-                      val newState = state.copy(proofState = mutateState(proofState, result), tacticsUsed = tacticsUsed :+ tactic, history = (proofState, tacticsUsed) +: history)
-
-                      if(newState.proofState.goals.nonEmpty) {
-                        (newState, output)
-                      } else {
-                        val proof = reconstructProof(formula, newState.tacticsUsed).build
-                        val (isValid, position, message) = SCProofChecker.checkSCProof(proof)
-
-                        (StateInitial, REPLOutput()
-                          .println()
-                          .println(prettyFrame(prettyProofState(newState.proofState)))
-                          .println()
-                          .println("All goals have been proven, the proof will now be reconstructed below:")
-                          .println(Printer.prettySCProof(proof, if(isValid) None else Some(position, message)))
-                          .println()
-                          .println(
-                            if(isValid)
-                              "This proof was successfully verified by the kernel."
-                            else
-                              "!!! ERROR !!! The reconstructed proof is invalid!\nThis may indicate an issue with a tactic."
-                          )
-                          .println()
-                          .println("--------")
-                          .println())
-                      }
-                    case None =>
-                      (state, output.println("This tactic failed to apply in this context, please try again."))
-                  }
-                case None =>
-                  (state, REPLOutput().println(s"Incorrect number of arguments for tactic $tacticName, please try again."))
-              }
-            case None =>
-              (state, REPLOutput().println("No registered tactic with this name, please try again."))
+        val remaining = parts.tail.mkString
+        val argsOpt =
+          if(remaining.trim.isEmpty) {
+            Some(Seq.empty)
+          } else if(remaining.forall(_.isDigit)) {
+            Some(Seq(remaining.toInt))
+          } else {
+            Try(SCResolver.resolveTopLevelFormula(SCAsciiParser.parseTermOrFormula(remaining))).toOption.map(Seq(_))
           }
-        } else {
-          (state, REPLOutput().println("Invalid tactic arguments format, please try again."))
+        argsOpt match {
+          case Some(args) =>
+            availableTactics.get(tacticName) match {
+              case Some(f) =>
+                f.unapply(args) match {
+                  case Some(tactic) =>
+                    val output = REPLOutput().println().println(s"> $tactic")
+
+                    tactic(proofState, theory) match {
+                      case Some(result) =>
+                        val newState = state.copy(proofState = mutateState(proofState, result), tacticsUsed = tacticsUsed :+ tactic, history = (proofState, tacticsUsed) +: history)
+
+                        if(newState.proofState.goals.nonEmpty) {
+                          (newState, output)
+                        } else {
+                          val proof = reconstructProof(formula, newState.tacticsUsed, theory).build
+                          val (isValid, position, message) = SCProofChecker.checkSCProof(proof)
+
+                          (StateInitial(theory), REPLOutput()
+                            .println()
+                            .println(prettyFrame(prettyProofState(newState.proofState)))
+                            .println()
+                            .println("All goals have been proven, the proof will now be reconstructed below:")
+                            .println(Printer.prettySCProof(proof, if(isValid) None else Some(position, message)))
+                            .println()
+                            .println(
+                              if(isValid)
+                                "This proof was successfully verified by the kernel."
+                              else
+                                "!!! ERROR !!! The reconstructed proof is invalid!\nThis may indicate an issue with a tactic."
+                            )
+                            .println()
+                            .println("--------")
+                            .println())
+                        }
+                      case None =>
+                        (state, output.println("This tactic failed to apply in this context, please try again."))
+                    }
+                  case None =>
+                    (state, REPLOutput().println(s"Incorrect number of arguments for tactic $tacticName, please try again."))
+                }
+              case None =>
+                (state, REPLOutput().println("No registered tactic with this name, please try again."))
+            }
+          case None =>
+            (state, REPLOutput().println("Invalid tactic arguments format, please try again."))
         }
       }
   }
 
   @main def repl(): Unit = {
     val scanner = new Scanner(System.in)
-    var state: REPLState = StateInitial
+    var state: REPLState = StateInitial(AxiomaticSetTheory.runningSetTheory)
     while(true) {
       val output1 = stateOutput(state)
       print(output1.build)

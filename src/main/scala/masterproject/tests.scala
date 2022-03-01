@@ -5,6 +5,7 @@ import lisa.KernelHelpers.*
 import masterproject.GoalBasedProofSystem.*
 import lisa.kernel.Printer
 import lisa.kernel.proof.SCProofChecker
+import lisa.settheory.AxiomaticSetTheory
 
 @main def tests(): Unit = {
   def variable(name: String): Formula = PredicateFormula(SchematicPredicateLabel(name, 0), Seq())
@@ -24,12 +25,14 @@ import lisa.kernel.proof.SCProofChecker
 
   //
 
+  val theory = AxiomaticSetTheory.runningSetTheory
+
   val initialState = formulaToProofState(conclusion)
   println(prettyFrame(prettyProofState(initialState)))
   val finalState = steps.foldLeft(initialState) { (state, tactic) =>
     println()
     println(s"> $tactic")
-    tactic(state) match {
+    tactic(state, theory) match {
       case Some(result) =>
         val newState = mutateState(state, result)
         println()
@@ -47,7 +50,7 @@ import lisa.kernel.proof.SCProofChecker
     throw new Exception(s"All tactics were applied successfully but the proof is incomplete (${finalState.goals.size} goal(s) remaining)")
   }
 
-  val builder = reconstructProof(conclusion, steps)
+  val builder = reconstructProof(conclusion, steps, theory)
 
   /*builder.steps.map(s => s"${Printer.prettySequent(s.conclusion)} by ${s.premises.mkString(", ")}").foreach(println)
   println()*/

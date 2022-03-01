@@ -7,6 +7,9 @@ import lisa.kernel.fol.FOL.*
 import scala.util.parsing.input.Position
 
 object SCResolver {
+  
+  // This procedure cannot differentiate variables and functions of arity 0.
+  // In this case for now it assumes they are variables.
 
   case class ResolutionException(message: String, pos: Position) extends Exception(s"$message:\n${pos.longString}")
 
@@ -24,7 +27,7 @@ object SCResolver {
 
   private def resolveTerm(tree: SCParsedTermOrFormula)(implicit ctx: ScopedContext): Term = tree match {
     case name: SCParsedName =>
-      FunctionTerm(resolveFunctionTermLabel(name, 0), Seq.empty)
+      VariableTerm(VariableLabel(name.identifier)) // Ambiguous: could be a function as well!
     case SCParsedApplication(name, args) =>
       FunctionTerm(resolveFunctionTermLabel(name, args.size), args.map(resolveTerm(_)))
     case product: SCParsedProduct =>
