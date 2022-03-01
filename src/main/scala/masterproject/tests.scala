@@ -15,13 +15,11 @@ import lisa.kernel.proof.SCProofChecker
 
   val conclusion: Formula = a ==> (b ==> (a /\ b))
   val steps: IndexedSeq[Tactic] = IndexedSeq(
-    TacticAssume(0),
-    TacticAssume(0),
-    TacticDestructGoal(0),
-    TacticWeakenHypothesis(0, 1),
-    TacticEliminate(0),
-    TacticWeakenHypothesis(0, 0),
-    TacticEliminate(0),
+    TacticAssume,
+    TacticAssume,
+    TacticDestructGoal,
+    TacticEliminate,
+    TacticEliminate,
   )
 
   //

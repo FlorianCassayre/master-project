@@ -23,14 +23,15 @@ object GoalBasedProofSystemREPL {
   }
 
   val availableTactics: Map[String, PartialFunction[Seq[Int], Tactic]] = Map(
-    "assume" -> { case Seq(goalIndex) => TacticAssume(goalIndex) },
-    "weaken_hypothesis" -> { case Seq(goalIndex, hypothesisIndex) => TacticWeakenHypothesis(goalIndex, hypothesisIndex) },
-    "eliminate" -> { case Seq(goalIndex) => TacticEliminate(goalIndex) },
-    "destruct_hypothesis" -> { case Seq(goalIndex, hypothesisIndex) => TacticDestructHypothesis(goalIndex, hypothesisIndex) },
-    "destruct_goal" -> { case Seq(goalIndex) => TacticDestructGoal(goalIndex) },
-    "or_hypothesis" -> { case Seq(goalIndex, hypothesisIndex) => TacticOrHypothesis(goalIndex, hypothesisIndex) },
-    "or_n_goal" -> { case Seq(goalIndex, n) => TacticOrNGoal(goalIndex, n) },
-    "solver" -> { case Seq(goalIndex) => TacticPropositionalSolver(goalIndex) },
+    "assume" -> { case Seq() => TacticAssume },
+    "weaken_hypothesis" -> { case Seq(hypothesisIndex) => TacticWeakenHypothesis(hypothesisIndex) },
+    "eliminate" -> { case Seq() => TacticEliminate },
+    "destruct_hypothesis" -> { case Seq(hypothesisIndex) => TacticDestructHypothesis(hypothesisIndex) },
+    "destruct_goal" -> { case Seq() => TacticDestructGoal },
+    "or_hypothesis" -> { case Seq(hypothesisIndex) => TacticOrHypothesis(hypothesisIndex) },
+    "or_n_goal" -> { case Seq(n) => TacticOrNGoal(n) },
+    "solver" -> { case Seq() => TacticPropositionalSolver },
+    "instantiate" -> { case Seq() => TacticInstantiateForall },
   )
 
   sealed abstract class REPLState
@@ -103,16 +104,21 @@ object GoalBasedProofSystemREPL {
                         (newState, output)
                       } else {
                         val proof = reconstructProof(formula, newState.tacticsUsed).build
-                        assert(SCProofChecker.checkSCProof(proof)._1)
+                        val (isValid, position, message) = SCProofChecker.checkSCProof(proof)
 
                         (StateInitial, REPLOutput()
                           .println()
                           .println(prettyFrame(prettyProofState(newState.proofState)))
                           .println()
                           .println("All goals have been proven, the proof will now be reconstructed below:")
-                          .println(Printer.prettySCProof(proof))
+                          .println(Printer.prettySCProof(proof, if(isValid) None else Some(position, message)))
                           .println()
-                          .println("This proof was successfully verified by the kernel.")
+                          .println(
+                            if(isValid)
+                              "This proof was successfully verified by the kernel."
+                            else
+                              "!!! ERROR !!! The reconstructed proof is invalid!\nThis may indicate an issue with a tactic."
+                          )
                           .println()
                           .println("--------")
                           .println())
