@@ -195,12 +195,38 @@ object GoalBasedProofSystem {
         None
   }
 
-  case class TacticCut(formula: Formula) extends TacticDefault {
-    override def apply(state: ProofGoal, theory: RunningTheory): Option[TacticResult] =
+  case class TacticCut(formula: Formula) extends TacticDefaultTheoryAgnostic {
+    override def apply(state: ProofGoal): Option[TacticResult] =
       Some(TacticResult(ProofStateDiffDefault(IndexedSeq(
         UpdateGoal(formula, IndexedSeq.empty),
         UpdateGoal(state.goal, IndexedSeq(formula))
       ))))
+  }
+
+  case class TacticTransitivity(hypothesisIndex: Int) extends TacticDefaultTheoryAgnostic {
+    override def apply(state: ProofGoal): Option[TacticResult] =
+      if(state.hypotheses.indices.contains(hypothesisIndex)) {
+        state.hypotheses(hypothesisIndex) match {
+          case ConnectorFormula(`Iff`, Seq(a, b)) if isSame(a, state.goal) || isSame(b, state.goal) =>
+            val f = if(isSame(a, state.goal)) b else a
+            Some(TacticResult(ProofStateDiffDefault(IndexedSeq(
+              UpdateGoal(f, IndexedSeq.empty),
+            ))))
+          case ConnectorFormula(`Implies`, Seq(a, b)) if isSame(b, state.goal) =>
+            Some(TacticResult(ProofStateDiffDefault(IndexedSeq(
+              UpdateGoal(a, IndexedSeq.empty),
+            )), {
+              case (sequent, Seq(i)) =>
+                val iff = ConnectorFormula(Iff, Seq(a, b))
+                IndexedSeq(
+                  SCImplicitProofStep(sequent.copy(left = sequent.left + iff), premises = Seq(i)),
+                  SCImplicitProofStep(Sequent(sequent.left + iff, Set(b)), premises = Seq(0)),
+                )
+            }))
+          case _ => None
+        }
+      } else
+        None
   }
 
   def prettyProofGoal(proofGoal: ProofGoal): String = {

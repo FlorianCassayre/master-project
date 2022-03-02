@@ -25,7 +25,6 @@ class MonadicSCProofBuilderTests extends AnyFunSuite {
   test("monadic proof builder") {
 
     // We adapted a proof from `ElementsOfSetTheoryTests` to compare the syntax
-    // Note that subproofs are currently not supported in this format
 
     val proof: SCProof = MonadicSCProofBuilder.create(for {
       (_, i0) <- MonadicSCProofBuilder.subproof(for {

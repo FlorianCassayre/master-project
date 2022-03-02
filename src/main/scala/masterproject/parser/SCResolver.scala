@@ -1,13 +1,13 @@
 package masterproject.parser
 
-import lisa.kernel.fol.FOL
 import masterproject.parser.SCParsed.*
 import lisa.kernel.fol.FOL.*
+import lisa.kernel.proof.SequentCalculus.Sequent
 
 import scala.util.parsing.input.Position
 
 object SCResolver {
-  
+
   // This procedure cannot differentiate variables and functions of arity 0.
   // In this case for now it assumes they are variables.
 
@@ -47,7 +47,7 @@ object SCResolver {
     case _ => throw ResolutionException("Type error: expected term, got formula", tree.pos)
   }
 
-  private def resolveFormula(tree: SCParsedTermOrFormula)(implicit ctx: ScopedContext): Formula = tree match {
+  private def resolveFormulaContext(tree: SCParsedTermOrFormula)(implicit ctx: ScopedContext): Formula = tree match {
     case name: SCParsedName =>
       PredicateFormula(resolvePredicateFormulaLabel(name, 0), Seq.empty)
     case SCParsedApplication(name, args) =>
@@ -66,10 +66,10 @@ object SCResolver {
       val args = Seq(operator.left, operator.right)
       label match {
         case Left(label) => PredicateFormula(label, args.map(resolveTerm(_)))
-        case Right(label) => ConnectorFormula(label, args.map(resolveFormula(_)))
+        case Right(label) => ConnectorFormula(label, args.map(resolveFormulaContext(_)))
       }
     case SCParsedNot(termOrFormula) =>
-      ConnectorFormula(Neg, Seq(resolveFormula(termOrFormula)))
+      ConnectorFormula(Neg, Seq(resolveFormulaContext(termOrFormula)))
     case binder: SCParsedBinder =>
       binder.bound.find(ctx.variables.contains).orElse(binder.bound.diff(binder.bound.distinct).headOption) match {
         case Some(bound) => throw ResolutionException(s"Name conflict: ${binder.bound}", binder.pos)
@@ -80,13 +80,16 @@ object SCResolver {
         case _: SCParsedExists => Exists
         case _: SCParsedExistsOne => ExistsOne
       }
-      binder.bound.foldRight(resolveFormula(binder.termOrFormula)(ctx.copy(variables = ctx.variables ++ binder.bound)))(
+      binder.bound.foldRight(resolveFormulaContext(binder.termOrFormula)(ctx.copy(variables = ctx.variables ++ binder.bound)))(
         (bound, body) => BinderFormula(label, VariableLabel(bound), body)
       )
-    case _ => throw ResolutionException("Type error: expected term, got formula", tree.pos)
+    case _ => throw ResolutionException("Type error: expected formula, got term", tree.pos)
   }
 
-  def resolveTopLevelFormula(tree: SCParsedTermOrFormula): Formula =
-    resolveFormula(tree)(ScopedContext(variables = Set.empty))
+  def resolveFormula(tree: SCParsedTermOrFormula): Formula =
+    resolveFormulaContext(tree)(ScopedContext(variables = Set.empty))
+    
+  def resolveSequent(tree: SCParsedSequent): Sequent =
+    Sequent(tree.left.map(resolveFormula).toSet, tree.right.map(resolveFormula).toSet)
 
 }
