@@ -1,10 +1,15 @@
 package masterproject.parser
 
+import lisa.kernel.Printer
 import masterproject.parser.SCParsed.*
 import lisa.kernel.fol.FOL.*
-import lisa.kernel.proof.SequentCalculus.Sequent
+import lisa.kernel.proof.SCProof
+import lisa.kernel.proof.SequentCalculus.{SCProofStep, Sequent}
+import masterproject.SCProofStepFinder
+import masterproject.SCProofStepFinder.NoProofStepFound
 import masterproject.parser.ReadingException.ResolutionException
 
+import scala.util.{Failure, Success, Try}
 import scala.util.parsing.input.Position
 
 private[parser] object SCResolver {
@@ -84,6 +89,112 @@ private[parser] object SCResolver {
       )
     case _ => throw ResolutionException("Type error: expected formula, got term", tree.pos)
   }
+
+  def resolveProof(tree: ParsedProof): SCProof = {
+    val premisesArity = Map(
+      "Rewrite" -> 1,
+      "Hypo." -> 0,
+      "Cut" -> 2,
+      "Left ∧" -> 1,
+      "Left ¬" -> 1,
+      "Right ∨" -> 1,
+      "Right ¬" -> 1,
+      "Left ∃" -> 1,
+      "Left ∀" -> 1,
+      "Left ∨" -> -1,
+      "Right ∃" -> 1,
+      "Right ∀" -> 1,
+      "Right ∧" -> -1,
+      "Right ↔" -> 2,
+      "Right →" -> 1,
+      "Weakening" -> 1,
+      "Left →" -> 2,
+      "Left ↔" -> 1,
+      "L. Refl" -> 1,
+      "R. Refl" -> 0,
+      "L. SubstEq" -> 1,
+      "R. SubstEq" -> 1,
+      "L. SubstIff" -> 1,
+      "R. SubstIff" -> 1,
+      "?Fun Instantiation" -> 1,
+      "?Pred Instantiation" -> 1,
+      "SCSubproof (hidden)" -> 0, // FIXME?
+      "Subproof" -> -1,
+      "Import" -> 1,
+    )
+
+    def resolveProofLevel(tree: ParsedProof): SCProof = {
+      val (steps, imports, _) = tree.steps.foldLeft((IndexedSeq.empty[SCProofStep], IndexedSeq.empty[Sequent], None: Option[Int])) { case ((currentSteps, currentImports, previousLine), step) =>
+        previousLine match {
+          case Some(previousIndex) =>
+            val expectedIndex = previousIndex + 1
+            if(step.line != expectedIndex) {
+              throw ResolutionException(s"Expected line $expectedIndex, but got ${step.line} instead", step.pos)
+            }
+          case None =>
+            if(step.line > 0) {
+              throw ResolutionException(s"The index of the first proof step cannot be strictly positive", step.pos)
+            }
+        }
+
+        val expectedArity = premisesArity(step.ruleName)
+        val actualArity = step.premises.size
+        if(expectedArity != -1 && expectedArity != actualArity) {
+          throw ResolutionException(s"Rule ${step.ruleName} expects $expectedArity premises, but got $actualArity instead", step.pos)
+        }
+
+        val isImport = step.ruleName == "Import"
+
+        if(step.line < 0) {
+          if(!isImport) {
+            throw ResolutionException("Negative step indices must necessarily be import statements", step.pos)
+          }
+        } else {
+          if(isImport) {
+            throw ResolutionException("Import statements can only appear on negative indices steps", step.pos)
+          }
+        }
+
+        if(isImport && step.premises != Seq(0)) {
+          throw ResolutionException(s"Import statements must have exactly one premise, and it should be equal to zero", step.pos)
+        }
+
+        if(!isImport) {
+          step.premises.foreach { premise =>
+            if((premise < 0 && -premise > currentImports.size) || (premise >= 0 && premise >= currentSteps.size)) {
+              throw ResolutionException(s"Premise $premise is out of bounds", step.pos)
+            }
+          }
+        }
+
+        val sequent = resolveSequent(step.conclusion)
+
+        val newLine = Some(step.line)
+
+        if(isImport) {
+          (currentSteps, sequent +: currentImports, newLine)
+        } else {
+          val currentProof = SCProof(currentSteps, currentImports)
+          val newProof = Try(SCProofStepFinder.proofStepFinder(currentProof, sequent, step.premises)) match {
+            case Success(value) if value.steps.size == currentSteps.size + 1 => value
+            case Success(_) => throw ResolutionException("Limitation of SCProofStepFinder", step.pos) // TODO
+            case Failure(exception: NoProofStepFound) => throw ResolutionException(exception.getMessage, step.pos)
+            case Failure(e) => throw new Exception(e)
+          }
+
+          val newStep = newProof.steps.last
+
+          (currentSteps :+ newStep, currentImports, newLine)
+        }
+      }
+
+      SCProof(steps, imports)
+    }
+
+    // TODO for now we ignore subproofs (because they rely on indentation to eliminate ambiguity)
+    resolveProofLevel(tree)
+  }
+
 
   def resolveFormula(tree: ParsedTermOrFormula): Formula =
     resolveFormulaContext(tree)(ScopedContext(variables = Set.empty))

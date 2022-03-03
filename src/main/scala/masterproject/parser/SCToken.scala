@@ -8,6 +8,8 @@ private[parser] object SCToken {
 
   case class Identifier(identifier: String) extends SCToken
   case class SchematicIdentifier(identifier: String) extends SCToken
+  
+  case class IntegerLiteral(value: Int) extends SCToken
 
   // The reason these *must* be case classes is because they extend `Positional`,
   // which contains a position attribute (that shouldn't be shared between instances)
@@ -37,5 +39,7 @@ private[parser] object SCToken {
   case class Semicolon() extends SCToken
 
   case class NewLine() extends SCToken
+  
+  case class RuleName(name: String) extends SCToken
 
 }

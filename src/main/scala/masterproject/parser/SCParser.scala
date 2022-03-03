@@ -20,6 +20,11 @@ private[parser] object SCParser extends Parsers {
   private def identifierOrSchematic: Parser[Identifier | SchematicIdentifier] =
     positioned(identifier | schematicIdentifier)
 
+  private def integerLiteral: Parser[IntegerLiteral] =
+    positioned(accept("integer literal", { case lit: IntegerLiteral => lit }))
+  private def ruleName: Parser[RuleName] =
+    positioned(accept("rule", { case rule: RuleName => rule }))
+
   private def binder: Parser[ParsedTermOrFormula] = positioned(
     (Forall() ^^^ ParsedForall.apply | Exists() ^^^ ParsedExists.apply | ExistsOne() ^^^ ParsedExistsOne.apply) ~
       rep1sep(identifier, Comma()) ~ Dot() ~ termOrFormula ^^ { case f ~ bs ~ _ ~ t => f(bs.map(_.identifier), t) }
@@ -84,6 +89,17 @@ private[parser] object SCParser extends Parsers {
   private def sequent: Parser[ParsedSequent] =
     positioned(termOrFormulaSequence ~ Turnstile() ~ termOrFormulaSequence ^^ { case l ~ _ ~ r => ParsedSequent(l, r) })
 
+  private def proofStep: Parser[ParsedProofStep] = positioned(
+    integerLiteral ~ ruleName ~ repsep(integerLiteral, Comma()) ~ sequent ^^ {
+      case l ~ r ~ p ~ s => ParsedProofStep(l.value, r.name, p.map(_.value), s)
+    }
+  )
+
+  private def proof: Parser[ParsedProof] = positioned(
+    NewLine().* ~> rep1sep(proofStep, NewLine()) <~ NewLine().* ^^ (seq => ParsedProof(seq.toIndexedSeq))
+  )
+
+
   private def parse[T](parser: Parser[T])(tokens: Seq[SCToken]): T = {
     val reader = new SCTokensReader(tokens)
     parser(reader) match {
@@ -98,5 +114,8 @@ private[parser] object SCParser extends Parsers {
 
   def parseSequent(tokens: Seq[SCToken]): ParsedSequent =
     parse(sequent)(tokens)
+
+  def parseProof(tokens: Seq[SCToken]): ParsedProof =
+    parse(proof)(tokens)
 
 }

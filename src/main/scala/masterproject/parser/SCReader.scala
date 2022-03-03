@@ -2,6 +2,7 @@ package masterproject.parser
 
 import lisa.kernel.proof.SequentCalculus.Sequent
 import lisa.kernel.fol.FOL.*
+import lisa.kernel.proof.SCProof
 
 object SCReader {
 
@@ -10,5 +11,8 @@ object SCReader {
 
   def readSequentAscii(str: String, multiline: Boolean = false): Sequent =
     SCResolver.resolveSequent(SCParser.parseSequent(SCLexer.lexingAscii(str, multiline)))
+
+  def readProof(str: String): SCProof =
+    SCResolver.resolveProof(SCParser.parseProof(SCLexer.lexingUnicode(str)))
 
 }

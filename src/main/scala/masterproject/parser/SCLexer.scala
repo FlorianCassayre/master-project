@@ -25,6 +25,10 @@ private[parser] abstract class SCLexer extends RegexParsers {
   protected val SymbolMembership: String
   protected val SymbolEmptySet: String
 
+  protected def newLine: Parser[NewLine] = positioned(
+    "\r?\n".r ^^^ NewLine()
+  )
+
   private val identifierPattern = "[a-zA-Z_][a-zA-Z0-9_]*"
 
   protected def identifier: Parser[Identifier] = positioned(
@@ -34,8 +38,8 @@ private[parser] abstract class SCLexer extends RegexParsers {
     (s"\\?$identifierPattern").r ^^ { str => SchematicIdentifier(str.tail) }
   )
 
-  protected def newLine: Parser[NewLine] = positioned(
-    "\r?\n".r ^^^ NewLine()
+  protected def integerLiteral: Parser[IntegerLiteral] = positioned(
+    "0|-?[1-9][0-9]*".r ^^ { str => IntegerLiteral(str.toInt) }
   )
 
   protected def keywords: Parser[SCToken] = positioned(
@@ -62,9 +66,43 @@ private[parser] abstract class SCLexer extends RegexParsers {
       | ";" ^^^ Semicolon()
   )
 
+  // One gotcha: formulas cannot contain these strings
+  protected def rules: Parser[SCToken] =
+    positioned(
+      ("Rewrite"
+        | "Hypo."
+        | "Cut"
+        | "Left ∧"
+        | "Left ¬"
+        | "Right ∨"
+        | "Right ¬"
+        | "Left ∃"
+        | "Left ∀"
+        | "Left ∨"
+        | "Right ∃"
+        | "Right ∀"
+        | "Right ∧"
+        | "Right ↔"
+        | "Right →"
+        | "Weakening"
+        | "Left →"
+        | "Left ↔"
+        | "L. Refl"
+        | "R. Refl"
+        | "L. SubstEq"
+        | "R. SubstEq"
+        | "L. SubstIff"
+        | "R. SubstIff"
+        | "?Fun Instantiation"
+        | "?Pred Instantiation"
+        | "SCSubproof (hidden)" // FIXME
+        | "Subproof"
+        | "Import") ^^ RuleName.apply
+    )
+
   // Order matters! Special keywords should be matched before identifiers
   protected def tokens: Parser[Seq[SCToken]] =
-    phrase(rep1(keywords | newLine | schematicIdentifier | identifier)) ^^ identity
+    phrase(rep1(rules | keywords | newLine | integerLiteral | schematicIdentifier | identifier)) ^^ identity
 
   def apply(str: String): Seq[SCToken] =
     parse(tokens, str) match {

@@ -2,11 +2,13 @@ package masterproject.parser
 
 import scala.util.parsing.input.Positional
 
+sealed abstract class SCParsed extends Positional
+
 private[parser] object SCParsed {
 
-  case class ParsedSequent(left: Seq[ParsedTermOrFormula], right: Seq[ParsedTermOrFormula]) extends Positional
+  case class ParsedSequent(left: Seq[ParsedTermOrFormula], right: Seq[ParsedTermOrFormula]) extends SCParsed
 
-  sealed abstract class ParsedTermOrFormula extends Positional
+  sealed abstract class ParsedTermOrFormula extends SCParsed
 
   sealed abstract class ParsedName extends ParsedTermOrFormula {
     val identifier: String
@@ -29,12 +31,12 @@ private[parser] object SCParsed {
   case class ParsedMembership(left: ParsedTermOrFormula, right: ParsedTermOrFormula) extends ParsedBinaryOperator
   case class ParsedSubset(left: ParsedTermOrFormula, right: ParsedTermOrFormula) extends ParsedBinaryOperator
   case class ParsedSameCardinality(left: ParsedTermOrFormula, right: ParsedTermOrFormula) extends ParsedBinaryOperator
-  
+
   case class ParsedPower(termOrFormula: ParsedTermOrFormula) extends ParsedTermOrFormula
   case class ParsedUnion(termOrFormula: ParsedTermOrFormula) extends ParsedTermOrFormula
 
   case class ParsedNot(termOrFormula: ParsedTermOrFormula) extends ParsedTermOrFormula
-  
+
   sealed abstract class ParsedProduct extends ParsedTermOrFormula {
     val left: ParsedTermOrFormula
     val right: ParsedTermOrFormula
@@ -51,5 +53,9 @@ private[parser] object SCParsed {
   case class ParsedForall(bound: Seq[String], termOrFormula: ParsedTermOrFormula) extends ParsedBinder
   case class ParsedExists(bound: Seq[String], termOrFormula: ParsedTermOrFormula) extends ParsedBinder
   case class ParsedExistsOne(bound: Seq[String], termOrFormula: ParsedTermOrFormula) extends ParsedBinder
+
+  case class ParsedProofStep(line: Int, ruleName: String, premises: Seq[Int], conclusion: ParsedSequent) extends SCParsed
+
+  case class ParsedProof(steps: IndexedSeq[ParsedProofStep]) extends SCParsed
 
 }
