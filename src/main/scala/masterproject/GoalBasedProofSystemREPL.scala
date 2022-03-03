@@ -1,6 +1,6 @@
 package masterproject
 
-import masterproject.parser.{SCAsciiParser, SCResolver}
+import masterproject.parser.SCReader
 import masterproject.GoalBasedProofSystem.*
 
 import java.util.Scanner
@@ -70,7 +70,7 @@ object GoalBasedProofSystemREPL {
   def stateReducer(state: REPLState, input: String): (REPLState, REPLOutput) = state match {
     case StateInitial(theory) =>
       Try {
-        SCResolver.resolveFormula(SCAsciiParser.parseTermOrFormula(input))
+        SCReader.readFormulaAscii(input)
       } match {
         case Success(formula) =>
           (StateTactical(formula, formulaToProofState(formula), IndexedSeq.empty, Seq.empty, theory),
@@ -101,7 +101,7 @@ object GoalBasedProofSystemREPL {
           } else if(remaining.forall(_.isDigit)) {
             Some(Seq(remaining.toInt))
           } else {
-            Try(SCResolver.resolveFormula(SCAsciiParser.parseTermOrFormula(remaining))).toOption.map(Seq(_))
+            Try(SCReader.readFormulaAscii(remaining)).toOption.map(Seq(_))
           }
         argsOpt match {
           case Some(args) =>
