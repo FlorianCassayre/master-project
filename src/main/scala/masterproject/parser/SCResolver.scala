@@ -4,7 +4,7 @@ import lisa.kernel.Printer
 import masterproject.parser.SCParsed.*
 import lisa.kernel.fol.FOL.*
 import lisa.kernel.proof.SCProof
-import lisa.kernel.proof.SequentCalculus.{SCProofStep, Sequent}
+import lisa.kernel.proof.SequentCalculus.*
 import masterproject.SCProofStepFinder
 import masterproject.SCProofStepFinder.NoProofStepFound
 import masterproject.parser.ReadingException.ResolutionException
@@ -91,36 +91,36 @@ private[parser] object SCResolver {
   }
 
   def resolveProof(tree: ParsedProof): SCProof = {
-    val premisesArity = Map(
-      "Rewrite" -> 1,
-      "Hypo." -> 0,
-      "Cut" -> 2,
-      "Left ∧" -> 1,
-      "Left ¬" -> 1,
-      "Right ∨" -> 1,
-      "Right ¬" -> 1,
-      "Left ∃" -> 1,
-      "Left ∀" -> 1,
-      "Left ∨" -> -1,
-      "Right ∃" -> 1,
-      "Right ∀" -> 1,
-      "Right ∧" -> -1,
-      "Right ↔" -> 2,
-      "Right →" -> 1,
-      "Weakening" -> 1,
-      "Left →" -> 2,
-      "Left ↔" -> 1,
-      "L. Refl" -> 1,
-      "R. Refl" -> 0,
-      "L. SubstEq" -> 1,
-      "R. SubstEq" -> 1,
-      "L. SubstIff" -> 1,
-      "R. SubstIff" -> 1,
-      "?Fun Instantiation" -> 1,
-      "?Pred Instantiation" -> 1,
-      "SCSubproof (hidden)" -> 0, // FIXME?
-      "Subproof" -> -1,
-      "Import" -> 1,
+    val stepsMetadata: Map[String, (Int, Class[_])] = Map(
+      "Rewrite" -> (1, classOf[Rewrite]),
+      "Hypo." -> (0, classOf[Hypothesis]),
+      "Cut" -> (2, classOf[Cut]),
+      "Left ∧" -> (1, classOf[LeftAnd]),
+      "Left ¬" -> (1, classOf[LeftNot]),
+      "Right ∨" -> (1, classOf[RightOr]),
+      "Right ¬" -> (1, classOf[RightNot]),
+      "Left ∃" -> (1, classOf[LeftExists]),
+      "Left ∀" -> (1, classOf[LeftForall]),
+      "Left ∨" -> (-1, classOf[LeftOr]),
+      "Right ∃" -> (1, classOf[RightExists]),
+      "Right ∀" -> (1, classOf[RightForall]),
+      "Right ∧" -> (-1, classOf[RightAnd]),
+      "Right ↔" -> (2, classOf[RightIff]),
+      "Right →" -> (1, classOf[RightImplies]),
+      "Weakening" -> (1, classOf[Weakening]),
+      "Left →" -> (2, classOf[LeftImplies]),
+      "Left ↔" -> (1, classOf[LeftIff]),
+      "L. Refl" -> (1, classOf[LeftRefl]),
+      "R. Refl" -> (0, classOf[RightRefl]),
+      "L. SubstEq" -> (1, classOf[LeftSubstEq]),
+      "R. SubstEq" -> (1, classOf[RightSubstEq]),
+      "L. SubstIff" -> (1, classOf[LeftSubstIff]),
+      "R. SubstIff" -> (1, classOf[RightSubstIff]),
+      "?Fun Instantiation" -> (1, classOf[InstFunSchema]),
+      "?Pred Instantiation" -> (1, classOf[InstPredSchema]),
+      "SCSubproof (hidden)" -> (0, classOf[SCSubproof]), // FIXME?
+      "Subproof" -> (-1, classOf[SCSubproof]),
+      "Import" -> (1, null),
     )
 
     def resolveProofLevel(tree: ParsedProof): SCProof = {
@@ -137,7 +137,7 @@ private[parser] object SCResolver {
             }
         }
 
-        val expectedArity = premisesArity(step.ruleName)
+        val (expectedArity, clazz) = stepsMetadata(step.ruleName)
         val actualArity = step.premises.size
         if(expectedArity != -1 && expectedArity != actualArity) {
           throw ResolutionException(s"Rule ${step.ruleName} expects $expectedArity premises, but got $actualArity instead", step.pos)
@@ -175,14 +175,12 @@ private[parser] object SCResolver {
           (currentSteps, sequent +: currentImports, newLine)
         } else {
           val currentProof = SCProof(currentSteps, currentImports)
-          val newProof = Try(SCProofStepFinder.proofStepFinder(currentProof, sequent, step.premises)) match {
-            case Success(value) if value.steps.size == currentSteps.size + 1 => value
-            case Success(_) => throw ResolutionException("Limitation of SCProofStepFinder", step.pos) // TODO
-            case Failure(exception: NoProofStepFound) => throw ResolutionException(exception.getMessage, step.pos)
-            case Failure(e) => throw new Exception(e)
+          val newStep =
+            SCProofStepFinder
+              .findPossibleProofSteps(currentProof, sequent, step.premises).find(candidateStep => candidateStep.getClass.getName == clazz.getName && candidateStep.premises == step.premises) match {
+            case Some(value) => value
+            case None => assert(false)
           }
-
-          val newStep = newProof.steps.last
 
           (currentSteps :+ newStep, currentImports, newLine)
         }

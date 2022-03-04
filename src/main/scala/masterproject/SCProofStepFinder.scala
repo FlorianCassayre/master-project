@@ -8,28 +8,13 @@ import lisa.kernel.Printer
 import scala.collection.View
 
 /**
- * The proof step finder module.
+ * This module aims at reconstructing kernel proof steps using only the conclusion and the premises.
  */
 object SCProofStepFinder {
 
   final case class NoProofStepFound(message: String) extends Exception(message)
 
-  /**
-   * Attempts to create a new proof with the given conclusion.
-   * This routine will concatenate at most one proof step to the existing proof.
-   * If there exists several possible ways to build the proof, the routine will pick one of them.
-   * Usually it will try to pick "the most general one", but it is not guaranteed (however it shouldn't matter).
-   * An exception is raised the step cannot be found.
-   * While the resulting proof should always be correct, it should no be trusted.
-   *
-   * @param proof      the existing proof
-   * @param conclusion the new proof conclusion
-   * @param premises   optional premises
-   * @return a new proof with the given conclusion
-   */
-  def proofStepFinder(proof: SCProof, conclusion: Sequent, premises: Seq[Int] = Seq.empty): SCProof = {
-    // In the future we might want to add a `strict` flag to allow the user to detect useless steps, oddly organized proofs, etc.
-
+  def findPossibleProofSteps(proof: SCProof, conclusion: Sequent, premises: Seq[Int] = Seq.empty): View[SCProofStep] = {
     require(premises.forall(i => proof.steps.indices.contains(i) || proof.imports.indices.contains(-(i + 1))))
 
     val checker = SCProofChecker.checkSingleSCStep
@@ -39,28 +24,19 @@ object SCProofStepFinder {
     val searchedSteps = premises.map(i => (proof.getSequent(i), i))
 
     if (right.isEmpty) {
-      throw NoProofStepFound("Cannot prove a right-empty sequent")
-    }
-
-    val rewritten = premises.distinct.find(i => isSameSequent(conclusion, proof.getSequent(i)))
-    if (rewritten.nonEmpty) {
-      if (rewritten.get < 0 || proof.getSequent(rewritten.get) != conclusion) {
-        // We still need to rewrite the conclusion to match the desired conclusion
-        proof.withNewSteps(IndexedSeq(Rewrite(conclusion, rewritten.get)))
-      } else {
-        // Trivial
-        proof
-      }
+      // We know in advance that it's going to be impossible
+      View.empty
     } else {
-      lazy val rightRefl = right.view.collect {
+      val rightRefl = right.view.collect {
         case f@PredicateFormula(`equality`, Seq(l, r)) if isSame(l, r) => f
       }
-      val step = {
-        if (left.sizeIs == 1 && right.sizeIs == 1 && isSameSet(left, right)) {
-          Hypothesis(conclusion, left.head)
-        } else if (left.isEmpty && right.sizeIs == 1 && rightRefl.nonEmpty) {
-          RightRefl(conclusion, rightRefl.head)
-        } else if (searchedSteps.nonEmpty) { // The following steps require premises
+
+      val viewRewrite: View[SCProofStep] = premises.distinct.view.filter(i => isSameSequent(conclusion, proof.getSequent(i))).map(Rewrite(conclusion, _))
+      val viewHypothesis: View[SCProofStep] = left.view.filter(l => right.exists(r => isSameSet(Set(l), Set(r)))).map(Hypothesis(conclusion, _))
+      val viewRightRefl: View[SCProofStep] = if(left.isEmpty && right.sizeIs == 1) rightRefl.map(RightRefl(conclusion, _)) else View.empty
+
+      val viewOtherSteps: View[SCProofStep] = {
+        if (searchedSteps.nonEmpty) { // The following steps require premises
           def collect[L <: FormulaLabel, A](f: PartialFunction[Formula, (L, A)])(formulas: Set[Formula]): Map[L, Set[A]] =
             formulas.collect(f).groupBy(_._1).view.mapValues(_.map(_._2)).toMap.withDefaultValue(Set.empty)
 
@@ -127,7 +103,7 @@ object SCProofStepFinder {
             case BinderFormula(label, bound, inner) => BinderFormula(label, bound, inverseFormulaSubstitution(inner, g, l))
           }
 
-          // A schematic function for substitution rules
+          // An arbitrary schematic function and predicate for substitution rules
           val phi = SchematicFunctionLabel("f", 0)
           val psi = SchematicPredicateLabel("p", 0)
 
@@ -135,6 +111,9 @@ object SCProofStepFinder {
 
           val rules1: View[SCProofStep] = searchedSteps.view.flatMap { case (s, i) =>
             View(
+              // Special rules
+              View(Weakening(conclusion, i)),
+
               // Left rules
               leftBinaryConnectors(And).view.map((l, r) => LeftAnd(conclusion, i, l, r)),
               leftBinaryConnectors(Iff).view.map((l, r) => LeftIff(conclusion, i, l, r)),
@@ -144,7 +123,6 @@ object SCProofStepFinder {
               ),
               leftBinders(Exists).view.map(b => LeftExists(conclusion, i, b.inner, b.bound)),
               collectExistsOneDef(s.left).map { case (x, phi) => LeftExistsOne(conclusion, i, phi, x) },
-              View(Weakening(conclusion, i)),
 
               s.left.view.map(f => LeftRefl(conclusion, i, f)),
 
@@ -158,7 +136,6 @@ object SCProofStepFinder {
                 s.right.view.flatMap(inverseInstantiation(b.inner, _, Some(b.bound)).flatten.map(t => RightExists(conclusion, i, b.inner, b.bound, t)))
               ),
               collectExistsOneDef(s.right).map { case (x, phi) => RightExistsOne(conclusion, i, phi, x) },
-              View(Weakening(conclusion, i)),
 
               // Substitutions
               leftEquals.view.flatMap(pair => View(pair, pair.swap)).flatMap { case (ss, tt) =>
@@ -201,17 +178,37 @@ object SCProofStepFinder {
           }
           }
 
-          (rules1 ++ rules2).find(step => checker(proof.steps.size, step, i => proof(i).bot, Some(proof.imports.size))._1) match {
-            case Some(step) => step
-            case None => throw NoProofStepFound("Cannot prove sequent")
-          }
+          (rules1 ++ rules2).filter(step => checker(proof.steps.size, step, i => proof(i).bot, Some(proof.imports.size))._1)
         } else {
-          // This case is only here to provide a more helpful message
-          throw NoProofStepFound("Cannot prove sequent; remark that the first step should not rely on any assumption")
+          View.empty
         }
       }
 
-      proof.withNewSteps(IndexedSeq(step))
+      // For performance reasons we start with the inexpensive steps first
+
+      viewRewrite ++ viewHypothesis ++ viewRightRefl ++ viewOtherSteps
+    }
+  }
+
+  /**
+   * Attempts to create a new proof with the given conclusion.
+   * This routine will concatenate at most one proof step to the existing proof.
+   * If there exists several possible ways to build the proof, the routine will pick one of them.
+   * Usually it will try to pick "the most general one", but it is not guaranteed (however it shouldn't matter).
+   * An exception is raised the step cannot be found.
+   * While the resulting proof should always be correct, it should no be trusted.
+   *
+   * @param proof      the existing proof
+   * @param conclusion the new proof conclusion
+   * @param premises   optional premises
+   * @param filter     an optional filter on the steps found
+   * @return a new proof with the given conclusion
+   */
+  def proofStepFinder(proof: SCProof, conclusion: Sequent, premises: Seq[Int] = Seq.empty, filter: SCProofStep => Boolean = _ => true): SCProof = {
+    val candidates = findPossibleProofSteps(proof, conclusion, premises)
+    candidates.find(filter) match {
+      case Some(step) => proof.withNewSteps(IndexedSeq(step))
+      case None => throw NoProofStepFound("")
     }
   }
 }

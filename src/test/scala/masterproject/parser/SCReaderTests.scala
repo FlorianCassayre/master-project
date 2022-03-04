@@ -1,5 +1,6 @@
 package masterproject.parser
 
+import lisa.kernel.Printer
 import lisa.kernel.proof.SCProofChecker
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -44,6 +45,7 @@ class SCReaderTests extends AnyFunSuite {
       """
     ).foreach { input =>
       val proof = SCReader.readProof(input)
+      println(Printer.prettySCProof(proof))
       // We don't check strictly if the rules have been reconstructed the same, since this is not yet guaranteed
       assert(SCProofChecker.checkSCProof(proof)._1)
     }
