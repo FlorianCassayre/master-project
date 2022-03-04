@@ -25,17 +25,20 @@ private[parser] trait SCLexer extends RegexParsers {
   protected val SymbolMembership: String
   protected val SymbolEmptySet: String
 
-  protected def newLine: Parser[NewLine] = positioned(
-    "\r?\n".r ^^^ NewLine()
+  protected def initialIndentation: Parser[InitialIndentation] = positioned(
+    " *".r ^^ (str => InitialIndentation(str.length))
+  )
+  protected def newLine: Parser[NewLineWithIndentation] = positioned(
+    "\r?\n *".r ^^ (str => NewLineWithIndentation(str.count(_ == ' ')))
   )
 
   private val identifierPattern = "[a-zA-Z_][a-zA-Z0-9_]*"
 
   private def identifier: Parser[Identifier] = positioned(
-    identifierPattern.r ^^ { str => Identifier(str) }
+    identifierPattern.r ^^ (str => Identifier(str))
   )
   private def schematicIdentifier: Parser[SchematicIdentifier] = positioned(
-    (s"\\?$identifierPattern").r ^^ { str => SchematicIdentifier(str.tail) }
+    (s"\\?$identifierPattern").r ^^ (str => SchematicIdentifier(str.tail))
   )
 
   private def keywords: Parser[SCToken] = positioned(
@@ -67,7 +70,7 @@ private[parser] trait SCLexer extends RegexParsers {
 
   // Order matters! Special keywords should be matched before identifiers
   protected def tokens: Parser[Seq[SCToken]] =
-    phrase(rep1(standardTokens))
+    phrase(initialIndentation ~ rep(standardTokens) ^^ { case h ~ t => h +: t })
 
   final def apply(str: String): Seq[SCToken] =
     parse(tokens, str) match {
@@ -84,7 +87,7 @@ object SCLexer {
       "0|-?[1-9][0-9]*".r ^^ { str => IntegerLiteral(str.toInt) }
     )
 
-    private def rules: Parser[SCToken] =
+    private def rules: Parser[RuleName] =
       positioned(
         ("Rewrite"
           | "Hypo."
@@ -118,7 +121,7 @@ object SCLexer {
       )
 
     override protected def tokens: Parser[Seq[SCToken]] =
-      phrase(rep1(rules | integerLiteral | standardTokens))
+      phrase(initialIndentation ~ rep(rules | integerLiteral | standardTokens) ^^ { case h ~ t => h +: t })
   }
 
   private trait SCLexerAscii extends SCLexer {
@@ -154,23 +157,34 @@ object SCLexer {
   private object SCLexerStandardUnicode extends SCLexerUnicode
   private object SCLexerExtendedUnicode extends SCLexerExtended with SCLexerUnicode
 
-  private def postProcessor(multiline: Boolean)(tokens: Seq[SCToken]): Seq[SCToken] =
+  private def postProcessor(lines: Boolean, indentation: Boolean)(tokens: Seq[SCToken]): Seq[SCToken] =
     val tokensWithEnd = tokens :+ End()
-    if(multiline)
-      tokensWithEnd.filter {
-        case NewLine() => false
-        case _ => true
-      }
-    else
-      tokensWithEnd
+    tokensWithEnd.flatMap {
+      case token @ NewLineWithIndentation(n) =>
+        val tokenLine = NewLine()
+        tokenLine.pos = token.pos
+        val tokenIndentation = Indentation(n)
+        tokenIndentation.pos = token.pos
+        if(indentation)
+          Seq(tokenLine, tokenIndentation)
+        else if(lines)
+          Seq(tokenLine)
+        else
+          Seq.empty
+      case token @ InitialIndentation(n) =>
+        val newToken = Indentation(n)
+        newToken.pos = token.pos
+        if(indentation) Seq(newToken) else Seq.empty
+      case other => Seq(other)
+    }
 
-  def lexingStandardAscii(str: String, multiline: Boolean = false): Seq[SCToken] =
-    postProcessor(multiline)(SCLexerStandardAscii(str))
+  def lexingStandardAscii(str: String, lines: Boolean = false, indentation: Boolean = false): Seq[SCToken] =
+    postProcessor(lines, indentation)(SCLexerStandardAscii(str))
 
-  def lexingStandardUnicode(str: String, multiline: Boolean = false): Seq[SCToken] =
-    postProcessor(multiline)(SCLexerStandardUnicode(str))
+  def lexingStandardUnicode(str: String, lines: Boolean = false, indentation: Boolean = false): Seq[SCToken] =
+    postProcessor(lines, indentation)(SCLexerStandardUnicode(str))
 
   def lexingExtendedUnicode(str: String): Seq[SCToken] =
-    postProcessor(multiline = false)(SCLexerExtendedUnicode(str))
+    postProcessor(lines = true, indentation = true)(SCLexerExtendedUnicode(str))
 
 }

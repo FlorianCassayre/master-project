@@ -118,81 +118,141 @@ private[parser] object SCResolver {
       "R. SubstIff" -> (1, classOf[RightSubstIff]),
       "?Fun Instantiation" -> (1, classOf[InstFunSchema]),
       "?Pred Instantiation" -> (1, classOf[InstPredSchema]),
-      "SCSubproof (hidden)" -> (0, classOf[SCSubproof]), // FIXME?
+      "SCSubproof (hidden)" -> (0, classOf[SCSubproof]), // FIXME (name)
       "Subproof" -> (-1, classOf[SCSubproof]),
       "Import" -> (1, null),
     )
 
-    def resolveProofLevel(tree: ParsedProof): SCProof = {
-      val (steps, imports, _) = tree.steps.foldLeft((IndexedSeq.empty[SCProofStep], IndexedSeq.empty[Sequent], None: Option[Int])) { case ((currentSteps, currentImports, previousLine), step) =>
-        previousLine match {
-          case Some(previousIndex) =>
-            val expectedIndex = previousIndex + 1
-            if(step.line != expectedIndex) {
-              throw ResolutionException(s"Expected line $expectedIndex, but got ${step.line} instead", step.pos)
-            }
-          case None =>
-            if(step.line > 0) {
-              throw ResolutionException(s"The index of the first proof step cannot be strictly positive", step.pos)
-            }
+    case class StackEntry(steps: IndexedSeq[SCProofStep], imports: IndexedSeq[Sequent], subproofPremises: Seq[Int], nextLineNumber: Int, indentation: Int)
+
+    def foldSubproofs(stack: Seq[StackEntry], position: Position): Option[SCSubproof] = {
+      stack.foldLeft(None: Option[SCSubproof]) { (subproofOpt, entry) =>
+        val premises = entry.subproofPremises
+        val newSteps = subproofOpt match {
+          case Some(proof) => entry.steps :+ proof.copy(premises = premises)
+          case None => entry.steps
         }
-
-        val (expectedArity, clazz) = stepsMetadata(step.ruleName)
-        val actualArity = step.premises.size
-        if(expectedArity != -1 && expectedArity != actualArity) {
-          throw ResolutionException(s"Rule ${step.ruleName} expects $expectedArity premises, but got $actualArity instead", step.pos)
+        if(newSteps.isEmpty) {
+          throw ResolutionException("This proof or subproof is incomplete", position)
         }
+        Some(SCSubproof(SCProof(newSteps, entry.imports)))
+      }
+    }
 
-        val isImport = step.ruleName == "Import"
+    val (finalStack, finalExpectedDeeperIndentation) = tree.steps.foldLeft(
+      (Seq.empty[StackEntry], true)
+    ) { case ((stack, expectedDeeperIndentation), parsedStep) =>
+      // The true indentation of the current step
+      val rightIndentation = parsedStep.indentation + parsedStep.line.toString.length
 
-        if(step.line < 0) {
-          if(!isImport) {
-            throw ResolutionException("Negative step indices must necessarily be import statements", step.pos)
+      val newStack =
+        if(expectedDeeperIndentation) { // Either the first line of a subproof or the first line of the proof
+          stack match {
+            case entry +: _ => // First step inside a subproof
+              if (rightIndentation <= entry.indentation) {
+                throw ResolutionException("The content of this subproof must be indented further", parsedStep.stepPosition)
+              }
+              val importsSize = entry.subproofPremises.size
+              if(-parsedStep.line != importsSize) {
+                throw ResolutionException(s"The parent subproof declared $importsSize premise(s), therefore this line must start with index ${-importsSize}", parsedStep.stepPosition)
+              }
+            case _ => // Very first line of the proof
+              ()
           }
-        } else {
-          if(isImport) {
-            throw ResolutionException("Import statements can only appear on negative indices steps", step.pos)
+          if (parsedStep.line > 0) {
+            throw ResolutionException(s"The index of the first proof step cannot be strictly positive", parsedStep.stepPosition)
+          }
+          val entry = StackEntry(IndexedSeq.empty, IndexedSeq.empty, Seq.empty, parsedStep.line, rightIndentation)
+          entry +: stack
+        } else { // A line at the same level or lower
+          assert(stack.nonEmpty) // Invariant
+
+          val indentationIndex = stack.zipWithIndex.find { case (entry, _) => entry.indentation == rightIndentation }.map(_._2)
+          indentationIndex match {
+            case Some(delta) =>
+              val previousEntry: StackEntry = stack(delta)
+              previousEntry.copy(steps = previousEntry.steps ++ foldSubproofs(stack.take(delta), parsedStep.stepPosition).map(sp => sp.copy(premises = previousEntry.subproofPremises)).toSeq) +: stack.drop(delta + 1)
+            case None =>
+              throw ResolutionException("This step is not properly indented", parsedStep.stepPosition)
           }
         }
 
-        if(isImport && step.premises != Seq(0)) {
-          throw ResolutionException(s"Import statements must have exactly one premise, and it should be equal to zero", step.pos)
-        }
+      assert(newStack.nonEmpty) // Invariant
 
+      val entry = newStack.head
+      val tail = newStack.tail
+
+      if (parsedStep.line != entry.nextLineNumber) {
+        throw ResolutionException(s"Expected line to be numbered ${entry.nextLineNumber}, but got ${parsedStep.line} instead", parsedStep.stepPosition)
+      }
+
+      val (expectedArity, clazz) = stepsMetadata(parsedStep.ruleName)
+      val actualArity = parsedStep.premises.size
+      if(expectedArity != -1 && expectedArity != actualArity) {
+        throw ResolutionException(s"Rule ${parsedStep.ruleName} expects $expectedArity premises, but got $actualArity instead", parsedStep.stepPosition)
+      }
+
+      val isImport = parsedStep.ruleName == "Import"
+      val isSubproof = parsedStep.ruleName == "Subproof" // Hidden is excluded from this
+
+      if(parsedStep.ruleName == "SCSubproof (hidden)") {
+        throw ResolutionException("Cannot parse a hidden subproof", parsedStep.stepPosition)
+      }
+
+      if(parsedStep.line < 0) {
         if(!isImport) {
-          step.premises.foreach { premise =>
-            if((premise < 0 && -premise > currentImports.size) || (premise >= 0 && premise >= currentSteps.size)) {
-              throw ResolutionException(s"Premise $premise is out of bounds", step.pos)
-            }
-          }
+          throw ResolutionException("Negative step indices must necessarily be import statements", parsedStep.stepPosition)
         }
-
-        val sequent = resolveSequent(step.conclusion)
-
-        val newLine = Some(step.line)
-
+      } else {
         if(isImport) {
-          (currentSteps, sequent +: currentImports, newLine)
-        } else {
-          val currentProof = SCProof(currentSteps, currentImports)
-          val newStep =
-            SCProofStepFinder
-              .findPossibleProofSteps(currentProof, sequent, step.premises).find(candidateStep => candidateStep.getClass.getName == clazz.getName && candidateStep.premises == step.premises) match {
-            case Some(value) => value
-            case None => throw ResolutionException("Couldn't reconstruct this kernel step", step.pos)
-          }
-
-          (currentSteps :+ newStep, currentImports, newLine)
+          throw ResolutionException("Import statements can only appear on negative indices steps", parsedStep.stepPosition)
         }
       }
 
-      SCProof(steps, imports)
+      if(isImport && parsedStep.premises != Seq(0)) {
+        throw ResolutionException("Import statements must have exactly one premise, and it should be equal to zero", parsedStep.stepPosition)
+      }
+
+      if(!isImport) {
+        parsedStep.premises.foreach { premise =>
+          if((premise < 0 && -premise > entry.imports.size) || (premise >= 0 && premise >= entry.steps.size)) {
+            throw ResolutionException(s"Premise $premise is out of bounds", parsedStep.stepPosition)
+          }
+        }
+      }
+
+      val sequent = resolveSequent(parsedStep.conclusion)
+
+      val newLine = Some(parsedStep.line)
+
+      val newEntry = entry.copy(nextLineNumber = entry.nextLineNumber + 1, subproofPremises = Seq.empty)
+
+      if(isImport) {
+        (newEntry.copy(imports = sequent +: newEntry.imports) +: tail, false)
+      } else if(isSubproof) {
+        (newEntry.copy(subproofPremises = parsedStep.premises) +: tail, true)
+      } else {
+        val currentProof = SCProof(newEntry.steps, newEntry.imports)
+        val newStep =
+          SCProofStepFinder
+            .findPossibleProofSteps(currentProof, sequent, parsedStep.premises).find(candidateStep => candidateStep.getClass.getName == clazz.getName && candidateStep.premises == parsedStep.premises) match {
+            case Some(stepFound) => stepFound
+            case None =>
+              throw ResolutionException("Couldn't reconstruct this kernel step", parsedStep.stepPosition)
+          }
+
+        (newEntry.copy(steps = newEntry.steps :+ newStep) +: tail, isSubproof)
+      }
     }
 
-    // TODO for now we ignore subproofs (because they rely on indentation to eliminate ambiguity)
-    resolveProofLevel(tree)
-  }
+    val lastPosition = tree.steps.last.stepPosition
+    if(finalExpectedDeeperIndentation) {
+      throw ResolutionException("Empty trailing subproof", lastPosition)
+    }
 
+    val finalStep = foldSubproofs(finalStack, lastPosition)
+    finalStep.get.sp
+  }
 
   def resolveFormula(tree: ParsedTermOrFormula): Formula =
     resolveFormulaContext(tree)(ScopedContext(variables = Set.empty))

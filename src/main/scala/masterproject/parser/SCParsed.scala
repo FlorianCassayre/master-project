@@ -1,6 +1,6 @@
 package masterproject.parser
 
-import scala.util.parsing.input.Positional
+import scala.util.parsing.input.{Position, Positional}
 
 sealed abstract class SCParsed extends Positional
 
@@ -54,7 +54,7 @@ private[parser] object SCParsed {
   case class ParsedExists(bound: Seq[String], termOrFormula: ParsedTermOrFormula) extends ParsedBinder
   case class ParsedExistsOne(bound: Seq[String], termOrFormula: ParsedTermOrFormula) extends ParsedBinder
 
-  case class ParsedProofStep(line: Int, ruleName: String, premises: Seq[Int], conclusion: ParsedSequent) extends SCParsed
+  case class ParsedProofStep(stepPosition: Position, indentation: Int, line: Int, ruleName: String, premises: Seq[Int], conclusion: ParsedSequent) extends SCParsed
 
   case class ParsedProof(steps: IndexedSeq[ParsedProofStep]) extends SCParsed
 

@@ -25,6 +25,11 @@ private[parser] object SCParser extends Parsers {
   private def ruleName: Parser[RuleName] =
     positioned(accept("rule", { case rule: RuleName => rule }))
 
+  private def indentation: Parser[Indentation] =
+    positioned(accept("indentation", { case indentation: Indentation => indentation }))
+  private def newLine: Parser[NewLine] =
+    positioned(accept("new line", { case line: NewLine => line }))
+
   private def binder: Parser[ParsedTermOrFormula] = positioned(
     (Forall() ^^^ ParsedForall.apply | Exists() ^^^ ParsedExists.apply | ExistsOne() ^^^ ParsedExistsOne.apply) ~
       rep1sep(identifier, Comma()) ~ Dot() ~ termOrFormula ^^ { case f ~ bs ~ _ ~ t => f(bs.map(_.identifier), t) }
@@ -90,13 +95,13 @@ private[parser] object SCParser extends Parsers {
     positioned(termOrFormulaSequence ~ Turnstile() ~ termOrFormulaSequence ^^ { case l ~ _ ~ r => ParsedSequent(l, r) })
 
   private def proofStep: Parser[ParsedProofStep] = positioned(
-    integerLiteral ~ ruleName ~ repsep(integerLiteral, Comma()) ~ sequent ^^ {
-      case l ~ r ~ p ~ s => ParsedProofStep(l.value, r.name, p.map(_.value), s)
+    indentation ~ integerLiteral ~ ruleName ~ repsep(integerLiteral, Comma()) ~ sequent ^^ {
+      case i ~ l ~ r ~ p ~ s => ParsedProofStep(l.pos, i.spaces, l.value, r.name, p.map(_.value), s)
     }
   )
 
   private def proof: Parser[ParsedProof] = positioned(
-    NewLine().* ~> rep1sep(proofStep, NewLine()) <~ NewLine().* ^^ (seq => ParsedProof(seq.toIndexedSeq))
+    (indentation ~ newLine).* ~> rep1sep(proofStep, newLine) <~ (newLine ~ indentation).* ^^ (steps => ParsedProof(steps.toIndexedSeq))
   )
 
 

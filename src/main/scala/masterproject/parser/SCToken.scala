@@ -11,6 +11,11 @@ private[parser] object SCToken {
   
   case class IntegerLiteral(value: Int) extends SCToken
 
+  case class Indentation(spaces: Int) extends SCToken
+
+  case class NewLineWithIndentation(spaces: Int) extends SCToken
+  case class InitialIndentation(spaces: Int) extends SCToken
+
   // The reason these *must* be case classes is because they extend `Positional`,
   // which contains a position attribute (that shouldn't be shared between instances)
   
@@ -38,9 +43,9 @@ private[parser] object SCToken {
   case class Comma() extends SCToken
   case class Semicolon() extends SCToken
 
-  case class NewLine() extends SCToken
-  
   case class RuleName(name: String) extends SCToken
+  
+  case class NewLine() extends SCToken
 
   case class End() extends SCToken
 
