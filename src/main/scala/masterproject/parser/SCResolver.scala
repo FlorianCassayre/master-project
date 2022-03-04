@@ -179,7 +179,7 @@ private[parser] object SCResolver {
             SCProofStepFinder
               .findPossibleProofSteps(currentProof, sequent, step.premises).find(candidateStep => candidateStep.getClass.getName == clazz.getName && candidateStep.premises == step.premises) match {
             case Some(value) => value
-            case None => assert(false)
+            case None => throw ResolutionException("Couldn't reconstruct this kernel step", step.pos)
           }
 
           (currentSteps :+ newStep, currentImports, newLine)

@@ -103,19 +103,19 @@ private[parser] object SCParser extends Parsers {
   private def parse[T](parser: Parser[T])(tokens: Seq[SCToken]): T = {
     val reader = new SCTokensReader(tokens)
     parser(reader) match {
-      case e @ NoSuccess(msg, next) => throw ParsingException(msg, next.pos, e.toString)
+      case e @ NoSuccess(msg, next) => throw ParsingException(msg, next.pos)
       case Success(result, next) => result
       case e => throw new MatchError(e)
     }
   }
 
   def parseTermOrFormula(tokens: Seq[SCToken]): ParsedTermOrFormula =
-    parse(termOrFormula)(tokens)
+    parse(positioned(termOrFormula <~ End()))(tokens)
 
   def parseSequent(tokens: Seq[SCToken]): ParsedSequent =
-    parse(sequent)(tokens)
+    parse(positioned(sequent <~ End()))(tokens)
 
   def parseProof(tokens: Seq[SCToken]): ParsedProof =
-    parse(proof)(tokens)
+    parse(positioned(proof <~ End()))(tokens)
 
 }

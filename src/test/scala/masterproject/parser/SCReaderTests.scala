@@ -14,7 +14,8 @@ class SCReaderTests extends AnyFunSuite {
       "a |- b",
       """(a /\ b => ((c <=> d))) |- exists x. f(x)""",
       "forall x,y    , z.exists  w . f(g(w), (x),y)|-a",
-      "|- {}={x, {{},y}}"
+      "|- {}={x, {{},y}}",
+      "|- Subproof"
     ).foreach(s => SCReader.readSequentAscii(s))
   }
 
@@ -24,7 +25,9 @@ class SCReaderTests extends AnyFunSuite {
       "|--",
       "a",
       "a |- b |- c",
-      "|- w = {x,y,z}"
+      "|- w = {x,y,z}",
+      "|- a b",
+      "|- (x = y"
     ).foreach(s => Try(SCReader.readSequentAscii(s)).isFailure)
   }
 

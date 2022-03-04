@@ -7,12 +7,12 @@ import lisa.kernel.proof.SCProof
 object SCReader {
 
   def readFormulaAscii(str: String, multiline: Boolean = false): Formula =
-    SCResolver.resolveFormula(SCParser.parseTermOrFormula(SCLexer.lexingAscii(str, multiline)))
+    SCResolver.resolveFormula(SCParser.parseTermOrFormula(SCLexer.lexingStandardAscii(str, multiline)))
 
   def readSequentAscii(str: String, multiline: Boolean = false): Sequent =
-    SCResolver.resolveSequent(SCParser.parseSequent(SCLexer.lexingAscii(str, multiline)))
+    SCResolver.resolveSequent(SCParser.parseSequent(SCLexer.lexingStandardAscii(str, multiline)))
 
   def readProof(str: String): SCProof =
-    SCResolver.resolveProof(SCParser.parseProof(SCLexer.lexingUnicode(str)))
+    SCResolver.resolveProof(SCParser.parseProof(SCLexer.lexingExtendedUnicode(str)))
 
 }

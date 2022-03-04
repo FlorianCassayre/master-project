@@ -42,4 +42,6 @@ private[parser] object SCToken {
   
   case class RuleName(name: String) extends SCToken
 
+  case class End() extends SCToken
+
 }

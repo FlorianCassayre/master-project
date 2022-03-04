@@ -7,7 +7,7 @@ import masterproject.parser.SCToken.*
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.RegexParsers
 
-private[parser] abstract class SCLexer extends RegexParsers {
+private[parser] trait SCLexer extends RegexParsers {
 
   override def skipWhitespace: Boolean = true
   override protected val whiteSpace: Regex = "[ \t\f]+".r
@@ -31,18 +31,14 @@ private[parser] abstract class SCLexer extends RegexParsers {
 
   private val identifierPattern = "[a-zA-Z_][a-zA-Z0-9_]*"
 
-  protected def identifier: Parser[Identifier] = positioned(
+  private def identifier: Parser[Identifier] = positioned(
     identifierPattern.r ^^ { str => Identifier(str) }
   )
-  protected def schematicIdentifier: Parser[SchematicIdentifier] = positioned(
+  private def schematicIdentifier: Parser[SchematicIdentifier] = positioned(
     (s"\\?$identifierPattern").r ^^ { str => SchematicIdentifier(str.tail) }
   )
 
-  protected def integerLiteral: Parser[IntegerLiteral] = positioned(
-    "0|-?[1-9][0-9]*".r ^^ { str => IntegerLiteral(str.toInt) }
-  )
-
-  protected def keywords: Parser[SCToken] = positioned(
+  private def keywords: Parser[SCToken] = positioned(
     SymbolForall ^^^ Forall()
       | SymbolExistsOne ^^^ ExistsOne()
       | SymbolExists ^^^ Exists()
@@ -66,47 +62,16 @@ private[parser] abstract class SCLexer extends RegexParsers {
       | ";" ^^^ Semicolon()
   )
 
-  // One gotcha: formulas cannot contain these strings
-  protected def rules: Parser[SCToken] =
-    positioned(
-      ("Rewrite"
-        | "Hypo."
-        | "Cut"
-        | "Left ∧"
-        | "Left ¬"
-        | "Right ∨"
-        | "Right ¬"
-        | "Left ∃"
-        | "Left ∀"
-        | "Left ∨"
-        | "Right ∃"
-        | "Right ∀"
-        | "Right ∧"
-        | "Right ↔"
-        | "Right →"
-        | "Weakening"
-        | "Left →"
-        | "Left ↔"
-        | "L. Refl"
-        | "R. Refl"
-        | "L. SubstEq"
-        | "R. SubstEq"
-        | "L. SubstIff"
-        | "R. SubstIff"
-        | "?Fun Instantiation"
-        | "?Pred Instantiation"
-        | "SCSubproof (hidden)" // FIXME
-        | "Subproof"
-        | "Import") ^^ RuleName.apply
-    )
+  protected final def standardTokens: Parser[SCToken] =
+    keywords | newLine | schematicIdentifier | identifier
 
   // Order matters! Special keywords should be matched before identifiers
   protected def tokens: Parser[Seq[SCToken]] =
-    phrase(rep1(rules | keywords | newLine | integerLiteral | schematicIdentifier | identifier)) ^^ identity
+    phrase(rep1(standardTokens))
 
-  def apply(str: String): Seq[SCToken] =
+  final def apply(str: String): Seq[SCToken] =
     parse(tokens, str) match {
-      case e @ NoSuccess(msg, next) => throw LexingException(e.toString, next.pos, e.toString)
+      case e @ NoSuccess(msg, next) => throw LexingException(e.toString, next.pos)
       case Success(result, next) => result
       case e => throw new MatchError(e)
     }
@@ -114,8 +79,49 @@ private[parser] abstract class SCLexer extends RegexParsers {
 
 object SCLexer {
 
-  private object SCLexerAscii extends SCLexer {
+  private trait SCLexerExtended extends SCLexer {
+    private def integerLiteral: Parser[IntegerLiteral] = positioned(
+      "0|-?[1-9][0-9]*".r ^^ { str => IntegerLiteral(str.toInt) }
+    )
 
+    private def rules: Parser[SCToken] =
+      positioned(
+        ("Rewrite"
+          | "Hypo."
+          | "Cut"
+          | "Left ∧"
+          | "Left ¬"
+          | "Right ∨"
+          | "Right ¬"
+          | "Left ∃"
+          | "Left ∀"
+          | "Left ∨"
+          | "Right ∃"
+          | "Right ∀"
+          | "Right ∧"
+          | "Right ↔"
+          | "Right →"
+          | "Weakening"
+          | "Left →"
+          | "Left ↔"
+          | "L. Refl"
+          | "R. Refl"
+          | "L. SubstEq"
+          | "R. SubstEq"
+          | "L. SubstIff"
+          | "R. SubstIff"
+          | "?Fun Instantiation"
+          | "?Pred Instantiation"
+          | "SCSubproof (hidden)" // FIXME
+          | "Subproof"
+          | "Import") ^^ RuleName.apply
+      )
+
+    override protected def tokens: Parser[Seq[SCToken]] =
+      phrase(rep1(rules | integerLiteral | standardTokens))
+  }
+
+  private trait SCLexerAscii extends SCLexer {
     override protected val SymbolForall: String = "forall"
     override protected val SymbolExists: String = "exists"
     override protected val SymbolExistsOne: String = "existsone"
@@ -128,11 +134,10 @@ object SCLexer {
     override protected val SymbolMembership: String = "in"
     override protected val SymbolSubset: String = "sub"
     override protected val SymbolEmptySet: String = "empty"
-
   }
+  private object SCLexerStandardAscii extends SCLexerAscii
 
-  private object SCLexerUnicode extends SCLexer {
-
+  private trait SCLexerUnicode extends SCLexer {
     override protected val SymbolForall: String = "∀"
     override protected val SymbolExists: String = "∃"
     override protected val SymbolExistsOne: String = "∃!"
@@ -145,22 +150,27 @@ object SCLexer {
     override protected val SymbolMembership: String = "∈"
     override protected val SymbolSubset: String = "⊆"
     override protected val SymbolEmptySet: String = "∅"
-
   }
+  private object SCLexerStandardUnicode extends SCLexerUnicode
+  private object SCLexerExtendedUnicode extends SCLexerExtended with SCLexerUnicode
 
   private def postProcessor(multiline: Boolean)(tokens: Seq[SCToken]): Seq[SCToken] =
+    val tokensWithEnd = tokens :+ End()
     if(multiline)
-      tokens.filter {
+      tokensWithEnd.filter {
         case NewLine() => false
         case _ => true
       }
     else
-      tokens
+      tokensWithEnd
 
-  def lexingAscii(str: String, multiline: Boolean = false): Seq[SCToken] =
-    postProcessor(multiline)(SCLexerAscii(str))
+  def lexingStandardAscii(str: String, multiline: Boolean = false): Seq[SCToken] =
+    postProcessor(multiline)(SCLexerStandardAscii(str))
 
-  def lexingUnicode(str: String, multiline: Boolean = false): Seq[SCToken] =
-    postProcessor(multiline)(SCLexerUnicode(str))
+  def lexingStandardUnicode(str: String, multiline: Boolean = false): Seq[SCToken] =
+    postProcessor(multiline)(SCLexerStandardUnicode(str))
+
+  def lexingExtendedUnicode(str: String): Seq[SCToken] =
+    postProcessor(multiline = false)(SCLexerExtendedUnicode(str))
 
 }
