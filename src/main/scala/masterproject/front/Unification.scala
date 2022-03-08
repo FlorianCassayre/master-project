@@ -13,6 +13,7 @@ object Unification {
   }
   private val emptyScopedUnificationContext = ScopedUnificationContext(Map.empty)
 
+  // TODO we should store information about which bound variables are in scope to avoid name clashes
   case class UnificationContext(
                                  predicates: Map[SchematicPredicateLabel, Formula],
                                  functions: Map[SchematicFunctionLabel, Term],
@@ -40,7 +41,7 @@ object Unification {
 
   // This function has the useful property that it will avoid performing needless computations
   // It assumes that the formulas/terms are well-formed
-  private def unifyZip[T](f: (T, T, UnificationContext) => UnificationResult, pattern: Seq[T], target: Seq[T], ctx: UnificationContext)(implicit scopedCtx: ScopedUnificationContext): UnificationResult = {
+  private def unifyZip[T](f: (T, T, UnificationContext) => UnificationResult, patterns: Seq[T], targets: Seq[T], ctx: UnificationContext): UnificationResult = {
     @tailrec
     def unifyZipRecursive(pattern: Seq[T], target: Seq[T], acc: UnificationContext): UnificationResult = (pattern, target) match {
       case (patternHead +: patternTail, targetHead +: targetTail) =>
@@ -51,7 +52,7 @@ object Unification {
       case (Seq(), Seq()) => UnificationSuccess(acc)
       case _ => throw new Exception
     }
-    unifyZipRecursive(pattern, target, ctx)
+    unifyZipRecursive(patterns, targets, ctx)
   }
 
   private def unifyTerms(pattern: Term, target: Term, ctx: UnificationContext)(implicit scopedCtx: ScopedUnificationContext): UnificationResult = (pattern, target) match {
@@ -138,5 +139,10 @@ object Unification {
     unifyTerms(pattern, target, emptyUnificationContext)(emptyScopedUnificationContext)
   def unify(pattern: Formula, target: Formula): UnificationResult =
     unifyFormulas(pattern, target, emptyUnificationContext)(emptyScopedUnificationContext)
+
+  def unifyAllTerms(patterns: Seq[Term], targets: Seq[Term]): UnificationResult =
+    unifyZip[Term](unifyTerms(_, _, _)(emptyScopedUnificationContext), patterns, targets, emptyUnificationContext)
+  def unifyAllFormulas(patterns: Seq[Formula], targets: Seq[Formula]): UnificationResult =
+    unifyZip[Formula](unifyFormulas(_, _, _)(emptyScopedUnificationContext), patterns, targets, emptyUnificationContext)
 
 }
