@@ -21,18 +21,23 @@ trait FormulaLabelDefinitions extends CommonDefinitions {
 
   val equality: ConstantPredicateLabel[2] = ConstantPredicateLabel("=")
 
-  final case class ConnectorLabel[N <: Arity] protected(id: String, arity: N) extends FormulaLabel with WithArity[N]
+  sealed abstract class ConnectorLabel[N <: Arity] extends FormulaLabel with WithArity[N]
+  final case class ConstantConnectorLabel[N <: Arity] protected(id: String, arity: N) extends ConnectorLabel[N]
+  final case class SchematicConnectorLabel[N <: Arity] protected(id: String, arity: N) extends ConnectorLabel[N] with SchematicLabel
 
-  object ConnectorLabel {
-    inline def apply[N <: Arity](id: String): ConnectorLabel[N] = ConnectorLabel(id, constValue[N])
-    def unsafe(id: String, arity: Int): ConnectorLabel[?] = ConnectorLabel(id, arity)
+  object ConstantConnectorLabel {
+    private[FormulaLabelDefinitions] inline def apply[N <: Arity](id: String): ConstantConnectorLabel[N] = ConstantConnectorLabel(id, constValue[N])
+  }
+  object SchematicConnectorLabel {
+    inline def apply[N <: Arity](id: String): SchematicConnectorLabel[N] = SchematicConnectorLabel(id, constValue[N])
+    def unsafe(id: String, arity: Int): SchematicConnectorLabel[?] = SchematicConnectorLabel(id, arity)
   }
 
-  val neg: ConnectorLabel[1] = ConnectorLabel("¬")
-  val implies: ConnectorLabel[2] = ConnectorLabel("⇒")
-  val iff: ConnectorLabel[2] = ConnectorLabel("↔")
-  val and: ConnectorLabel[2] = ConnectorLabel("∧")
-  val or: ConnectorLabel[2] = ConnectorLabel("∨")
+  val neg: ConstantConnectorLabel[1] = ConstantConnectorLabel("¬")
+  val implies: ConstantConnectorLabel[2] = ConstantConnectorLabel("⇒")
+  val iff: ConstantConnectorLabel[2] = ConstantConnectorLabel("↔")
+  val and: ConstantConnectorLabel[2] = ConstantConnectorLabel("∧")
+  val or: ConstantConnectorLabel[2] = ConstantConnectorLabel("∨")
 
   final case class BinderLabel protected(id: String) extends FormulaLabel
 

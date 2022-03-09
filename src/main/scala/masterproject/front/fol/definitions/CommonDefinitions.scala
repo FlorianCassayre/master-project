@@ -2,14 +2,18 @@ package masterproject.front.fol.definitions
 
 trait CommonDefinitions {
 
-  trait Label {
+  private[fol] trait Label {
     val id: String
   }
-  trait SchematicLabel extends Label
+  private[fol] trait SchematicLabel extends Label
+
+  private[fol] trait LabeledTree[A <: Label] {
+    val label: A
+  }
 
   type Arity = Int & Singleton
 
-  trait WithArity[N <: Arity] {
+  private[fol] trait WithArity[N <: Arity] {
     val arity: N
   }
 

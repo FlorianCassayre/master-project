@@ -5,7 +5,7 @@ import masterproject.front.fol.definitions.FormulaDefinitions
 trait FormulaConversions extends TermConversions {
   this: FormulaDefinitions =>
 
-  private val connectors: Map[ConnectorLabel[?], lisa.kernel.fol.FOL.ConnectorLabel] = Map(
+  private val connectors: Map[ConstantConnectorLabel[?], lisa.kernel.fol.FOL.ConnectorLabel] = Map(
     neg -> lisa.kernel.fol.FOL.Neg,
     implies -> lisa.kernel.fol.FOL.Implies,
     iff -> lisa.kernel.fol.FOL.Iff,
@@ -21,19 +21,11 @@ trait FormulaConversions extends TermConversions {
     equality -> lisa.kernel.fol.FOL.equality.asInstanceOf[lisa.kernel.fol.FOL.ConstantPredicateLabel], // Sadly...
   )
 
-  def toKernel(formula: PredicateFormula[?]): lisa.kernel.fol.FOL.PredicateFormula =
-    lisa.kernel.fol.FOL.PredicateFormula(toKernel(formula.label), formula.args.map(toKernel))
+  def toKernel(label: ConstantConnectorLabel[?]): lisa.kernel.fol.FOL.ConnectorLabel = connectors(label)
 
-  def toKernel(formula: ConnectorFormula[?]): lisa.kernel.fol.FOL.ConnectorFormula =
-    lisa.kernel.fol.FOL.ConnectorFormula(toKernel(formula.label), formula.args.map(toKernel))
-
-  def toKernel(formula: BinderFormula): lisa.kernel.fol.FOL.BinderFormula =
-    lisa.kernel.fol.FOL.BinderFormula(toKernel(formula.label), toKernel(formula.bound), toKernel(formula.inner))
-
-  def toKernel(formula: Formula): lisa.kernel.fol.FOL.Formula = formula match {
-    case predicate: PredicateFormula[?] => toKernel(predicate)
-    case connector: ConnectorFormula[?] => toKernel(connector)
-    case binder: BinderFormula => toKernel(binder)
+  def toKernel(label: ConnectorLabel[?]): lisa.kernel.fol.FOL.ConnectorLabel = label match {
+    case constant: ConstantConnectorLabel[?] => toKernel(constant)
+    case _: SchematicConnectorLabel[?] => throw new UnsupportedOperationException
   }
 
   def toKernel(label: ConstantPredicateLabel[?]): lisa.kernel.fol.FOL.ConstantPredicateLabel =
@@ -47,14 +39,27 @@ trait FormulaConversions extends TermConversions {
     case schematic: SchematicPredicateLabel[?] => toKernel(schematic)
   }
 
-  def toKernel(label: ConnectorLabel[?]): lisa.kernel.fol.FOL.ConnectorLabel = connectors(label)
-
   def toKernel(label: BinderLabel): lisa.kernel.fol.FOL.BinderLabel = binders(label)
 
   def toKernel(label: FormulaLabel): lisa.kernel.fol.FOL.FormulaLabel = label match {
     case predicate: PredicateLabel[?] => toKernel(predicate)
     case connector: ConnectorLabel[?] => toKernel(connector)
     case binder: BinderLabel => toKernel(binder)
+  }
+
+  def toKernel(formula: PredicateFormula[?]): lisa.kernel.fol.FOL.PredicateFormula =
+    lisa.kernel.fol.FOL.PredicateFormula(toKernel(formula.label), formula.args.map(toKernel))
+
+  def toKernel(formula: ConnectorFormula[?]): lisa.kernel.fol.FOL.ConnectorFormula =
+    lisa.kernel.fol.FOL.ConnectorFormula(toKernel(formula.label), formula.args.map(toKernel))
+
+  def toKernel(formula: BinderFormula): lisa.kernel.fol.FOL.BinderFormula =
+    lisa.kernel.fol.FOL.BinderFormula(toKernel(formula.label), toKernel(formula.bound), toKernel(formula.inner))
+
+  def toKernel(formula: Formula): lisa.kernel.fol.FOL.Formula = formula match {
+    case predicate: PredicateFormula[?] => toKernel(predicate)
+    case connector: ConnectorFormula[?] => toKernel(connector)
+    case binder: BinderFormula => toKernel(binder)
   }
 
   given Conversion[PredicateFormula[?], lisa.kernel.fol.FOL.PredicateFormula] = toKernel

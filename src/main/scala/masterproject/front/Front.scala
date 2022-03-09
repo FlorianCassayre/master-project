@@ -12,8 +12,8 @@ import proven.tactics.SimplePropositionalSolver
 object Front {
 
   object Notations {
-    val (la, lb, lc) = (SchematicPredicateLabel("a", 0), SchematicPredicateLabel("b", 0), SchematicPredicateLabel("c", 0))
-    val (a, b, c) = (PredicateFormula(la, Seq.empty), PredicateFormula(lb, Seq.empty), PredicateFormula(lc, Seq.empty))
+    val (la, lb, lc, ld, le) = (SchematicPredicateLabel("a", 0), SchematicPredicateLabel("b", 0), SchematicPredicateLabel("c", 0), SchematicPredicateLabel("d", 0), SchematicPredicateLabel("e", 0))
+    val (a, b, c, d, e) = (PredicateFormula(la, Seq.empty), PredicateFormula(lb, Seq.empty), PredicateFormula(lc, Seq.empty), PredicateFormula(ld, Seq.empty), PredicateFormula(le, Seq.empty))
   }
 
   def prettySequent(left: Seq[Formula], right: Seq[Formula], partial: Boolean = false): String = { // TODO this should be handled by the printer...
@@ -44,13 +44,20 @@ object Front {
     def hypotheses: IndexedSeq[PartialProofGoal]
     def conclusion: PartialProofGoal
 
-    require(hypotheses.forall(isPartialProofGoalWellFormed))
-    require(isPartialProofGoalWellFormed(conclusion))
-
     // The premises indexing is implicit:
     // * 0, 1, 2 will reference respectively the first, second and third steps in that array
     // * -1, -2, -3 will reference respectively the first second and third premises, as returned by `hypotheses`
     def reconstruct(bot: Sequent, ctx: UnificationContext): IndexedSeq[SCProofStep]
+
+    //
+
+    private def partials: Seq[PartialProofGoal] = hypotheses :+ conclusion
+
+    final def functions: Set[SchematicFunctionLabel] = partials.flatMap(schematicFunctions).toSet
+    final def predicates: Set[SchematicPredicateLabel] = partials.flatMap(schematicPredicates).toSet
+
+    require(partials.forall(isPartialProofGoalWellFormed))
+    require((functions ++ predicates).forall(_.arity == 0))
 
     override def toString: String = {
       def prettyPartialProofGoal(partialProofGoal: PartialProofGoal): String =
@@ -126,10 +133,32 @@ object Front {
       )
   }
 
+  case object RuleSubstituteRightIff extends Rule {
+    import Notations.*
+
+    override def hypotheses: IndexedSeq[PartialProofGoal] =
+      IndexedSeq(
+        PartialProofGoal(IndexedSeq.empty, IndexedSeq(???)),
+        PartialProofGoal(IndexedSeq.empty, IndexedSeq(a <=> b)),
+      )
+    override def conclusion: PartialProofGoal =
+      PartialProofGoal(IndexedSeq.empty, IndexedSeq(e))
+    override def reconstruct(bot: Sequent, ctx: UnificationContext): IndexedSeq[SCProofStep] =
+      IndexedSeq(
+        RightSubstIff(bot -> ???, -1, ctx.predicates(la), ctx.predicates(lb), ???, ???),
+        Cut(bot, 0, -2, ctx.predicates(la) <=> ctx.predicates(lb))
+      )
+  }
+
   //sealed trait Simplification extends Rule
 
   // TODO add other parameters, such as formulas or terms
-  case class RuleApplication(rule: Rule, formulas: Option[(IndexedSeq[Int], IndexedSeq[Int])] = None)
+  case class RuleApplication(
+    rule: Rule,
+    formulas: Option[(IndexedSeq[Int], IndexedSeq[Int])] = None,
+    functions: Map[SchematicFunctionLabel, Term] = Map.empty,
+    predicates: Map[SchematicPredicateLabel, Formula] = Map.empty,
+  )
 
 
   // Functions and algorithms
@@ -193,6 +222,40 @@ object Front {
     case BinderFormula(label, bound, inner) => BinderFormula(label, bound, simultaneousNullaryFunctionSchemaInstantiation(inner, map))
   }
 
+  //
+
+  def schematicFunctions(term: Term): Set[SchematicFunctionLabel] = term match {
+    case VariableTerm(_) => Set.empty
+    case FunctionTerm(label, args) =>
+      val self = label match {
+        case schematic: SchematicFunctionLabel => Set(schematic)
+        case _: ConstantFunctionLabel => Set.empty
+      }
+      args.flatMap(schematicFunctions).toSet ++ self
+  }
+
+  def schematicFunctions(formula: Formula): Set[SchematicFunctionLabel] = formula match {
+    case PredicateFormula(_, args) => args.flatMap(schematicFunctions).toSet
+    case ConnectorFormula(_, args) => args.flatMap(schematicFunctions).toSet
+    case BinderFormula(_, _, inner) => schematicFunctions(inner)
+  }
+
+  def schematicFunctions(partialProofGoal: PartialProofGoal): Set[SchematicFunctionLabel] =
+    partialProofGoal.left.concat(partialProofGoal.right).flatMap(schematicFunctions).toSet
+
+  def schematicPredicates(formula: Formula): Set[SchematicPredicateLabel] = formula match {
+    case PredicateFormula(label, args) =>
+      label match {
+        case schematic: SchematicPredicateLabel => Set(schematic)
+        case _: ConstantPredicateLabel => Set.empty
+      }
+    case ConnectorFormula(_, args) => args.flatMap(schematicPredicates).toSet
+    case BinderFormula(_, _, inner) => schematicPredicates(inner)
+  }
+
+  def schematicPredicates(partialProofGoal: PartialProofGoal): Set[SchematicPredicateLabel] =
+    partialProofGoal.left.concat(partialProofGoal.right).flatMap(schematicPredicates).toSet
+
   def mutateProofGoal(proofGoal: ProofGoal, application: RuleApplication): Option[(IndexedSeq[ProofGoal], UnificationContext)] = {
     val conclusion = application.rule.conclusion
 
@@ -209,42 +272,56 @@ object Front {
         val seq = iterator.take(2).toSeq
         if(seq.sizeIs > 1) {
           // If there is more than one matches, there is an ambiguity
-          // Thus we don't return anything
+          // Thus we choose not to return anything
           None
         } else {
           Some(seq.head)
         }
     }
 
-    parametersOption.flatMap { case (leftIndices, rightIndices) =>
-      unifyAllFormulas(conclusion.left.concat(conclusion.right), leftIndices.map(proofGoal.left).concat(rightIndices.map(proofGoal.right))) match {
-        case UnificationSuccess(ctx) =>
+    // We enumerate the schemas that appear at the top (of the rule) but not at the bottom
+    // For these we have no other choice that to get a hint from the user
+    val nonUnifiableFunctions = application.rule.hypotheses.flatMap(schematicFunctions).toSet.diff(schematicFunctions(application.rule.conclusion))
+    val nonUnifiablePredicates = application.rule.hypotheses.flatMap(schematicPredicates).toSet.diff(schematicPredicates(application.rule.conclusion))
 
-          def removeIndices[T](array: IndexedSeq[T], indices: Seq[Int]): IndexedSeq[T] = {
-            val set = indices.toSet
-            for {
-              (v, i) <- array.zipWithIndex
-              if !set.contains(i)
-            } yield v
-          }
+    // If the user enters invalid parameters, we choose to return None
+    if (nonUnifiableFunctions == application.functions.keySet && nonUnifiablePredicates == application.predicates.keySet) {
+      parametersOption.flatMap { case (leftIndices, rightIndices) =>
+        unifyAllFormulas(conclusion.left.concat(conclusion.right), leftIndices.map(proofGoal.left).concat(rightIndices.map(proofGoal.right))) match {
+          case UnificationSuccess(ctx) =>
+            // By assumption, they are disjoint
+            // Not sure if that's the best idea to "update" the context, since this object is technically
+            // owned by `Unification`
+            val newCtx = UnificationContext(ctx.predicates ++ application.predicates, ctx.functions ++ application.functions)
 
-          val (commonLeft, commonRight) = (removeIndices(proofGoal.left, leftIndices), removeIndices(proofGoal.right, rightIndices))
-
-          def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
-            formulas.map { formula =>
-              simultaneousNullaryFunctionSchemaInstantiation(
-                simultaneousNullaryPredicateSchemaInstantiation(formula, ctx.predicates),
-                ctx.functions
-              )
+            def removeIndices[T](array: IndexedSeq[T], indices: Seq[Int]): IndexedSeq[T] = {
+              val set = indices.toSet
+              for {
+                (v, i) <- array.zipWithIndex
+                if !set.contains(i)
+              } yield v
             }
 
-          val newGoals = application.rule.hypotheses.map(hypothesis =>
-            ProofGoal(commonLeft ++ instantiate(hypothesis.left), commonRight ++ instantiate(hypothesis.right))
-          )
+            val (commonLeft, commonRight) = (removeIndices(proofGoal.left, leftIndices), removeIndices(proofGoal.right, rightIndices))
 
-          Some((newGoals, ctx))
-        case UnificationFailure(message) => None
+            def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
+              formulas.map { formula =>
+                simultaneousNullaryFunctionSchemaInstantiation(
+                  simultaneousNullaryPredicateSchemaInstantiation(formula, newCtx.predicates),
+                  newCtx.functions
+                )
+              }
+
+            val newGoals = application.rule.hypotheses.map(hypothesis =>
+              ProofGoal(commonLeft ++ instantiate(hypothesis.left), commonRight ++ instantiate(hypothesis.right))
+            )
+
+            Some((newGoals, newCtx))
+          case UnificationFailure(message) => None
+        }
       }
+    } else {
+      None
     }
   }
 

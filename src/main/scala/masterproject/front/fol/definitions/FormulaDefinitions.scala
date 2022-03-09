@@ -2,7 +2,7 @@ package masterproject.front.fol.definitions
 
 trait FormulaDefinitions extends FormulaLabelDefinitions with TermDefinitions {
 
-  sealed abstract class Formula extends TreeWithLabel[FormulaLabel]
+  sealed abstract class Formula extends LabeledTree[FormulaLabel]
 
   final case class PredicateFormula[N <: Arity] protected(label: PredicateLabel[N], args: Seq[Term]) extends Formula
   object PredicateFormula {
@@ -15,5 +15,5 @@ trait FormulaDefinitions extends FormulaLabelDefinitions with TermDefinitions {
   }
 
   final case class BinderFormula(label: BinderLabel, bound: VariableLabel, inner: Formula) extends Formula
-  
+
 }

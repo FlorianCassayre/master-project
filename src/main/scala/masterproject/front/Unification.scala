@@ -26,14 +26,15 @@ object Unification {
   private val emptyUnificationContext = UnificationContext(Map.empty, Map.empty)
 
   sealed abstract class UnificationResult {
-    def map(f: UnificationContext => UnificationContext): UnificationResult = this match {
+    // This is not really needed for now
+    /*def map(f: UnificationContext => UnificationContext): UnificationResult = this match {
       case UnificationSuccess(ctx) => UnificationSuccess(f(ctx))
       case failure: UnificationFailure => failure
     }
     def flatMap(f: UnificationContext => UnificationResult): UnificationResult = this match {
       case UnificationSuccess(ctx) => f(ctx)
       case failure: UnificationFailure => failure
-    }
+    }*/
   }
   case class UnificationSuccess(ctx: UnificationContext) extends UnificationResult
   case class UnificationFailure(message: String) extends UnificationResult
@@ -144,5 +145,26 @@ object Unification {
     unifyZip[Term](unifyTerms(_, _, _)(emptyScopedUnificationContext), patterns, targets, emptyUnificationContext)
   def unifyAllFormulas(patterns: Seq[Formula], targets: Seq[Formula]): UnificationResult =
     unifyZip[Formula](unifyFormulas(_, _, _)(emptyScopedUnificationContext), patterns, targets, emptyUnificationContext)
+
+
+  private def reverseUnificationFormulas(substitutionMap: Map[PredicateLabel, Formula], target: Formula): Formula =
+    substitutionMap.toSeq.filter { case (_, f) => isSame(f, target) } match {
+      case Seq() =>
+        target match {
+          case _: PredicateFormula => target
+          case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(reverseUnificationFormulas(substitutionMap, _)))
+          case BinderFormula(label, bound, inner) => BinderFormula(label, bound, reverseUnificationFormulas(substitutionMap, inner))
+        }
+      case Seq((label, _)) =>
+        assert(label.arity == 0)
+        PredicateFormula(label, Seq.empty)
+      case _ => // Multiple
+        throw new Exception
+    }
+
+  def reverseUnification(substitutionMap: Map[PredicateLabel, Formula], target: Formula): Formula = {
+    require(substitutionMap.values.forall(_.freeVariables.isEmpty)) // Should not have free variables
+    reverseUnificationFormulas(substitutionMap, target)
+  }
 
 }
