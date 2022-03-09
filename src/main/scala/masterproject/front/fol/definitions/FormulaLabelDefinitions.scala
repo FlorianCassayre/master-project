@@ -7,8 +7,8 @@ trait FormulaLabelDefinitions extends CommonDefinitions {
   sealed abstract class FormulaLabel extends Label
 
   sealed abstract class PredicateLabel[N <: Arity] extends FormulaLabel with WithArity[N]
-  case class ConstantPredicateLabel[N <: Arity] protected(id: String, arity: N) extends PredicateLabel[N]
-  case class SchematicPredicateLabel[N <: Arity] protected(id: String, arity: N) extends PredicateLabel[N] with SchematicLabel
+  final case class ConstantPredicateLabel[N <: Arity] protected(id: String, arity: N) extends PredicateLabel[N]
+  final case class SchematicPredicateLabel[N <: Arity] protected(id: String, arity: N) extends PredicateLabel[N] with SchematicLabel
 
   object ConstantPredicateLabel {
     inline def apply[N <: Arity](id: String): ConstantPredicateLabel[N] = ConstantPredicateLabel(id, constValue[N])

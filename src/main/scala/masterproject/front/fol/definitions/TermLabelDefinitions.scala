@@ -9,8 +9,8 @@ trait TermLabelDefinitions extends CommonDefinitions {
   final case class VariableLabel(id: String) extends TermLabel
 
   sealed abstract class FunctionLabel[N <: Arity] extends TermLabel with WithArity[N]
-  case class ConstantFunctionLabel[N <: Arity] protected(id: String, arity: N) extends FunctionLabel[N]
-  case class SchematicFunctionLabel[N <: Arity] protected(id: String, arity: N) extends FunctionLabel[N] with SchematicLabel
+  final case class ConstantFunctionLabel[N <: Arity] protected(id: String, arity: N) extends FunctionLabel[N]
+  final case class SchematicFunctionLabel[N <: Arity] protected(id: String, arity: N) extends FunctionLabel[N] with SchematicLabel
 
   object ConstantFunctionLabel {
     inline def apply[N <: Arity](id: String): ConstantFunctionLabel[N] = ConstantFunctionLabel(id, constValue[N])

@@ -15,7 +15,6 @@ trait FormulaOps extends CommonOps {
     def apply(bound: VariableLabel, inner: Formula): BinderFormula = BinderFormula(label, bound, inner)
 
   given Conversion[PredicateLabel[0], PredicateFormula[0]] = PredicateFormula(_, Seq.empty)
-
   given Conversion[ConnectorLabel[0], ConnectorFormula[0]] = ConnectorFormula(_, Seq.empty) // For completeness
 
   given Conversion[Formula, FormulaLabel] = _.label
@@ -49,11 +48,8 @@ trait FormulaOps extends CommonOps {
   }
 
   object ==> extends UnapplyBinaryConnector(implies)
-
   object <=> extends UnapplyBinaryConnector(iff)
-
   object /\ extends UnapplyBinaryConnector(and)
-
   object \/ extends UnapplyBinaryConnector(or)
 
   sealed abstract class UnapplyBinaryPredicate(label: PredicateLabel[2]) {
