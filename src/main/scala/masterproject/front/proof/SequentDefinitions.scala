@@ -31,6 +31,14 @@ trait SequentDefinitions {
     override def toString: String = prettySequent(left, right, partial = true)
   }
 
+  def functionsOfSequent(sequent: SequentBase): Set[FunctionLabel[?]] = sequent.formulas.flatMap(functionsOf).toSet
+  def predicatesOfSequent(sequent: SequentBase): Set[PredicateLabel[?]] = sequent.formulas.flatMap(predicatesOf).toSet
+
+  def schematicFunctionsOfSequent(sequent: SequentBase): Set[SchematicFunctionLabel[?]] =
+    functionsOfSequent(sequent).collect { case l: SchematicFunctionLabel[?] => l }
+  def schematicPredicatesOfSequent(sequent: SequentBase): Set[SchematicPredicateLabel[?]] =
+    predicatesOfSequent(sequent).collect { case l: SchematicPredicateLabel[?] => l }
+
   def isSequentWellFormed(sequent: SequentBase): Boolean =
     sequent.formulas.forall(isWellFormed)
 

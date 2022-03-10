@@ -1,19 +1,18 @@
-package masterproject.front
+package masterproject.front.proof
 
-import masterproject.front.Front.*
-import lisa.kernel.fol.FOL.*
-import lisa.KernelHelpers.*
+import masterproject.front.fol.FOL.*
+import masterproject.front.proof.Proof.*
 import lisa.kernel.Printer
 import lisa.kernel.proof.SCProofChecker
 
 @main def tests(): Unit = {
 
-  val (la, lb, lc) = (ConstantPredicateLabel("a", 0), ConstantPredicateLabel("b", 0), ConstantPredicateLabel("c", 0))
+  val (la, lb, lc) = (ConstantPredicateLabel[0]("a"), ConstantPredicateLabel[0]("b"), ConstantPredicateLabel[0]("c"))
   val (a, b, c) = (PredicateFormula(la, Seq.empty), PredicateFormula(lb, Seq.empty), PredicateFormula(lc, Seq.empty))
 
   val initialProofState = ProofState(
     IndexedSeq(
-      ProofGoal(
+      Sequent(
         IndexedSeq(a, b),
         IndexedSeq((b <=> a) /\ (a <=> b))
       )

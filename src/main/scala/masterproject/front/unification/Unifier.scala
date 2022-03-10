@@ -1,11 +1,11 @@
-package masterproject.front
+package masterproject.front.unification
 
 import lisa.kernel.Printer
-import lisa.kernel.fol.FOL.*
+import masterproject.front.fol.FOL.*
 
 import scala.annotation.tailrec
 
-object Unification {
+object Unifier {
 
   private case class ScopedUnificationContext(variables: Map[VariableLabel, VariableLabel]) {
     def withVariable(patternVariable: VariableLabel, targetVariable: VariableLabel): ScopedUnificationContext =
@@ -15,12 +15,12 @@ object Unification {
 
   // TODO we should store information about which bound variables are in scope to avoid name clashes
   case class UnificationContext(
-                                 predicates: Map[SchematicPredicateLabel, Formula],
-                                 functions: Map[SchematicFunctionLabel, Term],
+                                 predicates: Map[SchematicPredicateLabel[0], Formula],
+                                 functions: Map[SchematicFunctionLabel[0], Term],
                                ) {
-    def withPredicate(pattern: SchematicPredicateLabel, target: Formula): UnificationContext =
+    def withPredicate(pattern: SchematicPredicateLabel[0], target: Formula): UnificationContext =
       copy(predicates = predicates + (pattern -> target))
-    def withFunction(pattern: SchematicFunctionLabel, target: Term): UnificationContext =
+    def withFunction(pattern: SchematicFunctionLabel[0], target: Term): UnificationContext =
       copy(functions = functions + (pattern -> target))
   }
   private val emptyUnificationContext = UnificationContext(Map.empty, Map.empty)
@@ -38,6 +38,11 @@ object Unification {
   }
   case class UnificationSuccess(ctx: UnificationContext) extends UnificationResult
   case class UnificationFailure(message: String) extends UnificationResult
+
+
+  // TODO
+  private def isSame(f1: Formula, f2: Formula): Boolean = f1 == f2
+  private def isSame(t1: Term, t2: Term): Boolean = t1 == t2
 
 
   // This function has the useful property that it will avoid performing needless computations
@@ -65,55 +70,59 @@ object Unification {
       } else {
         UnificationFailure(s"Bound variables do not match, expected ${expectedVariable.id} got ${targetLabel.id}")
       }
-    case (FunctionTerm(patternLabel: ConstantFunctionLabel, patternArgs), FunctionTerm(targetLabel: ConstantFunctionLabel, targetArgs)) =>
+    case (FunctionTerm(patternLabel: ConstantFunctionLabel[_], patternArgs), FunctionTerm(targetLabel: ConstantFunctionLabel[_], targetArgs)) =>
       if(patternLabel == targetLabel) {
         unifyZip(unifyTerms(_, _, _), patternArgs, targetArgs, ctx)
       } else {
         UnificationFailure(s"Function labels do not match, expected ${patternLabel.id} got ${targetLabel.id}")
       }
-    case (FunctionTerm(patternSchematic: SchematicFunctionLabel, patternArgs), _) =>
-      if(patternSchematic.arity == 0) {
-        ctx.functions.get(patternSchematic) match {
-          case Some(expectedTarget) =>
-            if(isSame(target, expectedTarget)) {
-              UnificationSuccess(ctx)
-            } else {
-              UnificationFailure(s"Schematic function failed to unify, expected ${Printer.prettyTerm(expectedTarget)} got ${Printer.prettyTerm(target)}")
-            }
-          case None =>
-            UnificationSuccess(ctx.withFunction(patternSchematic, target))
-        }
-      } else {
-        UnificationFailure(s"Nonzero-ary function schema in pattern: ${patternSchematic.id}")
+    case (FunctionTerm(patternSchematic: SchematicFunctionLabel[_], patternArgs), _) =>
+      patternSchematic match {
+        case SchematicFunctionLabel(_, 0) =>
+          val nullaryLabel = patternSchematic.asInstanceOf[SchematicFunctionLabel[0]]
+          ctx.functions.get(nullaryLabel) match {
+            case Some(expectedTarget) =>
+              if (isSame(target, expectedTarget)) {
+                UnificationSuccess(ctx)
+              } else {
+                UnificationFailure(s"Schematic function failed to unify, expected ${Printer.prettyTerm(expectedTarget)} got ${Printer.prettyTerm(target)}")
+              }
+            case None =>
+              UnificationSuccess(ctx.withFunction(nullaryLabel, target))
+          }
+        case SchematicFunctionLabel(_, _) =>
+          UnificationFailure(s"Nonzero-ary function schema in pattern: ${patternSchematic.id}")
       }
     case _ =>
       def typeName(t: Term): String = t match {
         case _: VariableTerm => "Variable"
-        case _: FunctionTerm => "Function"
+        case _: FunctionTerm[_] => "Function"
       }
       UnificationFailure(s"Types do not match, expected ${typeName(pattern).toLowerCase} got ${typeName(target).toLowerCase}")
   }
   private def unifyFormulas(pattern: Formula, target: Formula, ctx: UnificationContext)(implicit scopedCtx: ScopedUnificationContext): UnificationResult = (pattern, target) match {
-    case (PredicateFormula(patternLabel: ConstantPredicateLabel, patternArgs), PredicateFormula(targetLabel: ConstantPredicateLabel, targetArgs)) =>
+    case (PredicateFormula(patternLabel: ConstantPredicateLabel[_], patternArgs), PredicateFormula(targetLabel: ConstantPredicateLabel[_], targetArgs)) =>
       if(patternLabel == targetLabel) {
         unifyZip(unifyTerms(_, _, _), patternArgs, targetArgs, ctx)
       } else {
         UnificationFailure(s"Predicate labels do not match, expected ${patternLabel.id} got ${targetLabel.id}")
       }
-    case (PredicateFormula(patternSchematic: SchematicPredicateLabel, patternArgs), _) =>
-      if(patternSchematic.arity == 0) {
-        ctx.predicates.get(patternSchematic) match {
-          case Some(expectedTarget) =>
-            if(isSame(target, expectedTarget)) {
-              UnificationSuccess(ctx)
-            } else {
-              UnificationFailure(s"Schematic predicate failed to unify, expected ${Printer.prettyFormula(expectedTarget)} got ${Printer.prettyFormula(target)}")
-            }
-          case None =>
-            UnificationSuccess(ctx.withPredicate(patternSchematic, target))
-        }
-      } else {
-        UnificationFailure(s"Nonzero-ary predicate schema in pattern: ${patternSchematic.id}")
+    case (PredicateFormula(patternSchematic: SchematicPredicateLabel[_], patternArgs), _) =>
+      patternSchematic match {
+        case SchematicPredicateLabel(_, 0) =>
+          val nullaryLabel = patternSchematic.asInstanceOf[SchematicPredicateLabel[0]]
+          ctx.predicates.get(nullaryLabel) match {
+            case Some(expectedTarget) =>
+              if(isSame(target, expectedTarget)) {
+                UnificationSuccess(ctx)
+              } else {
+                UnificationFailure(s"Schematic predicate failed to unify, expected ${Printer.prettyFormula(expectedTarget)} got ${Printer.prettyFormula(target)}")
+              }
+            case None =>
+              UnificationSuccess(ctx.withPredicate(nullaryLabel, target))
+          }
+        case SchematicPredicateLabel(_, _) =>
+          UnificationFailure(s"Nonzero-ary predicate schema in pattern: ${patternSchematic.id}")
       }
     case (ConnectorFormula(patternLabel, patternArgs), ConnectorFormula(targetLabel, targetArgs)) =>
       if(patternLabel == targetLabel) {
@@ -129,8 +138,8 @@ object Unification {
       }
     case _ =>
       def typeName(f: Formula): String = f match {
-        case _: PredicateFormula => "Predicate"
-        case _: ConnectorFormula => "Connector"
+        case _: PredicateFormula[_] => "Predicate"
+        case _: ConnectorFormula[_] => "Connector"
         case _: BinderFormula => "Binder"
       }
       UnificationFailure(s"Types do not match, expected ${typeName(pattern).toLowerCase} got ${typeName(target).toLowerCase}")
@@ -147,11 +156,11 @@ object Unification {
     unifyZip[Formula](unifyFormulas(_, _, _)(emptyScopedUnificationContext), patterns, targets, emptyUnificationContext)
 
 
-  private def reverseUnificationFormulas(substitutionMap: Map[PredicateLabel, Formula], target: Formula): Formula =
+  private def reverseUnificationFormulas(substitutionMap: Map[PredicateLabel[0], Formula], target: Formula): Formula =
     substitutionMap.toSeq.filter { case (_, f) => isSame(f, target) } match {
       case Seq() =>
         target match {
-          case _: PredicateFormula => target
+          case _: PredicateFormula[_] => target
           case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(reverseUnificationFormulas(substitutionMap, _)))
           case BinderFormula(label, bound, inner) => BinderFormula(label, bound, reverseUnificationFormulas(substitutionMap, inner))
         }
@@ -162,7 +171,7 @@ object Unification {
         throw new Exception
     }
 
-  def reverseUnification(substitutionMap: Map[PredicateLabel, Formula], target: Formula): Formula = {
+  def reverseUnification(substitutionMap: Map[PredicateLabel[0], Formula], target: Formula): Formula = {
     require(substitutionMap.values.forall(_.freeVariables.isEmpty)) // Should not have free variables
     reverseUnificationFormulas(substitutionMap, target)
   }

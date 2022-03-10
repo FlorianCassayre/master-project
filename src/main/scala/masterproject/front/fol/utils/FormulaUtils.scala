@@ -75,12 +75,12 @@ trait FormulaUtils extends TermUtils {
     }
   }
 
-  private def instantiateFunctionSchemas(formula: Formula, map: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])]): Formula = {
+  def instantiateFunctionSchemas(formula: Formula, map: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])]): Formula = {
     require(map.forall { case (f, (_, args)) => f.arity == args.size })
     instantiateFunctionSchemasInternal(formula, map)
   }
 
-  private def instantiatePredicateSchema(formula: Formula, map: Map[SchematicPredicateLabel[?], (Term, Seq[VariableLabel])]): Formula = {
+  private def instantiatePredicateSchemasInternal(formula: Formula, map: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])]): Formula = {
     formula match {
       case PredicateFormula(label, args) =>
         val option = label match {
@@ -88,20 +88,25 @@ trait FormulaUtils extends TermUtils {
           case _ => None
         }
         option match {
-          case Some((r, a)) => substituteVariables(formula, a.zip(args).toMap)
+          case Some((r, a)) => substituteVariables(r, a.zip(args).toMap)
           case None => formula
         }
-      case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(instantiatePredicateSchema(_, map)))
+      case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(instantiatePredicateSchemasInternal(_, map)))
       case BinderFormula(label, bound, inner) =>
         val fv = freeVariablesOf(formula) -- map.flatMap { case (_, (_, a)) => a }
         if (fv.contains(bound)) {
           val newBoundVariable = VariableLabel(freshId(fv.map(_.id), bound.id))
           val newInner = substituteVariables(inner, Map(bound -> VariableTerm(newBoundVariable)))
-          BinderFormula(label, newBoundVariable, instantiatePredicateSchema(newInner, map))
+          BinderFormula(label, newBoundVariable, instantiatePredicateSchemasInternal(newInner, map))
         } else {
-          BinderFormula(label, bound, instantiatePredicateSchema(inner, map))
+          BinderFormula(label, bound, instantiatePredicateSchemasInternal(inner, map))
         }
     }
+  }
+
+  def instantiatePredicateSchemas(formula: Formula, map: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])]): Formula = {
+    require(map.forall { case (f, (_, args)) => f.arity == args.size })
+    instantiatePredicateSchemasInternal(formula, map)
   }
 
 }

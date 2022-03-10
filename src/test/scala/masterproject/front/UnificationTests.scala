@@ -1,17 +1,14 @@
 package masterproject.front
 
-import lisa.kernel.fol.FOL.*
-import lisa.KernelHelpers.*
-import masterproject.front.Unification.*
+import masterproject.front.fol.FOL.*
+import masterproject.front.unification.Unifier.*
 import org.scalatest.funsuite.AnyFunSuite
 
 class UnificationTests extends AnyFunSuite {
 
-  val (lsa, lsb, lsc) = (SchematicPredicateLabel("a", 0), SchematicPredicateLabel("b", 0), SchematicPredicateLabel("c", 0))
-  val (sa, sb, sc) = (PredicateFormula(lsa, Seq.empty), PredicateFormula(lsb, Seq.empty), PredicateFormula(lsc, Seq.empty))
+  val (sa, sb, sc) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"))
 
-  val (la, lb, lc) = (ConstantPredicateLabel("a", 0), ConstantPredicateLabel("b", 0), ConstantPredicateLabel("c", 0))
-  val (a, b, c) = (PredicateFormula(la, Seq.empty), PredicateFormula(lb, Seq.empty), PredicateFormula(lc, Seq.empty))
+  val (a, b, c) = (ConstantPredicateLabel[0]("a"), ConstantPredicateLabel[0]("b"), ConstantPredicateLabel[0]("c"))
 
   def checkUnifies(pattern: Formula, target: Formula): Unit = {
     unify(pattern, target) match {
