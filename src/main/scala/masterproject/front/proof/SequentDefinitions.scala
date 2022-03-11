@@ -13,22 +13,22 @@ trait SequentDefinitions {
   }
 
   // TODO this should be handled by its own printer
-  private def prettySequent(left: Seq[Formula], right: Seq[Formula], partial: Boolean = false): String = {
-    def prettySequence(seq: Seq[Formula], leftSide: Boolean): String = {
+  private def prettySequent(left: Seq[Formula], right: Seq[Formula], partialLeft: Boolean = false, partialRight: Boolean = false): String = {
+    def prettySequence(seq: Seq[Formula], leftSide: Boolean, partial: Boolean): String = {
       val strs = seq.map(Printer.prettyFormula(_))
       val rest = "..."
       val strs1 = if(partial) if(leftSide) rest +: strs else strs :+ rest else strs
       strs1.mkString("; ")
     }
 
-    s"${prettySequence(left, true)} ⊢ ${prettySequence(right, false)}"
+    s"${prettySequence(left, true, partialLeft)} ⊢ ${prettySequence(right, false, partialRight)}"
   }
 
   final case class Sequent(left: IndexedSeq[Formula], right: IndexedSeq[Formula]) extends SequentBase {
     override def toString: String = prettySequent(left, right)
   }
-  final case class PartialSequent(left: IndexedSeq[Formula], right: IndexedSeq[Formula]) extends SequentBase {
-    override def toString: String = prettySequent(left, right, partial = true)
+  final case class PartialSequent(left: IndexedSeq[Formula], right: IndexedSeq[Formula], partialLeft: Boolean = true, partialRight: Boolean = true) extends SequentBase {
+    override def toString: String = prettySequent(left, right, partialLeft, partialRight)
   }
 
   def functionsOfSequent(sequent: SequentBase): Set[FunctionLabel[?]] = sequent.formulas.flatMap(functionsOf).toSet

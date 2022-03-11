@@ -17,6 +17,8 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
 
   sealed abstract class Tactic
 
+  type Reconstruct = (lisa.kernel.proof.SequentCalculus.Sequent, UnificationContext) => IndexedSeq[SCProofStep]
+
   abstract class Rule extends Tactic {
     def hypotheses: IndexedSeq[PartialSequent]
     def conclusion: PartialSequent
@@ -24,7 +26,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     // The premises indexing is implicit:
     // * 0, 1, 2 will reference respectively the first, second and third steps in that array
     // * -1, -2, -3 will reference respectively the first second and third premises, as returned by `hypotheses`
-    def reconstruct(bot: lisa.kernel.proof.SequentCalculus.Sequent, ctx: UnificationContext): IndexedSeq[SCProofStep]
+    def reconstruct: Reconstruct
 
     private def partials: Seq[PartialSequent] = hypotheses :+ conclusion
 
@@ -43,46 +45,55 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     }
   }
 
-  abstract class RuleSolver extends Rule {
+  class RuleSolver(override val reconstruct: Reconstruct) extends Rule {
     override final def hypotheses: IndexedSeq[PartialSequent] = IndexedSeq.empty
     override final def conclusion: PartialSequent = PartialSequent(IndexedSeq.empty, IndexedSeq.empty)
   }
 
-  abstract class RuleIntroduction extends Rule
-  abstract class RuleElimination extends Rule
+  class RuleIntroduction(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: Reconstruct) extends Rule
+  class RuleElimination(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: Reconstruct) extends Rule
+  // Possibly ambiguous (need additional context parameters)
+  class RuleSubstitution(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: Reconstruct) extends Rule
 
   case class TacticApplication(
-                              tactic: Tactic,
-                              formulas: Option[(IndexedSeq[Int], IndexedSeq[Int])] = None,
-                              functions: Map[SchematicFunctionLabel[0], Term] = Map.empty,
-                              predicates: Map[SchematicPredicateLabel[0], Formula] = Map.empty,
-                              connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])] = Map.empty,
-                            )
+    tactic: Tactic,
+    formulas: Option[(IndexedSeq[Int], IndexedSeq[Int])] = None,
+    functions: Map[SchematicFunctionLabel[0], Term] = Map.empty,
+    predicates: Map[SchematicPredicateLabel[0], Formula] = Map.empty,
+    connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])] = Map.empty,
+  )
 
   def mutateProofGoal(proofGoal: Sequent, application: TacticApplication): Option[(IndexedSeq[Sequent], UnificationContext)] = {
     application.tactic match {
       case rule: Rule =>
         val conclusion = rule.conclusion
 
-        def parametersOption: Option[(IndexedSeq[Int], IndexedSeq[Int])] = application.formulas match {
-          case Some(pair @ (explicitLeft, explicitRight)) =>
-            require(conclusion.left.size == explicitLeft.size)
-            require(conclusion.right.size == explicitRight.size)
-            Some(pair)
-          case None =>
-            def iterator = for {
-              leftIndices <- proofGoal.left.indices.combinations(conclusion.left.size).flatMap(_.permutations)
-              rightIndices <- proofGoal.right.indices.combinations(conclusion.right.size).flatMap(_.permutations)
-            } yield (leftIndices, rightIndices)
-            val seq = iterator.take(2).toSeq
-            if(seq.sizeIs > 1) {
-              // If there is more than one matches, there is an ambiguity
-              // Thus we choose not to return anything
-              None
-            } else {
-              Some(seq.head)
+        def parametersOption: Option[(IndexedSeq[Int], IndexedSeq[Int])] =
+          if ((conclusion.partialLeft || conclusion.left.size == proofGoal.left.size) && (conclusion.partialRight || conclusion.right.size == proofGoal.right.size)) {
+            application.formulas match {
+              case Some(pair@(explicitLeft, explicitRight)) =>
+                require(conclusion.left.size == explicitLeft.size)
+                require(conclusion.right.size == explicitRight.size)
+                Some(pair)
+              case None =>
+                def iterator = for {
+                  leftIndices <- proofGoal.left.indices.combinations(conclusion.left.size).flatMap(_.permutations)
+                  rightIndices <- proofGoal.right.indices.combinations(conclusion.right.size).flatMap(_.permutations)
+                } yield (leftIndices, rightIndices)
+
+                val seq = iterator.take(2).toSeq
+                if (seq.sizeIs > 1) {
+                  // If there is more than one matches, there is an ambiguity
+                  // Thus we choose not to return anything
+                  None
+                } else {
+                  Some(seq.head)
+                }
             }
-        }
+          } else {
+            // Not matching exactly
+            None
+          }
 
         // We enumerate the schemas that appear at the top (of the rule) but not at the bottom
         // For these we have no other choice that to get a hint from the user
@@ -125,8 +136,16 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
                     )
                   }
 
+                def createHypothesis(common: IndexedSeq[Formula], pattern: IndexedSeq[Formula], partial: Boolean): IndexedSeq[Formula] = {
+                  val instantiated = instantiate(pattern)
+                  if(partial) common ++ instantiated else instantiated
+                }
+
                 val newGoals = rule.hypotheses.map(hypothesis =>
-                  Sequent(commonLeft ++ instantiate(hypothesis.left), commonRight ++ instantiate(hypothesis.right))
+                  Sequent(
+                    createHypothesis(commonLeft, hypothesis.left, hypothesis.partialLeft),
+                    createHypothesis(commonRight, hypothesis.right, hypothesis.partialRight),
+                  )
                 )
 
                 Some((newGoals, newCtx))

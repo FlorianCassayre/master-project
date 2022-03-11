@@ -23,6 +23,9 @@ object Unifier {
       copy(predicates = predicates + (pattern -> target))
     def withFunction(pattern: SchematicFunctionLabel[0], target: Term): UnificationContext =
       copy(functions = functions + (pattern -> target))
+    def apply(predicate: SchematicPredicateLabel[0]): Formula = predicates(predicate)
+    def apply(function: SchematicFunctionLabel[0]): Term = functions(function)
+    def apply(connector: SchematicConnectorLabel[?]): (Formula, Seq[SchematicPredicateLabel[0]]) = connectors(connector)
   }
   private val emptyUnificationContext = UnificationContext(Map.empty, Map.empty, Map.empty)
 

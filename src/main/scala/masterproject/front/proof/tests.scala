@@ -14,19 +14,22 @@ import lisa.kernel.proof.SCProofChecker
   val initialProofState = ProofState(
     IndexedSeq(
       Sequent(
-        IndexedSeq(b),
-        IndexedSeq((a /\ c) ==> b)
+        IndexedSeq(),
+        IndexedSeq(a, b),
       )
     )
   )
 
   val appliedRules: Seq[TacticApplication] = Seq(
-    TacticApplication(RuleSubstituteRightIff, predicates = Map(Notations.a -> b), connectors = Map(Notations.f -> ((a /\ x) ==> b, Seq(x)))),
+    TacticApplication(
+      RuleEliminationRightOr,
+      formulas = Some((IndexedSeq.empty, IndexedSeq(0, 1)))
+    ),
   )
 
   println(initialProofState)
   println()
-  //println(appliedRules.map(_.rule).mkString("\n\n"))
+  println(appliedRules.map(_.tactic).mkString("\n\n"))
   println()
 
   val reconstructed = reconstructSCProof(initialProofState, appliedRules)
