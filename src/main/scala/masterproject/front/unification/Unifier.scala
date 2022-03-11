@@ -17,13 +17,14 @@ object Unifier {
   case class UnificationContext(
                                  predicates: Map[SchematicPredicateLabel[0], Formula],
                                  functions: Map[SchematicFunctionLabel[0], Term],
+                                 connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])]
                                ) {
     def withPredicate(pattern: SchematicPredicateLabel[0], target: Formula): UnificationContext =
       copy(predicates = predicates + (pattern -> target))
     def withFunction(pattern: SchematicFunctionLabel[0], target: Term): UnificationContext =
       copy(functions = functions + (pattern -> target))
   }
-  private val emptyUnificationContext = UnificationContext(Map.empty, Map.empty)
+  private val emptyUnificationContext = UnificationContext(Map.empty, Map.empty, Map.empty)
 
   sealed abstract class UnificationResult {
     // This is not really needed for now

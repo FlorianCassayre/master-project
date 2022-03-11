@@ -50,10 +50,6 @@ trait TermUtils {
     }
   }
 
-  protected def checkParametersArity[L <: SchematicLabel & WithArity[?], T <: LabeledTree[L]](map: Map[L, (T, Seq[T])]): Unit = {
-    require(map.forall { case (f, (_, args)) => f.arity == args.size })
-  }
-
   private def instantiateFunctionSchemas(term: Term, map: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])]): Term = {
     require(map.forall { case (f, (_, args)) => f.arity == args.size })
     instantiateFunctionSchemasInternal(term, map)

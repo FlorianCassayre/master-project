@@ -38,6 +38,8 @@ trait SequentDefinitions {
     functionsOfSequent(sequent).collect { case l: SchematicFunctionLabel[?] => l }
   def schematicPredicatesOfSequent(sequent: SequentBase): Set[SchematicPredicateLabel[?]] =
     predicatesOfSequent(sequent).collect { case l: SchematicPredicateLabel[?] => l }
+  def schematicConnectorsOfSequent(sequent: SequentBase): Set[SchematicConnectorLabel[?]] =
+    sequent.formulas.flatMap(schematicConnectorsOf).toSet
 
   def isSequentWellFormed(sequent: SequentBase): Boolean =
     sequent.formulas.forall(isWellFormed)

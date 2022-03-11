@@ -15,9 +15,9 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
         ).mkString("\n")
   }
 
-  sealed abstract class Rule
+  sealed abstract class Tactic
 
-  abstract class StaticRule extends Rule {
+  abstract class Rule extends Tactic {
     def hypotheses: IndexedSeq[PartialSequent]
     def conclusion: PartialSequent
 
@@ -30,6 +30,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
 
     require(partials.forall(isSequentWellFormed))
     require(partials.flatMap(_.formulas).flatMap(f => predicatesOf(f) ++ functionsOf(f)).forall(_.arity == 0))
+    require(partials.flatMap(schematicConnectorsOfSequent).forall(_.arity > 0)) // Please use predicates instead
 
     override def toString: String = {
       val top = hypotheses.map(_.toString).mkString(" " * 6)
@@ -42,24 +43,25 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     }
   }
 
-  abstract class RuleSolver extends StaticRule {
+  abstract class RuleSolver extends Rule {
     override final def hypotheses: IndexedSeq[PartialSequent] = IndexedSeq.empty
     override final def conclusion: PartialSequent = PartialSequent(IndexedSeq.empty, IndexedSeq.empty)
   }
 
-  abstract class RuleIntroduction extends StaticRule
-  abstract class RuleElimination extends StaticRule
+  abstract class RuleIntroduction extends Rule
+  abstract class RuleElimination extends Rule
 
-  case class RuleApplication(
-                              rule: Rule,
+  case class TacticApplication(
+                              tactic: Tactic,
                               formulas: Option[(IndexedSeq[Int], IndexedSeq[Int])] = None,
                               functions: Map[SchematicFunctionLabel[0], Term] = Map.empty,
                               predicates: Map[SchematicPredicateLabel[0], Formula] = Map.empty,
+                              connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])] = Map.empty,
                             )
 
-  def mutateProofGoal(proofGoal: Sequent, application: RuleApplication): Option[(IndexedSeq[Sequent], UnificationContext)] = {
-    application.rule match {
-      case rule: StaticRule =>
+  def mutateProofGoal(proofGoal: Sequent, application: TacticApplication): Option[(IndexedSeq[Sequent], UnificationContext)] = {
+    application.tactic match {
+      case rule: Rule =>
         val conclusion = rule.conclusion
 
         def parametersOption: Option[(IndexedSeq[Int], IndexedSeq[Int])] = application.formulas match {
@@ -89,15 +91,21 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
         val nonUnifiablePredicates = rule.hypotheses.flatMap(schematicPredicatesOfSequent).toSet
           .diff(schematicPredicatesOfSequent(rule.conclusion))
 
+        // By assumption they must be of arity > 0
+        // We require all connector schemas to be explicitly defined
+        val connectorSchemas = (rule.hypotheses :+ rule.conclusion).flatMap(schematicConnectorsOfSequent).toSet
+
         // If the user enters invalid parameters, we choose to return None
-        if (nonUnifiableFunctions == application.functions.keySet && nonUnifiablePredicates == application.predicates.keySet) {
+        if (nonUnifiableFunctions == application.functions.keySet && nonUnifiablePredicates == application.predicates.keySet && connectorSchemas == application.connectors.keySet) {
           parametersOption.flatMap { case (leftIndices, rightIndices) =>
-            unifyAllFormulas(conclusion.left.concat(conclusion.right), leftIndices.map(proofGoal.left).concat(rightIndices.map(proofGoal.right))) match {
+            val conclusionPatterns = conclusion.left.concat(conclusion.right)
+            val conclusionTargets = leftIndices.map(proofGoal.left).concat(rightIndices.map(proofGoal.right))
+            unifyAllFormulas(conclusionPatterns.map(instantiateConnectorSchemas(_, application.connectors)), conclusionTargets.map(instantiateConnectorSchemas(_, application.connectors))) match {
               case UnificationSuccess(ctx) =>
                 // By assumption, they are disjoint
                 // Not sure if that's the best idea to "update" the context, since this object is technically
                 // owned by `Unification`
-                val newCtx = UnificationContext(ctx.predicates ++ application.predicates, ctx.functions ++ application.functions)
+                val newCtx = UnificationContext(ctx.predicates ++ application.predicates, ctx.functions ++ application.functions, application.connectors)
 
                 def removeIndices[T](array: IndexedSeq[T], indices: Seq[Int]): IndexedSeq[T] = {
                   val set = indices.toSet
@@ -112,7 +120,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
                 def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
                   formulas.map { formula =>
                     instantiatePredicateSchemas(
-                      instantiateFunctionSchemas(formula, newCtx.functions.view.mapValues(t => (t, Seq.empty[VariableLabel])).toMap),
+                      instantiateFunctionSchemas(instantiateConnectorSchemas(formula, newCtx.connectors), newCtx.functions.view.mapValues(t => (t, Seq.empty[VariableLabel])).toMap),
                       newCtx.predicates.view.mapValues(p => (p, Seq.empty[VariableLabel])).toMap
                     )
                   }
@@ -131,7 +139,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     }
   }
 
-  def mutateProofStateFirstGoal(proofState: ProofState, application: RuleApplication): Option[(ProofState, UnificationContext)] = {
+  def mutateProofStateFirstGoal(proofState: ProofState, application: TacticApplication): Option[(ProofState, UnificationContext)] = {
     proofState.goals match {
       case h +: t =>
         mutateProofGoal(h, application).map { (newGoals, ctx) => (ProofState(newGoals ++ t), ctx) }
@@ -139,12 +147,12 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     }
   }
 
-  def reconstructSCProof(proofState: ProofState, applications: Seq[RuleApplication]): Option[SCProof] = {
+  def reconstructSCProof(proofState: ProofState, applications: Seq[TacticApplication]): Option[SCProof] = {
     // Each proof goal that is created (or updated) will be given a unique id
     // Then we use these ids to refer to them as a proof step in the SC proof
-    def recursive(nextId: Int, shadowProofState: IndexedSeq[Int], proofState: ProofState, remaining: Seq[RuleApplication]): Option[(SCProof, Map[Int, Int])] = remaining match {
-      case appliedRule +: rest =>
-        mutateProofStateFirstGoal(proofState, appliedRule) match {
+    def recursive(nextId: Int, shadowProofState: IndexedSeq[Int], proofState: ProofState, remaining: Seq[TacticApplication]): Option[(SCProof, Map[Int, Int])] = remaining match {
+      case appliedTactic +: rest =>
+        mutateProofStateFirstGoal(proofState, appliedTactic) match {
           case Some((newState, ctx)) =>
             // The id of the goal that was transformed (here, it's always the first one)
             val id = shadowProofState.head
@@ -159,8 +167,8 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
             recursive(nextId + nReplacedGoals, newShadowProofState, newState, rest) match {
               case Some((proof, translation)) =>
                 // Now we can reconstruct the SC proof steps
-                val reconstructedSteps = appliedRule.rule match {
-                  case rule: StaticRule =>
+                val reconstructedSteps = appliedTactic.tactic match {
+                  case rule: Rule =>
                     rule.reconstruct(sequentToKernel(updatedGoal), ctx)
                 }
                 // We need to "fix" the indexing of these proof steps

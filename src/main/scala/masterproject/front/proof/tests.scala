@@ -7,41 +7,43 @@ import lisa.kernel.proof.SCProofChecker
 
 @main def tests(): Unit = {
 
-  val (la, lb, lc) = (ConstantPredicateLabel[0]("a"), ConstantPredicateLabel[0]("b"), ConstantPredicateLabel[0]("c"))
-  val (a, b, c) = (PredicateFormula(la, Seq.empty), PredicateFormula(lb, Seq.empty), PredicateFormula(lc, Seq.empty))
+  val (a, b, c) = (ConstantPredicateLabel[0]("a"), ConstantPredicateLabel[0]("b"), ConstantPredicateLabel[0]("c"))
+
+  val x = SchematicPredicateLabel[0]("x")
 
   val initialProofState = ProofState(
     IndexedSeq(
       Sequent(
-        IndexedSeq(a, b),
-        IndexedSeq((b <=> a) /\ (a <=> b))
+        IndexedSeq(b),
+        IndexedSeq((a /\ c) ==> b)
       )
     )
   )
 
-  val appliedRules: Seq[RuleApplication] = Seq(
-    RuleApplication(RuleIntroductionRightAnd),
-    RuleApplication(RulePropositionalSolver),
-    RuleApplication(RulePropositionalSolver),
+  val appliedRules: Seq[TacticApplication] = Seq(
+    TacticApplication(RuleSubstituteRightIff, predicates = Map(Notations.a -> b), connectors = Map(Notations.f -> ((a /\ x) ==> b, Seq(x)))),
   )
 
   println(initialProofState)
   println()
-  println(appliedRules.map(_.rule).mkString("\n\n"))
+  //println(appliedRules.map(_.rule).mkString("\n\n"))
   println()
 
   val reconstructed = reconstructSCProof(initialProofState, appliedRules)
 
   reconstructed match {
     case Some(proof) =>
-      println(Printer.prettySCProof(proof))
+      val checkerResult = SCProofChecker.checkSCProof(proof)
+
+      println(Printer.prettySCProof(proof, if(checkerResult._1) None else Some((checkerResult._2, checkerResult._3))))
 
       println()
-      if(proof.imports.nonEmpty) {
-        println("Warning, the proof contains imports")
-        println()
-      }
-      if(SCProofChecker.checkSCProof(proof)._1) {
+
+      if(checkerResult._1) {
+        if(proof.imports.nonEmpty) {
+          println(s"Warning, the proof contains ${proof.imports.size} import(s)")
+          println()
+        }
         println("The proof is valid")
       } else {
         println("!!! ERROR !!! The proof is invalid")

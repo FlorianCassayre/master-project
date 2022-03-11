@@ -23,6 +23,17 @@ trait FormulaUtils extends TermUtils {
     case BinderFormula(_, _, inner) => predicatesOf(inner)
   }
 
+  def schematicConnectorsOf(formula: Formula): Set[SchematicConnectorLabel[?]] = formula match {
+    case PredicateFormula(_, _) => Set.empty
+    case ConnectorFormula(label, args) =>
+      val set = label match {
+        case _: ConstantConnectorLabel[?] => Set.empty
+        case schematic: SchematicConnectorLabel[?] => Set(schematic)
+      }
+      set ++ args.flatMap(schematicConnectorsOf)
+    case BinderFormula(_, _, inner) => schematicConnectorsOf(inner)
+  }
+
 
   protected def isFormulaWellFormed(formula: Formula)(implicit ctx: Scope): Boolean = formula match {
     case PredicateFormula(label, args) =>
@@ -107,6 +118,28 @@ trait FormulaUtils extends TermUtils {
   def instantiatePredicateSchemas(formula: Formula, map: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])]): Formula = {
     require(map.forall { case (f, (_, args)) => f.arity == args.size })
     instantiatePredicateSchemasInternal(formula, map)
+  }
+
+  private def instantiateConnectorSchemasInternal(formula: Formula, map: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])]): Formula = formula match {
+    case PredicateFormula(_, _) => formula
+    case ConnectorFormula(label, args) =>
+      val option = label match {
+        case schematic: SchematicConnectorLabel[?] => map.get(schematic)
+        case _: ConstantConnectorLabel[?] => None
+      }
+      option match {
+        case Some((f, a)) =>
+          assert(a.size == args.size)
+          instantiatePredicateSchemas(f, a.zip(args).map { case (k, v) => k -> (v, Seq.empty) }.toMap)
+        case None =>
+          ConnectorFormula(label, args.map(instantiateConnectorSchemasInternal(_, map)))
+      }
+    case BinderFormula(label, bound, inner) => BinderFormula(label, bound, instantiateConnectorSchemasInternal(inner, map))
+  }
+
+  def instantiateConnectorSchemas(formula: Formula, map: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])]): Formula = {
+    require(map.forall { case (f, (_, args)) => f.arity == args.size })
+    instantiateConnectorSchemasInternal(formula, map)
   }
 
 }

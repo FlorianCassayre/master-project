@@ -5,7 +5,7 @@ import masterproject.front.unification.Unifier.*
 import lisa.kernel.proof.SequentCalculus.*
 import proven.tactics.SimplePropositionalSolver
 
-trait BaseRulesDefinitions extends ProofStateDefinitions {
+trait RuleDefinitions extends ProofStateDefinitions {
 
   case object RulePropositionalSolver extends RuleSolver {
     override def reconstruct(bot: lisa.kernel.proof.SequentCalculus.Sequent, ctx: UnificationContext): IndexedSeq[SCProofStep] = {
@@ -56,7 +56,7 @@ trait BaseRulesDefinitions extends ProofStateDefinitions {
       )
   }
 
-  case object RuleSubstituteRightIff extends StaticRule {
+  case object RuleSubstituteRightIff extends Rule {
     import Notations.*
 
     override def hypotheses: IndexedSeq[PartialSequent] =
@@ -65,14 +65,22 @@ trait BaseRulesDefinitions extends ProofStateDefinitions {
         PartialSequent(IndexedSeq.empty, IndexedSeq(a <=> b)),
       )
     override def conclusion: PartialSequent =
-      PartialSequent(IndexedSeq.empty, IndexedSeq(f(a)))
+      PartialSequent(IndexedSeq.empty, IndexedSeq(f(b)))
     override def reconstruct(bot: lisa.kernel.proof.SequentCalculus.Sequent, ctx: UnificationContext): IndexedSeq[SCProofStep] =
+      val (fBody, fArgs) = ctx.connectors(f)
       IndexedSeq(
-        RightSubstIff(???, -1, ctx.predicates(a), ctx.predicates(b), ???, e),
-        Cut(bot, 0, -2, ???) // ctx.predicates(a) <=> ctx.predicates(b)
+        RightSubstIff(
+          bot +< (ctx.predicates(a) <=> ctx.predicates(b)),
+          -1,
+          ctx.predicates(a),
+          ctx.predicates(b),
+          fBody,
+          fArgs.head,
+        ),
+        Cut(bot, -2, 0, ctx.predicates(a) <=> ctx.predicates(b))
       )
   }
 
-  // TODO more stuff
+  // TODO more rules
 
 }
