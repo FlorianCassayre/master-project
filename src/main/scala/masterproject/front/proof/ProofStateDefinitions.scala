@@ -17,6 +17,13 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
 
   sealed abstract class Tactic
 
+  abstract class GeneralTactic extends Tactic {
+    // TODO uh, `TacticApplication`
+    def apply(proofGoal: Sequent, app: TacticApplication): Option[(IndexedSeq[Sequent], ReconstructGeneral)]
+  }
+
+  type ReconstructGeneral = lisa.kernel.proof.SequentCalculus.Sequent => IndexedSeq[SCProofStep]
+
   type Reconstruct = (lisa.kernel.proof.SequentCalculus.Sequent, UnificationContext) => IndexedSeq[SCProofStep]
 
   abstract class Rule extends Tactic {
@@ -63,8 +70,10 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])] = Map.empty,
   )
 
-  def mutateProofGoal(proofGoal: Sequent, application: TacticApplication): Option[(IndexedSeq[Sequent], UnificationContext)] = {
+  def mutateProofGoal(proofGoal: Sequent, application: TacticApplication): Option[(IndexedSeq[Sequent], Either[UnificationContext, ReconstructGeneral])] = {
     application.tactic match {
+      case general: GeneralTactic =>
+        general(proofGoal, application).map { case (steps, f) => (steps, Right(f)) }
       case rule: Rule =>
         val conclusion = rule.conclusion
 
@@ -148,7 +157,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
                   )
                 )
 
-                Some((newGoals, newCtx))
+                Some((newGoals, Left(newCtx)))
               case UnificationFailure(message) => None
             }
           }
@@ -158,7 +167,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     }
   }
 
-  def mutateProofStateFirstGoal(proofState: ProofState, application: TacticApplication): Option[(ProofState, UnificationContext)] = {
+  def mutateProofStateFirstGoal(proofState: ProofState, application: TacticApplication): Option[(ProofState, Either[UnificationContext, ReconstructGeneral])] = {
     proofState.goals match {
       case h +: t =>
         mutateProofGoal(h, application).map { (newGoals, ctx) => (ProofState(newGoals ++ t), ctx) }
@@ -172,7 +181,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     def recursive(nextId: Int, shadowProofState: IndexedSeq[Int], proofState: ProofState, remaining: Seq[TacticApplication]): Option[(SCProof, Map[Int, Int])] = remaining match {
       case appliedTactic +: rest =>
         mutateProofStateFirstGoal(proofState, appliedTactic) match {
-          case Some((newState, ctx)) =>
+          case Some((newState, either)) =>
             // The id of the goal that was transformed (here, it's always the first one)
             val id = shadowProofState.head
             val updatedGoal = proofState.goals.head
@@ -186,9 +195,12 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
             recursive(nextId + nReplacedGoals, newShadowProofState, newState, rest) match {
               case Some((proof, translation)) =>
                 // Now we can reconstruct the SC proof steps
-                val reconstructedSteps = appliedTactic.tactic match {
-                  case rule: Rule =>
+                val reconstructedSteps = (appliedTactic.tactic, either) match { // TODO fix this ugly wart
+                  case (rule: Rule, Left(ctx)) =>
                     rule.reconstruct(sequentToKernel(updatedGoal), ctx)
+                  case (general: GeneralTactic, Right(reconstructFunction)) =>
+                    reconstructFunction(sequentToKernel(updatedGoal))
+                  case e => throw new MatchError(e)
                 }
                 // We need to "fix" the indexing of these proof steps
                 def premiseMapping(p: Int): Int = {

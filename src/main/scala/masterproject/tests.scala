@@ -59,7 +59,7 @@ import lisa.settheory.AxiomaticSetTheory
 
   println(Printer.prettySCProof(scproof))
 
-  assert(SCProofChecker.checkSCProof(scproof)._1)
+  assert(SCProofChecker.checkSCProof(scproof).isValid)
 
   println()
   println("The proof is valid.")

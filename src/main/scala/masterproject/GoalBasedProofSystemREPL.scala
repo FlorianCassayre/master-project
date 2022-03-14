@@ -119,17 +119,17 @@ object GoalBasedProofSystemREPL {
                           (newState, output)
                         } else {
                           val proof = reconstructProof(formula, newState.tacticsUsed, theory).build
-                          val (isValid, position, message) = SCProofChecker.checkSCProof(proof)
+                          val judgement = SCProofChecker.checkSCProof(proof)
 
                           (StateInitial(theory), REPLOutput()
                             .println()
                             .println(prettyFrame(prettyProofState(newState.proofState)))
                             .println()
                             .println("All goals have been proven, the proof will now be reconstructed below:")
-                            .println(Printer.prettySCProof(proof, if(isValid) None else Some(position, message)))
+                            .println(Printer.prettySCProof(proof, judgement))
                             .println()
                             .println(
-                              if(isValid)
+                              if(judgement.isValid)
                                 "This proof was successfully verified by the kernel."
                               else
                                 "!!! ERROR !!! The reconstructed proof is invalid!\nThis may indicate an issue with a tactic."

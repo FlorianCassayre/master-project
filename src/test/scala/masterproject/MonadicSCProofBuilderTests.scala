@@ -49,8 +49,8 @@ class MonadicSCProofBuilderTests extends AnyFunSuite {
       _ <- withForallGeneralization(x)
     } yield ())
 
-    val result = SCProofChecker.checkSCProof(proof)
-    assert(result._1, (result._2, result._3))
+    val judgement = SCProofChecker.checkSCProof(proof)
+    assert(judgement.isValid, judgement)
 
     assert(isSameSequent(() |- forall(x.label, forall(y.label, (x === y) <=> in(x, pair(y, y)))), proof.conclusion),
       s"Unexpected conclusion: ${Printer.prettySequent(proof.conclusion)} (expected: ${Printer.prettySequent(proof.conclusion)})")
@@ -84,7 +84,7 @@ class MonadicSCProofBuilderTests extends AnyFunSuite {
       (_, i4) <- (pxy === pxy1) |- (in(z, pxy1) <=> ((z === x) \/ (z === y))) by i3
     } yield ())
 
-    val result = SCProofChecker.checkSCProof(proof)
-    assert(result._1, (result._2, result._3))
+    val judgement = SCProofChecker.checkSCProof(proof)
+    assert(judgement.isValid, judgement)
   }
 }

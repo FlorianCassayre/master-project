@@ -1,4 +1,4 @@
-package masterproject.front.proof
+package masterproject.front
 
 import masterproject.front.fol.FOL.*
 import masterproject.front.proof.Proof.*
@@ -9,21 +9,22 @@ import lisa.kernel.proof.SCProofChecker
 
   val (a, b, c) = (ConstantPredicateLabel[0]("a"), ConstantPredicateLabel[0]("b"), ConstantPredicateLabel[0]("c"))
 
-  val x = SchematicPredicateLabel[0]("x")
+  val (w, x, y, z) = (SchematicPredicateLabel[0]("w"), SchematicPredicateLabel[0]("x"), SchematicPredicateLabel[0]("y"), SchematicPredicateLabel[0]("z"))
 
   val initialProofState = ProofState(
     IndexedSeq(
       Sequent(
-        IndexedSeq(),
-        IndexedSeq(a, b),
+        IndexedSeq(c),
+        IndexedSeq(a \/ b),
       )
     )
   )
 
   val appliedRules: Seq[TacticApplication] = Seq(
     TacticApplication(
-      RuleEliminationRightOr,
-      formulas = Some((IndexedSeq.empty, IndexedSeq(0, 1)))
+      GeneralTacticRightIff,
+      predicates = Map(Notations.a -> c, Notations.b -> b, Notations.c -> a \/ Notations.e),
+      formulas = Some((IndexedSeq.empty, IndexedSeq(0)))
     ),
   )
 
@@ -36,13 +37,13 @@ import lisa.kernel.proof.SCProofChecker
 
   reconstructed match {
     case Some(proof) =>
-      val checkerResult = SCProofChecker.checkSCProof(proof)
+      val judgement = SCProofChecker.checkSCProof(proof)
 
-      println(Printer.prettySCProof(proof, if(checkerResult._1) None else Some((checkerResult._2, checkerResult._3))))
+      println(Printer.prettySCProof(proof, judgement))
 
       println()
 
-      if(checkerResult._1) {
+      if(judgement.isValid) {
         if(proof.imports.nonEmpty) {
           println(s"Warning, the proof contains ${proof.imports.size} import(s)")
           println()

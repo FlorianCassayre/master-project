@@ -178,7 +178,7 @@ object SCProofStepFinder {
           }
           }
 
-          (rules1 ++ rules2).filter(step => checker(proof.steps.size, step, i => proof.getSequent(i), Some(proof.imports.size))._1)
+          (rules1 ++ rules2).filter(step => checker(proof.steps.size, step, i => proof.getSequent(i), Some(proof.imports.size)).isValid)
         } else {
           View.empty
         }

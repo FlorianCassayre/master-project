@@ -28,13 +28,13 @@ class GoalBasedProofSystemTests extends AnyFunSuite {
 
     assert(proof.conclusion == (() |- statement), s"The conclusion of the reconstruct proof does not match the statement that was to be proven")
 
-    val result = SCProofChecker.checkSCProof(proof)
+    val judgement = SCProofChecker.checkSCProof(proof)
 
     // For some output
-    println(Printer.prettySCProof(proof, if(result._1) None else Some((result._2, result._3))))
+    println(Printer.prettySCProof(proof, judgement))
     println()
 
-    assert(result._1, "The validity of the reconstructed proof couldn't be certified")
+    assert(judgement.isValid, "The validity of the reconstructed proof couldn't be certified")
   }
 
   test("goal based proof system") {

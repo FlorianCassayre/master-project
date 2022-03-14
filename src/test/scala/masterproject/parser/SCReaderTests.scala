@@ -67,8 +67,8 @@ class SCReaderTests extends AnyFunSuite {
       val proof = SCReader.readProof(input)
       println(Printer.prettySCProof(proof))
       println()
-      assert(SCProofChecker.checkSCProof(proof)._1)
-      //assert(Printer.prettySCProof(proof) == input.trim) // TODO uncomment this when #3 is merged
+      assert(SCProofChecker.checkSCProof(proof).isValid)
+      assert(Printer.prettySCProof(proof) == input.trim) // TODO uncomment this when #3 is merged
     }
   }
 

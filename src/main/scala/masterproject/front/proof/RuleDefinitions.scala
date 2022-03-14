@@ -109,6 +109,40 @@ trait RuleDefinitions extends ProofStateDefinitions {
     }
   )
 
+  case object GeneralTacticRightIff extends GeneralTactic {
+    import Notations.*
+
+    override def apply(proofGoal: Sequent, app: TacticApplication): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
+      app.formulas.collect { case (IndexedSeq(), IndexedSeq(i)) if proofGoal.right.indices.contains(i) =>
+        val formula = proofGoal.right(i)
+        val ea = instantiatePredicateSchemas(app.predicates(c), Map(e -> (app.predicates(a), Seq.empty)))
+        val eb = instantiatePredicateSchemas(app.predicates(c), Map(e -> (app.predicates(b), Seq.empty)))
+        if(formula == eb) { // TODO isSame
+          Some(
+            IndexedSeq(
+              proofGoal.copy(right = (proofGoal.right.take(i) :+ ea) ++ proofGoal.right.drop(i + 1)),
+              () |- app.predicates(a) <=> app.predicates(b),
+            ),
+            (bot: lisa.kernel.proof.SequentCalculus.Sequent) =>
+              IndexedSeq(
+                RightSubstIff(
+                  bot +< (app.predicates(a) <=> app.predicates(b)),
+                  -1,
+                  app.predicates(a),
+                  app.predicates(b),
+                  app.predicates(c), // f(e)
+                  e,
+                ),
+                Cut(bot, -2, 0, app.predicates(a) <=> app.predicates(b))
+              )
+          )
+        } else {
+          None
+        }
+      }.flatten
+    }
+  }
+
   // TODO more rules
 
 }

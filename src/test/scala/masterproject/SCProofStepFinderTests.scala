@@ -6,6 +6,7 @@ import lisa.kernel.fol.FOL.*
 import lisa.kernel.proof.*
 import lisa.kernel.proof.SequentCalculus.*
 import lisa.settheory.AxiomaticSetTheory.*
+import lisa.kernel.proof.SCProofCheckerJudgement.*
 import org.scalatest.funsuite.AnyFunSuite
 import masterproject.SCProofBuilder.*
 
@@ -163,7 +164,7 @@ class SCProofStepFinderTests extends AnyFunSuite {
       Try(proofBuilder.build) match {
         case Success(proof) =>
           SCProofChecker.checkSCProof(proof) match {
-            case (true, _, _) => // OK
+            case SCValidProof => // OK
               println(testname)
               println(Printer.prettySCProof(proof))
               println()
@@ -175,7 +176,7 @@ class SCProofStepFinderTests extends AnyFunSuite {
                   assert(view.exists(filter), s"The proof step finder was not able to find the step '$testname'")
                 case SCExplicitProofStep(step) => assert(false)
               }
-            case (false, path, message) => throw new AssertionError(s"The reconstructed proof for '$testname' is incorrect:\n${Printer.prettySCProof(proof, Some((path, message)))}")
+            case invalid: SCInvalidProof => throw new AssertionError(s"The reconstructed proof for '$testname' is incorrect:\n${Printer.prettySCProof(proof, invalid)}")
           }
         case Failure(exception) => throw new AssertionError(s"Couldn't reconstruct the proof for '$testname'", exception) // Couldn't reconstruct this proof
       }
