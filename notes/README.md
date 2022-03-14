@@ -1,4 +1,5 @@
 Notes
 ===
 
-Weekly notes to document the progress.
+* [`weekly/`](weekly) -- weekly notes reporting on the progress
+* [`documentation/`](documentation) -- documentation of the tools I am developing, with respect to their current state
