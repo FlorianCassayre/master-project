@@ -109,6 +109,21 @@ trait RuleDefinitions extends ProofStateDefinitions {
     }
   )
 
+  case object RuleModusPonens extends RuleElimination(
+    (** |- *(a)) :+ ($(a) |- $(b)),
+    ** |- *(b),
+    (bot, ctx) => {
+      IndexedSeq(
+        Cut(
+          bot,
+          -1,
+          -2,
+          ctx(a),
+        ),
+      )
+    }
+  )
+
   case object GeneralTacticRightIff extends GeneralTactic {
     import Notations.*
 

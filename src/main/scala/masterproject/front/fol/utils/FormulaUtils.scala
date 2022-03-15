@@ -1,9 +1,13 @@
 package masterproject.front.fol.utils
 
+import masterproject.front.fol.conversions.FormulaConversions
 import masterproject.front.fol.definitions.FormulaDefinitions
 
 trait FormulaUtils extends TermUtils {
-  this: FormulaDefinitions =>
+  this: FormulaDefinitions & FormulaConversions =>
+
+  def isSame(f1: Formula, f2: Formula): Boolean =
+    lisa.kernel.fol.FOL.isSame(f1, f2)
 
   def freeVariablesOf(formula: Formula): Set[VariableLabel] = formula match {
     case PredicateFormula(_, args) => args.flatMap(freeVariablesOf).toSet

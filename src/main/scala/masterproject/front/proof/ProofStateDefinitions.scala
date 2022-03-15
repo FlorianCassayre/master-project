@@ -3,10 +3,12 @@ package masterproject.front.proof
 import lisa.kernel.proof.SCProof
 import masterproject.front.fol.FOL.*
 import masterproject.front.unification.Unifier.*
-import lisa.kernel.proof.SequentCalculus.SCProofStep
+import lisa.kernel.proof.SequentCalculus.{Rewrite, SCProofStep}
 import masterproject.SCUtils
 
 trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
+
+  case class Proof(initialState: ProofState, steps: Seq[TacticApplication])
 
   final case class ProofState(goals: IndexedSeq[Sequent]) {
     override def toString: String =
@@ -52,6 +54,8 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     }
   }
 
+  case object TacticApplyTheorem extends Tactic
+
   class RuleSolver(override val reconstruct: Reconstruct) extends Rule {
     override final def hypotheses: IndexedSeq[PartialSequent] = IndexedSeq.empty
     override final def conclusion: PartialSequent = PartialSequent(IndexedSeq.empty, IndexedSeq.empty)
@@ -70,10 +74,23 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])] = Map.empty,
   )
 
-  def mutateProofGoal(proofGoal: Sequent, application: TacticApplication): Option[(IndexedSeq[Sequent], Either[UnificationContext, ReconstructGeneral])] = {
+  trait ReadableProofContext {
+    def contains(sequent: Sequent): Boolean
+  }
+
+  def mutateProofGoal(proofGoal: Sequent, application: TacticApplication, proofContext: ReadableProofContext): Option[(IndexedSeq[Sequent], Option[Either[UnificationContext, ReconstructGeneral]])] = {
     application.tactic match {
+      case TacticApplyTheorem =>
+        if(proofContext.contains(proofGoal)) {
+          Some((
+            IndexedSeq.empty,
+            None,
+          ))
+        } else {
+          None
+        }
       case general: GeneralTactic =>
-        general(proofGoal, application).map { case (steps, f) => (steps, Right(f)) }
+        general(proofGoal, application).map { case (steps, f) => (steps, Some(Right(f))) }
       case rule: Rule =>
         val conclusion = rule.conclusion
 
@@ -157,7 +174,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
                   )
                 )
 
-                Some((newGoals, Left(newCtx)))
+                Some((newGoals, Some(Left(newCtx))))
               case UnificationFailure(message) => None
             }
           }
@@ -167,20 +184,20 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     }
   }
 
-  def mutateProofStateFirstGoal(proofState: ProofState, application: TacticApplication): Option[(ProofState, Either[UnificationContext, ReconstructGeneral])] = {
+  def mutateProofStateFirstGoal(proofState: ProofState, application: TacticApplication, proofContext: ReadableProofContext): Option[(ProofState, Option[Either[UnificationContext, ReconstructGeneral]])] = {
     proofState.goals match {
       case h +: t =>
-        mutateProofGoal(h, application).map { (newGoals, ctx) => (ProofState(newGoals ++ t), ctx) }
+        mutateProofGoal(h, application, proofContext).map { (newGoals, ctx) => (ProofState(newGoals ++ t), ctx) }
       case _ => None
     }
   }
 
-  def reconstructSCProof(proofState: ProofState, applications: Seq[TacticApplication]): Option[SCProof] = {
+  def reconstructSCProof(proof: Proof, proofContext: ReadableProofContext): Option[(SCProof, Map[Int, Sequent])] = {
     // Each proof goal that is created (or updated) will be given a unique id
     // Then we use these ids to refer to them as a proof step in the SC proof
-    def recursive(nextId: Int, shadowProofState: IndexedSeq[Int], proofState: ProofState, remaining: Seq[TacticApplication]): Option[(SCProof, Map[Int, Int])] = remaining match {
+    def recursive(nextId: Int, shadowProofState: IndexedSeq[Int], proofState: ProofState, remaining: Seq[TacticApplication]): Option[(SCProof, Map[Int, Int], Map[Int, Sequent])] = remaining match {
       case appliedTactic +: rest =>
-        mutateProofStateFirstGoal(proofState, appliedTactic) match {
+        mutateProofStateFirstGoal(proofState, appliedTactic, proofContext) match {
           case Some((newState, either)) =>
             // The id of the goal that was transformed (here, it's always the first one)
             val id = shadowProofState.head
@@ -193,13 +210,15 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
             val newShadowProofState = newShadowGoals ++ shadowProofState.tail
             // We continue exploring the tree. The reconstruction happens when this function returns
             recursive(nextId + nReplacedGoals, newShadowProofState, newState, rest) match {
-              case Some((proof, translation)) =>
+              case Some((proof, translation, theorems)) =>
                 // Now we can reconstruct the SC proof steps
-                val reconstructedSteps = (appliedTactic.tactic, either) match { // TODO fix this ugly wart
-                  case (rule: Rule, Left(ctx)) =>
-                    rule.reconstruct(sequentToKernel(updatedGoal), ctx)
-                  case (general: GeneralTactic, Right(reconstructFunction)) =>
-                    reconstructFunction(sequentToKernel(updatedGoal))
+                val (reconstructedSteps, isTheorem) = (appliedTactic.tactic, either) match { // TODO fix this ugly wart
+                  case (TacticApplyTheorem, None) =>
+                    (IndexedSeq.empty, true)
+                  case (rule: Rule, Some(Left(ctx))) =>
+                    (rule.reconstruct(sequentToKernel(updatedGoal), ctx), false)
+                  case (general: GeneralTactic, Some(Right(reconstructFunction))) =>
+                    (reconstructFunction(sequentToKernel(updatedGoal)), false)
                   case e => throw new MatchError(e)
                 }
                 // We need to "fix" the indexing of these proof steps
@@ -217,7 +236,23 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
                 val reconstructedAndRemappedSteps = reconstructedSteps.map(SCUtils.mapPremises(_, premiseMapping))
                 val newProof = proof.withNewSteps(reconstructedAndRemappedSteps)
                 // We return the expanded proof, along with the information to recover the last (= current) step as a premise
-                Some((newProof, translation + (id -> (newProof.steps.size - 1))))
+                if(isTheorem) {
+                  val importId = newProof.imports.size
+                  val translatedId = -(importId + 1)
+                  Some((
+                    newProof.copy(imports = newProof.imports :+ sequentToKernel(updatedGoal)),
+                    translation + (id -> translatedId),
+                    theorems + (importId -> updatedGoal),
+                  ))
+                } else {
+                  val translatedId = newProof.steps.size - 1
+                  Some((
+                    newProof,
+                    translation + (id -> translatedId),
+                    theorems,
+                  ))
+                }
+
               case None => None
             }
           case None =>
@@ -229,10 +264,10 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
         // and for that we should convert unclosed branches into imports
         val imports = proofState.goals.map(sequentToKernel)
         val initialTranslation = shadowProofState.zipWithIndex.map { case (v, i) => v -> -(i + 1) }.toMap
-        Some((SCProof(IndexedSeq.empty, imports), initialTranslation))
+        Some((SCProof(IndexedSeq.empty, imports), initialTranslation, Map.empty))
     }
     // The final conclusion is given the id 0, although it will never be referenced as a premise
-    recursive(proofState.goals.size, proofState.goals.indices, proofState, applications).map { case (proof, _) => proof }
+    recursive(proof.initialState.goals.size, proof.initialState.goals.indices, proof.initialState, proof.steps).map { case (proof, _, theorems) => (proof, theorems) }
   }
 
   object Notations {

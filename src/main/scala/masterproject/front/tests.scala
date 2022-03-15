@@ -15,16 +15,18 @@ import lisa.kernel.proof.SCProofChecker
     IndexedSeq(
       Sequent(
         IndexedSeq(c),
-        IndexedSeq(a \/ b),
+        IndexedSeq(a),
       )
     )
   )
 
   val appliedRules: Seq[TacticApplication] = Seq(
     TacticApplication(
-      GeneralTacticRightIff,
-      predicates = Map(Notations.a -> c, Notations.b -> b, Notations.c -> a \/ Notations.e),
-      formulas = Some((IndexedSeq.empty, IndexedSeq(0)))
+      RuleModusPonens,
+      predicates = Map(Notations.a -> (a /\ b)),
+    ),
+    TacticApplication(
+      TacticApplyTheorem,
     ),
   )
 
@@ -33,15 +35,24 @@ import lisa.kernel.proof.SCProofChecker
   println(appliedRules.map(_.tactic).mkString("\n\n"))
   println()
 
-  val reconstructed = reconstructSCProof(initialProofState, appliedRules)
+  val universalContext = new ReadableProofContext {
+    override def contains(sequent: Sequent): Boolean = true
+  }
+
+  val reconstructed = reconstructSCProof(Proof(initialProofState, appliedRules), universalContext)
 
   reconstructed match {
-    case Some(proof) =>
+    case Some((proof, theorems)) =>
       val judgement = SCProofChecker.checkSCProof(proof)
 
       println(Printer.prettySCProof(proof, judgement))
 
       println()
+      if(theorems.nonEmpty) {
+        val keys = theorems.keySet.toSeq.sorted
+        println(s"Imports that are theorems: ${keys.mkString(", ")} (steps number ${keys.map(i => -(i + 1)).mkString(", ")})")
+        println()
+      }
 
       if(judgement.isValid) {
         if(proof.imports.nonEmpty) {
