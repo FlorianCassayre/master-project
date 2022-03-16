@@ -6,7 +6,9 @@ sealed abstract class SCParsed extends Positional
 
 private[parser] object SCParsed {
 
-  case class ParsedSequent(left: Seq[ParsedTermOrFormula], right: Seq[ParsedTermOrFormula]) extends SCParsed
+  case class ParsedSequent(left: Seq[ParsedTopTermOrFormula], right: Seq[ParsedTopTermOrFormula]) extends SCParsed
+
+  case class ParsedTopTermOrFormula(freeVariables: Seq[String], termOrFormula: ParsedTermOrFormula) extends SCParsed
 
   sealed abstract class ParsedTermOrFormula extends SCParsed
 

@@ -56,6 +56,7 @@ private[parser] trait SCLexer extends RegexParsers {
       | SymbolEmptySet ^^^ EmptySet()
       | "=" ^^^ Equal()
       | "~" ^^^ SameCardinality()
+      | "\\" ^^^ LocalBinder()
       | "{" ^^^ CurlyBracketOpen()
       | "}" ^^^ CurlyBracketClose()
       | "(" ^^^ ParenthesisOpen()

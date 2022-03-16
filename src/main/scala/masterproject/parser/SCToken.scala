@@ -33,6 +33,7 @@ private[parser] object SCToken {
   case class ExistsOne() extends SCToken
   case class Not() extends SCToken
   case class EmptySet() extends SCToken
+  case class LocalBinder() extends SCToken
 
   case class CurlyBracketOpen() extends SCToken
   case class CurlyBracketClose() extends SCToken

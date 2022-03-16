@@ -88,8 +88,14 @@ private[parser] object SCParser extends Parsers {
       | EmptySet() ^^^ ParsedSet0()
   )
 
-  private def termOrFormulaSequence: Parser[Seq[ParsedTermOrFormula]] =
-    repsep(termOrFormula, Semicolon())
+  private def localBinder: Parser[Seq[String]] =
+    LocalBinder() ~> rep1sep(identifier, Comma()) <~ Dot() ^^ (fv => fv.map(_.identifier))
+
+  private def topTermOrFormula: Parser[ParsedTopTermOrFormula] =
+    localBinder.? ~ termOrFormula ^^ { case fv ~ t => ParsedTopTermOrFormula(fv.getOrElse(Seq.empty), t) }
+
+  private def termOrFormulaSequence: Parser[Seq[ParsedTopTermOrFormula]] =
+    repsep(topTermOrFormula, Semicolon())
 
   private def sequent: Parser[ParsedSequent] =
     positioned(termOrFormulaSequence ~ Turnstile() ~ termOrFormulaSequence ^^ { case l ~ _ ~ r => ParsedSequent(l, r) })
@@ -116,6 +122,9 @@ private[parser] object SCParser extends Parsers {
 
   def parseTermOrFormula(tokens: Seq[SCToken]): ParsedTermOrFormula =
     parse(positioned(termOrFormula <~ End()))(tokens)
+
+  def parseTopTermOrFormula(tokens: Seq[SCToken]): ParsedTopTermOrFormula =
+    parse(positioned(topTermOrFormula <~ End()))(tokens)
 
   def parseSequent(tokens: Seq[SCToken]): ParsedSequent =
     parse(positioned(sequent <~ End()))(tokens)
