@@ -8,20 +8,25 @@ trait ProofContextDefinitions extends ProofStateDefinitions {
 
   import scala.collection.mutable
 
-  case class ProofContext(private[ProofContextDefinitions] val proven: mutable.Map[Sequent, (IndexedSeq[Sequent], SCProof)] = mutable.Map.empty) extends ReadableProofContext {
+  class ProofContext(private[ProofContextDefinitions] val proven: mutable.Map[Sequent, (IndexedSeq[Sequent], SCProof)] = mutable.Map.empty) extends ReadableProofContext {
     override def contains(sequent: Sequent): Boolean = proven.contains(sequent)
-    def mkTheorem(sequent: Sequent, proof: Proof): Theorem = {
+    def mkTheorem(proof: Proof): Theorem = {
+      require(proof.initialState.goals.sizeIs == 1, "The proof must start with exactly one goal")
+      val sequent = proof.initialState.goals.head
       reconstructSCProof(proof, this) match {
         case Some((scProof, theoremImports)) =>
-          assert(scProof.imports.size == theoremImports.size, "All imports must have been proven")
+          require(scProof.imports.size == theoremImports.size, "All imports must have been proven")
           proven.addOne((sequent, (scProof.imports.indices.map(theoremImports), scProof)))
           Theorem(this, sequent)
         case None => throw new Exception
       }
     }
+    override def toString: String = proven.keySet.toSeq.map(new Theorem(this, _)).map(_.toString).mkString("\n")
   }
 
-  case class Theorem private[ProofContextDefinitions](private[ProofContextDefinitions] val context: ProofContext, sequent: Sequent)
+  case class Theorem private[ProofContextDefinitions](private[ProofContextDefinitions] val context: ProofContext, sequent: Sequent) {
+    override def toString: String = s"Theorem: $sequent"
+  }
 
 
   private def topologicalSort[U](adjacency: Map[U, Set[U]]): Seq[U] = {

@@ -1,4 +1,5 @@
 package masterproject.front.proof
 
-object Proof 
-  extends RuleDefinitions
+object Proof
+  extends ProofContextDefinitions
+  with RuleDefinitions

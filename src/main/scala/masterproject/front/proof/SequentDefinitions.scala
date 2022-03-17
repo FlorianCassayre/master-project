@@ -53,4 +53,7 @@ trait SequentDefinitions {
 
   given Conversion[Sequent, lisa.kernel.proof.SequentCalculus.Sequent] = sequentToKernel
 
+  def isSameSequent(s1: Sequent, s2: Sequent): Boolean =
+    lisa.kernel.proof.SequentCalculus.isSameSequent(s1, s2)
+
 }

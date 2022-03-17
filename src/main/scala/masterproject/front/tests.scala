@@ -11,35 +11,36 @@ import lisa.kernel.proof.SCProofChecker
 
   val (w, x, y, z) = (SchematicPredicateLabel[0]("w"), SchematicPredicateLabel[0]("x"), SchematicPredicateLabel[0]("y"), SchematicPredicateLabel[0]("z"))
 
-  val initialProofState = ProofState(
-    IndexedSeq(
-      Sequent(
-        IndexedSeq(c),
-        IndexedSeq(a),
+  val fproof = Proof(
+    ProofState(
+      IndexedSeq(
+        Sequent(
+          IndexedSeq(c),
+          IndexedSeq(a),
+        )
       )
+    ),
+    Seq(
+      TacticApplication(
+        RuleModusPonens,
+        predicates = Map(Notations.a -> (a /\ b)),
+      ),
+      TacticApplication(
+        TacticApplyTheorem,
+      ),
     )
   )
 
-  val appliedRules: Seq[TacticApplication] = Seq(
-    TacticApplication(
-      RuleModusPonens,
-      predicates = Map(Notations.a -> (a /\ b)),
-    ),
-    TacticApplication(
-      TacticApplyTheorem,
-    ),
-  )
-
-  println(initialProofState)
+  println(fproof.initialState)
   println()
-  println(appliedRules.map(_.tactic).mkString("\n\n"))
+  println(fproof.steps.map(_.tactic).mkString("\n\n"))
   println()
 
   val universalContext = new ReadableProofContext {
     override def contains(sequent: Sequent): Boolean = true
   }
 
-  val reconstructed = reconstructSCProof(Proof(initialProofState, appliedRules), universalContext)
+  val reconstructed = reconstructSCProof(fproof, universalContext)
 
   reconstructed match {
     case Some((proof, theorems)) =>
