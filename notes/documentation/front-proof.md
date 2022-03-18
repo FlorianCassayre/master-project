@@ -104,7 +104,12 @@ Tactics should come in different flavours:
 * Tactics that can perform arbitrary transformations: this is a generalization of rules, with the difference
   that it won't be possible to know in advance whether this tactic can be applied without actually trying it
 * Repeated tactic: we should have a tactic that repeats another tactic until it fails.
-  Similarly e should also provide the ability to apply a tactic on all formulas of a sequent (this might be tricky)
+  Similarly, we should also provide the ability to apply a tactic on all formulas of a sequent (this might be tricky)
 * Composed tactic: tactics should be composable with each other (chained). This may seem trivial
   at first, but there are various problems that need to be overcome in order to make the feature
   practical
+
+#### Forward and backward proofs
+
+Another advantage of describing rules with schemas is that we can use them without modifications
+in both forward and backward proof styles. 
