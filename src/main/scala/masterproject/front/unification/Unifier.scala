@@ -180,4 +180,10 @@ object Unifier {
     reverseUnificationFormulas(substitutionMap, target)
   }
 
+  def instantiateFormulaFromContext(formula: Formula, ctx: UnificationContext): Formula =
+    instantiatePredicateSchemas(
+      instantiateFunctionSchemas(instantiateConnectorSchemas(formula, ctx.connectors), ctx.functions.view.mapValues(t => (t, Seq.empty[VariableLabel])).toMap),
+      ctx.predicates.view.mapValues(p => (p, Seq.empty[VariableLabel])).toMap
+    )
+
 }
