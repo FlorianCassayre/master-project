@@ -1,4 +1,4 @@
-package masterproject.front.proof
+package masterproject.front.proof.sequent
 
 import lisa.kernel.Printer
 import masterproject.front.fol.FOL.*
@@ -17,7 +17,7 @@ trait SequentDefinitions {
     def prettySequence(seq: Seq[Formula], leftSide: Boolean, partial: Boolean): String = {
       val strs = seq.map(Printer.prettyFormula(_))
       val rest = "..."
-      val strs1 = if(partial) if(leftSide) rest +: strs else strs :+ rest else strs
+      val strs1 = if (partial) if (leftSide) rest +: strs else strs :+ rest else strs
       strs1.mkString("; ")
     }
 
@@ -27,17 +27,21 @@ trait SequentDefinitions {
   final case class Sequent(left: IndexedSeq[Formula], right: IndexedSeq[Formula]) extends SequentBase {
     override def toString: String = prettySequent(left, right)
   }
+
   final case class PartialSequent(left: IndexedSeq[Formula], right: IndexedSeq[Formula], partialLeft: Boolean = true, partialRight: Boolean = true) extends SequentBase {
     override def toString: String = prettySequent(left, right, partialLeft, partialRight)
   }
 
   def functionsOfSequent(sequent: SequentBase): Set[FunctionLabel[?]] = sequent.formulas.flatMap(functionsOf).toSet
+
   def predicatesOfSequent(sequent: SequentBase): Set[PredicateLabel[?]] = sequent.formulas.flatMap(predicatesOf).toSet
 
   def schematicFunctionsOfSequent(sequent: SequentBase): Set[SchematicFunctionLabel[?]] =
     functionsOfSequent(sequent).collect { case l: SchematicFunctionLabel[?] => l }
+
   def schematicPredicatesOfSequent(sequent: SequentBase): Set[SchematicPredicateLabel[?]] =
     predicatesOfSequent(sequent).collect { case l: SchematicPredicateLabel[?] => l }
+
   def schematicConnectorsOfSequent(sequent: SequentBase): Set[SchematicConnectorLabel[?]] =
     sequent.formulas.flatMap(schematicConnectorsOf).toSet
 

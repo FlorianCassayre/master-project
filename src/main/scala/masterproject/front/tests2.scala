@@ -23,7 +23,7 @@ import masterproject.front.proof.Proof.*
       )
     ),
     Seq(
-      TacticApplication(RulePropositionalSolver),
+      AppliedTactic(GeneralTacticSolver, TacticParameters()),
     )
   )
 
@@ -39,13 +39,15 @@ import masterproject.front.proof.Proof.*
       )
     ),
     Seq(
-      TacticApplication(
+      AppliedTactic(
         RuleSubstituteRightIff,
-        predicates = Map(Notations.a -> (a /\ b)),
-        connectors = Map(Notations.f -> (x, Seq(x)))
+        TacticParameters(
+          predicates = Map(Notations.a -> (a /\ b)),
+          connectors = Map(Notations.f -> (x, Seq(x)))
+        )
       ),
-      TacticApplication(RuleHypothesis),
-      TacticApplication(TacticApplyTheorem),
+      AppliedTactic(RuleHypothesis, TacticParameters()),
+      AppliedTactic(TacticApplyTheorem, TacticParameters()),
     )
   )
 

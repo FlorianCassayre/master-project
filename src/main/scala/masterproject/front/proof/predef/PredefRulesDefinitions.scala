@@ -1,11 +1,12 @@
-package masterproject.front.proof
+package masterproject.front.proof.predef
 
 import masterproject.front.fol.FOL.*
 import masterproject.front.unification.Unifier.*
 import lisa.kernel.proof.SequentCalculus.*
 import proven.tactics.SimplePropositionalSolver
+import masterproject.front.proof.state.RuleDefinitions
 
-trait RuleDefinitions extends ProofStateDefinitions {
+trait PredefRulesDefinitions extends RuleDefinitions {
 
   private case class SideBuilder(formulas: IndexedSeq[Formula], partial: Boolean) {
     def |-(other: SideBuilder): PartialSequent = PartialSequent(formulas, other.formulas, partial, other.partial)
@@ -16,18 +17,10 @@ trait RuleDefinitions extends ProofStateDefinitions {
   private def ** : SideBuilder = SideBuilder(IndexedSeq.empty, true)
   private def $$ : SideBuilder = SideBuilder(IndexedSeq.empty, false)
   //private def &(hypotheses: PartialSequent*): IndexedSeq[PartialSequent] = hypotheses.toIndexedSeq
-  given Conversion[PartialSequent, IndexedSeq[PartialSequent]] = IndexedSeq(_)
-  val __ : IndexedSeq[PartialSequent] = IndexedSeq.empty
+  private given Conversion[PartialSequent, IndexedSeq[PartialSequent]] = IndexedSeq(_)
+  private val __ : IndexedSeq[PartialSequent] = IndexedSeq.empty
 
   import Notations.*
-
-  case object RulePropositionalSolver extends RuleSolver(
-    (bot, ctx) => {
-      val proof = SimplePropositionalSolver.solveSequent(bot)
-      assert(proof.imports.isEmpty)
-      IndexedSeq(SCSubproof(proof))
-    }
-  )
 
   case object RuleHypothesis extends RuleIntroduction(
     __,
@@ -114,49 +107,10 @@ trait RuleDefinitions extends ProofStateDefinitions {
     ** |- *(b),
     (bot, ctx) => {
       IndexedSeq(
-        Cut(
-          bot,
-          -1,
-          -2,
-          ctx(a),
-        ),
+        Cut(bot, -1, -2, ctx(a)),
       )
     }
   )
-
-  case object GeneralTacticRightIff extends GeneralTactic {
-    import Notations.*
-
-    override def apply(proofGoal: Sequent, app: TacticApplication): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
-      app.formulas.collect { case (IndexedSeq(), IndexedSeq(i)) if proofGoal.right.indices.contains(i) =>
-        val formula = proofGoal.right(i)
-        val ea = instantiatePredicateSchemas(app.predicates(c), Map(e -> (app.predicates(a), Seq.empty)))
-        val eb = instantiatePredicateSchemas(app.predicates(c), Map(e -> (app.predicates(b), Seq.empty)))
-        if(formula == eb) { // TODO isSame
-          Some(
-            IndexedSeq(
-              proofGoal.copy(right = (proofGoal.right.take(i) :+ ea) ++ proofGoal.right.drop(i + 1)),
-              () |- app.predicates(a) <=> app.predicates(b),
-            ),
-            (bot: lisa.kernel.proof.SequentCalculus.Sequent) =>
-              IndexedSeq(
-                RightSubstIff(
-                  bot +< (app.predicates(a) <=> app.predicates(b)),
-                  -1,
-                  app.predicates(a),
-                  app.predicates(b),
-                  app.predicates(c), // f(e)
-                  e,
-                ),
-                Cut(bot, -2, 0, app.predicates(a) <=> app.predicates(b))
-              )
-          )
-        } else {
-          None
-        }
-      }.flatten
-    }
-  }
 
   // TODO more rules
 

@@ -1,14 +1,14 @@
-package masterproject.front.proof
+package masterproject.front.proof.state
 
 import lisa.kernel.proof.SCProof
 import lisa.kernel.proof.SequentCalculus.SCSubproof
 import masterproject.front.fol.FOL.*
 
-trait ProofContextDefinitions extends ProofStateDefinitions {
+trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
 
   import scala.collection.mutable
 
-  class ProofContext(private[ProofContextDefinitions] val proven: mutable.Map[Sequent, (IndexedSeq[Sequent], SCProof)] = mutable.Map.empty) extends ReadableProofContext {
+  class ProofEnvironment(private[ProofEnvironmentDefinitions] val proven: mutable.Map[Sequent, (IndexedSeq[Sequent], SCProof)] = mutable.Map.empty) extends ReadableProofEnvironment {
     override def contains(sequent: Sequent): Boolean = proven.contains(sequent)
     def mkTheorem(proof: Proof): Theorem = {
       require(proof.initialState.goals.sizeIs == 1, "The proof must start with exactly one goal")
@@ -24,7 +24,7 @@ trait ProofContextDefinitions extends ProofStateDefinitions {
     override def toString: String = proven.keySet.toSeq.map(new Theorem(this, _)).map(_.toString).mkString("\n")
   }
 
-  case class Theorem private[ProofContextDefinitions](private[ProofContextDefinitions] val context: ProofContext, sequent: Sequent) {
+  case class Theorem private[ProofEnvironmentDefinitions](private[ProofEnvironmentDefinitions] val context: ProofEnvironment, sequent: Sequent) {
     override def toString: String = s"Theorem: $sequent"
   }
 

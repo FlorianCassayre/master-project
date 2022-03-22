@@ -15,25 +15,19 @@ import lisa.kernel.proof.SCProofChecker
     ProofState(
       IndexedSeq(
         Sequent(
-          IndexedSeq(c),
+          IndexedSeq(a /\ b),
           IndexedSeq(a),
         )
       )
     ),
     Seq(
-      TacticApplication(
-        RuleModusPonens,
-        predicates = Map(Notations.a -> (a /\ b)),
-      ),
-      TacticApplication(
-        TacticApplyTheorem,
-      ),
+      AppliedTactic(GeneralTacticSolver, TacticParameters()),
     )
   )
 
   println(fproof.initialState)
   println()
-  println(fproof.steps.map(_.tactic).mkString("\n\n"))
+  println(fproof.steps.map(_._1).mkString("\n\n"))
   println()
 
   val universalContext = new ReadableProofContext {
