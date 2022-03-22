@@ -6,7 +6,7 @@ import masterproject.front.fol.FOL.*
 import masterproject.parser.SCReader.*
 import masterproject.front.unification.Unifier
 import masterproject.front.unification.Unifier.*
-import lisa.kernel.proof.SequentCalculus.{Cut, Hypothesis, LeftAnd, RightAnd, SCProofStep, SCSubproof}
+import lisa.kernel.proof.SequentCalculus.{Cut, Hypothesis, LeftAnd, RightAnd, SCProofStep, SCSubproof, Weakening}
 import masterproject.SCUtils
 import proven.tactics.SimplePropositionalSolver
 
@@ -53,7 +53,7 @@ object Meta {
             val options = il.zip(pl).map { case ((i, childArgs), childPattern) => recursive(childArgs, childPattern, vl(i)) } :+
               recursive(ir, pr, vr)
             val values = options.collect { case Some(v) => v }
-            if(options.sizeIs == values) {
+            if(options.sizeIs == values.size) {
               Some(values.flatten)
             } else {
               None
@@ -255,11 +255,53 @@ object Meta {
             ReconstructedSteps(
               bot => // |- q
                 IndexedSeq(
-                  SCSubproof(SCProof(spSteps(???)), Seq.empty),
-                  Cut(???, 0, -1, ctx(p)),
+                  Weakening(bot.copy(right = bot.right :+ ctx(p)), -1), // Is weakening required?
+                  SCSubproof(SCProof(spSteps(bot.copy(left = bot.left :+ ctx(p)))), Seq.empty),
+                  Cut(bot, 1, 0, ctx(p)),
                 )
             )
         })
+    }
+  }
+
+  case object RuleEliminationMeta extends PredefRule {
+    def rule: MetaRule = MetaRule(
+      IndexedSeq(
+        MetaRule(
+          IndexedSeq(Sequent(IndexedSeq.empty, IndexedSeq(p))),
+          Sequent(IndexedSeq.empty, IndexedSeq(q)),
+        ),
+      ),
+      Sequent(IndexedSeq(p), IndexedSeq(q)),
+    )
+    override def reconstruct: UnificationContext => Reconstruct = ctx => {
+      case (_, IndexedSeq(ReconstructedFunction(f))) =>
+        ReconstructedSteps(bot => IndexedSeq( // p |- q
+          ???
+        ))
+    }
+  }
+
+  case object RuleEliminationRightOr extends PredefRule {
+    def rule: MetaRule = MetaRule(
+      IndexedSeq(
+        MetaSequent(Sequent(IndexedSeq.empty, IndexedSeq(p \/ q))),
+        MetaRule(
+          IndexedSeq(Sequent(IndexedSeq.empty, IndexedSeq(p))),
+          Sequent(IndexedSeq.empty, IndexedSeq(r)),
+        ),
+        MetaRule(
+          IndexedSeq(Sequent(IndexedSeq.empty, IndexedSeq(q))),
+          Sequent(IndexedSeq.empty, IndexedSeq(r)),
+        ),
+      ),
+      Sequent(IndexedSeq.empty, IndexedSeq(r)),
+    )
+    override def reconstruct: UnificationContext => Reconstruct = ctx => {
+      case (_, IndexedSeq(ReconstructedFunction(f))) =>
+        ReconstructedSteps(bot => IndexedSeq( // p |- q
+          ???
+        ))
     }
   }
 
@@ -413,6 +455,27 @@ object Meta {
   def initialProofModeState(goals: MetaLogical*): ProofModeState =
     ProofModeState(Seq((ProofStateSnapshot(ProofState(goals.toIndexedSeq), goals.indices, goals.size), None)))
 
+
+  // Dirty
+  def prettyMetaLogical(meta: MetaLogical): String = {
+    def removeSchematicConnectors(formula: Formula): Formula = formula match {
+      case _: PredicateFormula[?] => formula
+      case ConnectorFormula(label: SchematicConnectorLabel[?], _) =>
+        ConnectorFormula(ConstantConnectorLabel("?", 0), Seq.empty)
+      case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(removeSchematicConnectors))
+      case BinderFormula(label, bound, inner) => BinderFormula(label, bound, removeSchematicConnectors(inner))
+    }
+    def removeSchematicConnectorsSequent(sequent: Sequent): Sequent =
+      Sequent(sequent.left.map(removeSchematicConnectors), sequent.right.map(removeSchematicConnectors))
+    meta match {
+      case MetaRule(hypotheses, conclusion) =>
+        val hypothesesStr = hypotheses.map(prettyMetaLogical).mkString("; ")
+        val conclusionStr = prettyMetaLogical(conclusion)
+        s"($hypothesesStr) |= $conclusionStr"
+      case MetaSequent(sequent) => Printer.prettySequent(sequentToKernel(removeSchematicConnectorsSequent(sequent)))
+    }
+  }
+
   // === Tests ===
 
   @main def testMeta(): Unit = {
@@ -425,12 +488,15 @@ object Meta {
 
     val (initial, steps) = {
       val sequentToProve: Sequent =
-        Sequent(IndexedSeq(a /\ b), IndexedSeq(a))
+        Sequent(IndexedSeq(a), IndexedSeq(a))
       val backwardProofSteps: Seq[ProofStateMutator] =
         Seq(
+          MutateProofGoal(RuleEliminationRightOr, Args(Some(MetaSequentSelector(IndexedSeq.empty, IndexedSeq(0))),
+            predicates = Map(p -> (a, Seq.empty), q -> (a, Seq.empty))
+          )),
           //MutateProofGoal(SolverTactic, Args()),
-          MutateProofGoal(RuleIntroductionLeftAnd, Args(Some(MetaSequentSelector(IndexedSeq(0), IndexedSeq.empty)))),
-          MutateProofGoal(RuleHypothesis, Args(Some(MetaSequentSelector(IndexedSeq(0), IndexedSeq(0))))),
+          //MutateProofGoal(RuleIntroductionLeftAnd, Args(Some(MetaSequentSelector(IndexedSeq(0), IndexedSeq.empty)))),
+          //MutateProofGoal(RuleHypothesis, Args(Some(MetaSequentSelector(IndexedSeq(0), IndexedSeq(0))))),
         )
 
       (initialProofModeState(MetaSequent(sequentToProve)), backwardProofSteps)
@@ -438,7 +504,10 @@ object Meta {
 
     val finalProofMode = steps.foldLeft(initial)((mode, mutator) => mutateProofMode(mode, mutator).get)
 
-    assert(finalProofMode.lastSnapshot.proofState.goals.isEmpty)
+    println(finalProofMode.lastSnapshot.proofState.goals.map(prettyMetaLogical).mkString("\n"))
+    println()
+
+    assert(finalProofMode.lastSnapshot.proofState.goals.isEmpty, "The proof state has unproven goals")
     val scProof = reconstructSCProof(finalProofMode)
     println(Printer.prettySCProof(scProof))
     assert(SCProofChecker.checkSCProof(scProof).isValid)
