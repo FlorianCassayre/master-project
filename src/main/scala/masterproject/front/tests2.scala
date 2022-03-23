@@ -40,10 +40,9 @@ import masterproject.front.proof.Proof.*
     ),
     Seq(
       RuleSubstituteRightIff(
-        RuleTacticParameters(
-          predicates = Map(Notations.a -> (a /\ b)),
-          connectors = Map(Notations.f -> (x, Seq(x)))
-        )
+        RuleTacticParametersBuilder
+          .withPredicate(Notations.a, a /\ b)
+          .withConnector(Notations.f, x, x)
       ),
       RuleHypothesis(),
       TacticApplyTheorem,

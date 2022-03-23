@@ -9,82 +9,10 @@ import lisa.kernel.Printer
 class ProofTests extends AnyFunSuite {
 
   val (a, b, c) = (ConstantPredicateLabel[0]("a"), ConstantPredicateLabel[0]("b"), ConstantPredicateLabel[0]("c"))
-  val (w, x, y, z) = (SchematicPredicateLabel[0]("w"), SchematicPredicateLabel[0]("x"), SchematicPredicateLabel[0]("y"), SchematicPredicateLabel[0]("z"))
+  val (s, t) = (ConstantFunctionLabel[0]("s"), ConstantFunctionLabel[0]("t"))
+  val (x, y) = (VariableLabel("x"), VariableLabel("y"))
 
-
-  test("introduction rules") {
-    val proofs: Seq[Proof] = Seq(
-      Proof(
-        (a(), b /\ c) |- (b /\ c, b())
-      )(
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(1), IndexedSeq(0))))),
-      ),
-      Proof(
-        (a /\ b) |- a()
-      )(
-        RuleIntroductionLeftAnd(),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq(0))))),
-      ),
-      Proof(
-        (a(), b()) |- (a /\ b)
-      )(
-        RuleIntroductionRightAnd(RuleTacticParameters(Some((IndexedSeq.empty, IndexedSeq(0))))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq(0))))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(1), IndexedSeq(0))))),
-      ),
-      Proof(
-        (a \/ b) |- (a(), b())
-      )(
-        RuleIntroductionLeftOr(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq.empty)))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq(0))))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq(1))))),
-      ),
-      Proof(
-        a() |- (a \/ b)
-      )(
-        RuleIntroductionRightOr(RuleTacticParameters(Some((IndexedSeq.empty, IndexedSeq(0))))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq(0))))),
-      ),
-      Proof(
-        (a ==> b, a()) |- b()
-      )(
-        RuleIntroductionLeftImplies(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq.empty)))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq(1))))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(1), IndexedSeq(0))))),
-      ),
-      Proof(
-        () |- (a ==> a)
-      )(
-        RuleIntroductionRightImplies(RuleTacticParameters(Some((IndexedSeq.empty, IndexedSeq(0))))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq(0))))),
-      ),
-      Proof(
-        (a <=> b) |- (b ==> a)
-      )(
-        RuleIntroductionLeftIff(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq.empty)))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(1), IndexedSeq(0))))),
-      ),
-      Proof(
-        (a ==> b, b ==> a) |- (a <=> b)
-      )(
-        RuleIntroductionRightIff(RuleTacticParameters(Some((IndexedSeq.empty, IndexedSeq(0))))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq(0))))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(1), IndexedSeq(0))))),
-      ),
-      Proof(
-        (a(), !a) |- b()
-      )(
-        RuleIntroductionLeftNot(RuleTacticParameters(Some((IndexedSeq(1), IndexedSeq.empty)))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq(1))))), // FIXME shouldn't it be 0?
-      ),
-      Proof(
-        () |- (!a, a())
-      )(
-        RuleIntroductionRightNot(RuleTacticParameters(Some((IndexedSeq.empty, IndexedSeq(0))))),
-        RuleHypothesis(RuleTacticParameters(Some((IndexedSeq(0), IndexedSeq(0))))),
-      ),
-    )
-
+  private def checkProofs(proofs: Proof*): Unit = {
     val emptyEnvironment: ReadableProofEnvironment = _ => false
     proofs.foreach { proof =>
       val result = reconstructSCProof(proof, emptyEnvironment)
@@ -97,6 +25,96 @@ class ProofTests extends AnyFunSuite {
       assert(scProof.imports.isEmpty)
       assert(lisa.kernel.proof.SequentCalculus.isSameSequent(scProof.conclusion, proof.initialState.goals.head))
     }
+  }
+
+  test("introduction rules") {
+    checkProofs(
+      Proof(
+        (a(), b /\ c) |- (b /\ c, b())
+      )(
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(1)(0)),
+      ),
+      Proof(
+        (a /\ b) |- a()
+      )(
+        RuleIntroductionLeftAnd(),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+      ),
+      Proof(
+        (a(), b()) |- (a /\ b)
+      )(
+        RuleIntroductionRightAnd(RuleTacticParametersBuilder.withIndices()(0)),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(1)(0)),
+      ),
+      Proof(
+        (a \/ b) |- (a(), b())
+      )(
+        RuleIntroductionLeftOr(RuleTacticParametersBuilder.withIndices(0)()),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(1)),
+      ),
+      Proof(
+        a() |- (a \/ b)
+      )(
+        RuleIntroductionRightOr(RuleTacticParametersBuilder.withIndices()(0)),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+      ),
+      Proof(
+        (a ==> b, a()) |- b()
+      )(
+        RuleIntroductionLeftImplies(RuleTacticParametersBuilder.withIndices(0)()),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(1)),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(1)(0)),
+      ),
+      Proof(
+        () |- (a ==> a)
+      )(
+        RuleIntroductionRightImplies(RuleTacticParametersBuilder.withIndices()(0)),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+      ),
+      Proof(
+        (a <=> b) |- (b ==> a)
+      )(
+        RuleIntroductionLeftIff(RuleTacticParametersBuilder.withIndices(0)()),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(1)(0)),
+      ),
+      Proof(
+        (a ==> b, b ==> a) |- (a <=> b)
+      )(
+        RuleIntroductionRightIff(RuleTacticParametersBuilder.withIndices()(0)),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(1)(0)),
+      ),
+      Proof(
+        (a(), !a) |- b()
+      )(
+        RuleIntroductionLeftNot(RuleTacticParametersBuilder.withIndices(1)()),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(1)), // FIXME shouldn't it be 0?
+      ),
+      Proof(
+        () |- (!a, a())
+      )(
+        RuleIntroductionRightNot(RuleTacticParametersBuilder.withIndices()(0)),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+      ),
+    )
+  }
+
+  test("substitution rules") {
+    checkProofs(
+      Proof(
+        forall(x, x === x) |- (s === s)
+      )(
+        RuleSubstituteLeftForall(
+          RuleTacticParametersBuilder
+            .withIndices(0)()
+            .withPredicate(Notations.p, y === y, y)
+            .withFunction(Notations.t, s)
+        ),
+        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+      ),
+    )
   }
 
 }

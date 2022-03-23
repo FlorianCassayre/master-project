@@ -90,7 +90,6 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
                     (IndexedSeq.empty, true)
                   case general: GeneralTactic =>
                     (reconstructFunction(), false)
-                  case e => throw new MatchError(e)
                 }
                 // We need to "fix" the indexing of these proof steps
                 def premiseMapping(p: Int): Int = {
@@ -146,7 +145,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     val (s, t) = (SchematicFunctionLabel[0]("s"), SchematicFunctionLabel[0]("t"))
     val f: SchematicConnectorLabel[1] = SchematicConnectorLabel[1]("f")
     val p: SchematicPredicateLabel[1] = SchematicPredicateLabel[1]("p")
-    val x: VariableLabel = VariableLabel("x")
+    val (x, y) = (VariableLabel("x"), VariableLabel("y"))
   }
 
 }

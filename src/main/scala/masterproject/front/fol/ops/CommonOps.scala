@@ -12,7 +12,7 @@ trait CommonOps {
     case _ => T *: FillTupleIter[T, N - 1]
   }
 
-  protected type FillTuple[T, N <: Arity] = N match {
+  type FillTuple[T, N <: Arity] = N match {
     case 1 => T | FillTupleIter[T, N]
     case _ => FillTupleIter[T, N]
   }
@@ -22,5 +22,8 @@ trait CommonOps {
       case tuple: Tuple => tuple.productIterator.toSeq.asInstanceOf[Seq[T]]
       case _ => Seq(any.asInstanceOf[T]) // Safe cast
     }
+
+  extension [T, N <: Arity](tuple: FillTuple[T, N])
+    def toSeq: Seq[T] = tuple2seq(tuple)
 
 }

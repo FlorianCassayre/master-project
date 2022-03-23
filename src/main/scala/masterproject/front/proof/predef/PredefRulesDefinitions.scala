@@ -98,20 +98,25 @@ trait PredefRulesDefinitions extends RuleDefinitions {
 
   // Substitution
 
+  case object RuleSubstituteLeftForall extends RuleSubstitution(
+    *(p(t)) |- **,
+    *(forall(x, p(x))) |- **,
+    (bot, ctx) => {
+      val (fBody, fArgs) = ctx.applyMultiary(p)
+      val px = substituteVariables(fBody, Map(fArgs.head -> VariableTerm(ctx(x))))
+      IndexedSeq(
+        LeftForall(bot, -1, px, ctx(x), ctx(t))
+      )
+    }
+  )
+
   case object RuleSubstituteRightIff extends RuleSubstitution(
     (** |- *(f(a))) :+ ($$ |- $(a <=> b)),
     ** |- *(f(b)),
     (bot, ctx) => {
       val (fBody, fArgs) = ctx.applyMultiary(f)
       IndexedSeq(
-        RightSubstIff(
-          bot +< (ctx(a) <=> ctx(b)),
-          -1,
-          ctx(a),
-          ctx(b),
-          fBody,
-          fArgs.head,
-        ),
+        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), fBody, fArgs.head),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
     }
@@ -123,14 +128,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     (bot, ctx) => {
       val (fBody, fArgs) = ctx.applyMultiary(f)
       IndexedSeq(
-        LeftSubstIff(
-          bot +< (ctx(a) <=> ctx(b)),
-          -1,
-          ctx(a),
-          ctx(b),
-          fBody,
-          fArgs.head,
-        ),
+        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), fBody, fArgs.head),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
     }
@@ -187,7 +185,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
   // TODO more rules
 
   // Move this
-  case class GeneralTacticRightIff(parameters: RuleTacticParameters) extends GeneralTactic {
+  /*case class GeneralTacticRightIff(parameters: RuleTacticParameters) extends GeneralTactic {
     import Notations.*
 
     override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
@@ -220,6 +218,6 @@ trait PredefRulesDefinitions extends RuleDefinitions {
         }
       }.flatten
     }
-  }
+  }*/
 
 }

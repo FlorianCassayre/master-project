@@ -10,10 +10,32 @@ trait RuleDefinitions extends ProofStateDefinitions {
 
   case class RuleTacticParameters(
     formulas: Option[(IndexedSeq[Int], IndexedSeq[Int])] = None,
-    functions: Map[SchematicFunctionLabel[0], Term] = Map.empty,
-    predicates: Map[SchematicPredicateLabel[0], Formula] = Map.empty,
+    functions: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])] = Map.empty,
+    predicates: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])] = Map.empty,
     connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])] = Map.empty,
-  )
+  ) {
+    def withIndices(left: Int*)(right: Int*): RuleTacticParameters =
+      copy(formulas = Some((left.toIndexedSeq, right.toIndexedSeq)))
+    def withFunction[N <: Arity](
+      label: SchematicFunctionLabel[N], value: Term, parameters: FillTuple[VariableLabel, N]
+    ): RuleTacticParameters =
+      copy(functions = functions + (label -> (value, parameters.toSeq)))
+    def withFunction(label: SchematicFunctionLabel[0], value: Term): RuleTacticParameters =
+      withFunction(label, value, EmptyTuple)
+    def withPredicate[N <: Arity](
+      label: SchematicPredicateLabel[N], value: Formula, parameters: FillTuple[VariableLabel, N]
+    ): RuleTacticParameters =
+      copy(predicates = predicates + (label -> (value, parameters.toSeq)))
+    def withPredicate(label: SchematicPredicateLabel[0], value: Formula): RuleTacticParameters =
+      withPredicate(label, value, EmptyTuple)
+    def withConnector[N <: Arity](
+      label: SchematicConnectorLabel[N], value: Formula, parameters: FillTuple[SchematicPredicateLabel[0], N]
+    ): RuleTacticParameters = {
+      require(label.arity > 0, "For consistency, use nullary predicate schemas instead of connectors")
+      copy(connectors = connectors + (label -> (value, parameters.toSeq)))
+    }
+  }
+  val RuleTacticParametersBuilder: RuleTacticParameters = RuleTacticParameters()
 
   case class RuleTactic private[RuleDefinitions](rule: Rule, parameters: RuleTacticParameters) extends GeneralTactic {
     override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
@@ -47,6 +69,8 @@ trait RuleDefinitions extends ProofStateDefinitions {
           None
         }
 
+      val allFormulas = hypotheses :+ conclusion
+
       // We enumerate the schemas that appear at the top (of the rule) but not at the bottom
       // For these we have no other choice that to get a hint from the user
       val nonUnifiableFunctions = hypotheses.flatMap(schematicFunctionsOfSequent).toSet
@@ -54,24 +78,62 @@ trait RuleDefinitions extends ProofStateDefinitions {
       val nonUnifiablePredicates = hypotheses.flatMap(schematicPredicatesOfSequent).toSet
         .diff(schematicPredicatesOfSequent(conclusion))
 
-      // By assumption they must be of arity > 0
-      // We require all connector schemas to be explicitly defined
-      val connectorSchemas = (hypotheses :+ conclusion).flatMap(schematicConnectorsOfSequent).toSet
+      // We enumerate the schemas of arity > 0
+      val ruleFunctions = allFormulas.flatMap(schematicFunctionsOfSequent).toSet
+      val rulePredicates = allFormulas.flatMap(schematicPredicatesOfSequent).toSet
+      // By assumption connectors must be of arity > 0
+      val ruleConnectors = allFormulas.flatMap(schematicConnectorsOfSequent).toSet
+      assert(ruleConnectors.forall(_.arity > 0))
 
-      // If the user enters invalid parameters, we choose to return None
-      if (nonUnifiableFunctions == parameters.functions.keySet && nonUnifiablePredicates == parameters.predicates.keySet && connectorSchemas == parameters.connectors.keySet) {
-        parametersOption.flatMap { case (leftIndices, rightIndices) =>
+      val parametersFunctions = parameters.functions.keySet
+      val parametersPredicates = parameters.predicates.keySet
+      val parametersConnectors = parameters.connectors.keySet
+
+      // 0. Assignments should be well-formed TODO: call isWellFormed
+      lazy val noMalformedAssignment =
+        parameters.functions.forall { case (label, (_, args)) => label.arity == args.size } &&
+          parameters.predicates.forall { case (label, (_, args)) => label.arity == args.size } &&
+          parameters.connectors.forall { case (label, (_, args)) => label.arity == args.size }
+      // 1. All the parameters must be declared symbols
+      lazy val noUnknownSymbols =
+        parametersFunctions.subsetOf(ruleFunctions) &&
+          parametersPredicates.subsetOf(rulePredicates) &&
+          parametersConnectors.subsetOf(ruleConnectors)
+      // 2. All symbols defined as non-unifiable must appear in the parameters
+      lazy val noUndeclaredNonUnifiable =
+        nonUnifiableFunctions.subsetOf(parametersFunctions) &&
+          nonUnifiablePredicates.subsetOf(parametersPredicates)
+      // 3. All schemas of arity > 0 must be declared explicitly
+      lazy val noUndeclaredHigherOrder =
+        ruleFunctions.filter(_.arity > 0).subsetOf(parametersFunctions) &&
+          rulePredicates.filter(_.arity > 0).subsetOf(parametersPredicates) &&
+          ruleConnectors.subsetOf(parametersConnectors)
+
+      // This function ensures that the parameters do not contradict a resolution
+      def contextMatchesParameters(ctx: UnificationContext): Boolean = {
+        ctx.functions.filter(_._1.arity == 0).forall { case (label, (t1, _)) =>
+          parameters.functions.get(label).forall { case (t2, _) => isSame(t1, t2) }
+        } &&
+          ctx.predicates.filter(_._1.arity == 0).forall { case (label, (t1, _)) =>
+            parameters.predicates.get(label).forall { case (t2, _) => isSame(t1, t2) }
+          }
+      }
+
+      // If the user enters invalid parameters, we return None
+      if (noMalformedAssignment && noUnknownSymbols && noUndeclaredNonUnifiable && noUndeclaredHigherOrder) {
+        parametersOption.filter { case (leftIndices, rightIndices) =>
+          leftIndices.forall(proofGoal.left.indices.contains) && rightIndices.forall(proofGoal.right.indices.contains)
+        }.flatMap { case (leftIndices, rightIndices) =>
           val conclusionPatterns = conclusion.left.concat(conclusion.right)
           val conclusionTargets = leftIndices.map(proofGoal.left).concat(rightIndices.map(proofGoal.right))
-          unifyAllFormulas(conclusionPatterns.map(instantiateConnectorSchemas(_, parameters.connectors)), conclusionTargets.map(instantiateConnectorSchemas(_, parameters.connectors))) match {
-            case UnificationSuccess(ctx) =>
-              // By assumption, they are disjoint
-              // Not sure if that's the best idea to "update" the context, since this object is technically
-              // owned by `Unification`
+          unifyAllFormulas(conclusionPatterns, conclusionTargets) match {
+            case UnificationSuccess(ctx) if contextMatchesParameters(ctx) =>
+
               val newCtx = UnificationContext(
-                ctx.predicates ++ parameters.predicates.view.mapValues(f => (f, Seq.empty)),
-                ctx.functions ++ parameters.functions.view.mapValues(t => (t, Seq.empty)),
-                parameters.connectors
+                ctx.predicates ++ parameters.predicates,
+                ctx.functions ++ parameters.functions,
+                ctx.connectors ++ parameters.connectors,
+                ctx.variables,
               )
 
               def removeIndices[T](array: IndexedSeq[T], indices: Seq[Int]): IndexedSeq[T] = {
@@ -85,12 +147,7 @@ trait RuleDefinitions extends ProofStateDefinitions {
               val (commonLeft, commonRight) = (removeIndices(proofGoal.left, leftIndices), removeIndices(proofGoal.right, rightIndices))
 
               def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
-                formulas.map { formula =>
-                  instantiatePredicateSchemas(
-                    instantiateFunctionSchemas(instantiateConnectorSchemas(formula, newCtx.connectors), newCtx.functions),
-                    newCtx.predicates
-                  )
-                }
+                formulas.map(formula => instantiateSchemas(formula, newCtx.functions, newCtx.predicates, newCtx.connectors))
 
               def createHypothesis(common: IndexedSeq[Formula], pattern: IndexedSeq[Formula], partial: Boolean): IndexedSeq[Formula] = {
                 val instantiated = instantiate(pattern)
@@ -106,7 +163,7 @@ trait RuleDefinitions extends ProofStateDefinitions {
 
               val reconstruction = () => reconstruct(proofGoal, newCtx)
               Some((newGoals, reconstruction))
-            case UnificationFailure(message) => None
+            case _ => None // Contradiction or unification failure
           }
         }
       } else {
@@ -134,7 +191,6 @@ trait RuleDefinitions extends ProofStateDefinitions {
     private def partials: Seq[PartialSequent] = hypotheses :+ conclusion
 
     require(partials.forall(isSequentWellFormed))
-    require(partials.flatMap(_.formulas).flatMap(f => predicatesOf(f) ++ functionsOf(f)).forall(_.arity == 0))
     require(partials.flatMap(schematicConnectorsOfSequent).forall(_.arity > 0)) // Please use predicates instead
 
     final def apply(parameters: RuleTacticParameters = RuleTacticParameters()): RuleTactic =

@@ -17,7 +17,8 @@ object Unifier {
   case class UnificationContext(
     predicates: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])],
     functions: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])],
-    connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])]
+    connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])],
+    variables: Map[VariableLabel, VariableLabel], // TODO enforce uniqueness in pattern
   ) {
     def withPredicate(pattern: SchematicPredicateLabel[0], target: Formula): UnificationContext =
       copy(predicates = predicates + (pattern -> (target, Seq.empty)))
@@ -27,11 +28,16 @@ object Unifier {
       copy(predicates = predicates + (pattern -> (target, args)))
     def withFunction(pattern: SchematicFunctionLabel[?], target: Term, args: Seq[VariableLabel]): UnificationContext =
       copy(functions = functions + (pattern -> (target, args)))
+    def withVariable(patternVariable: VariableLabel, targetVariable: VariableLabel): UnificationContext =
+      copy(variables = variables + (patternVariable -> targetVariable))
     def apply(predicate: SchematicPredicateLabel[0]): Formula = predicates(predicate)._1
     def apply(function: SchematicFunctionLabel[0]): Term = functions(function)._1
+    def apply(variable: VariableLabel): VariableLabel = variables(variable)
+    def applyMultiary(function: SchematicFunctionLabel[?]): (Term, Seq[VariableLabel]) = functions(function)
+    def applyMultiary(predicate: SchematicPredicateLabel[?]): (Formula, Seq[VariableLabel]) = predicates(predicate)
     def applyMultiary(connector: SchematicConnectorLabel[?]): (Formula, Seq[SchematicPredicateLabel[0]]) = connectors(connector)
   }
-  private val emptyUnificationContext = UnificationContext(Map.empty, Map.empty, Map.empty)
+  private val emptyUnificationContext = UnificationContext(Map.empty, Map.empty, Map.empty, Map.empty)
 
   sealed abstract class UnificationResult {
     // This is not really needed for now
@@ -140,7 +146,7 @@ object Unifier {
       }
     case (BinderFormula(patternLabel, patternBound, patternInner), BinderFormula(targetLabel, targetBound, targetInner)) =>
       if(patternLabel == targetLabel) {
-        unifyFormulas(patternInner, targetInner, ctx)(scopedCtx.withVariable(patternBound, targetBound))
+        unifyFormulas(patternInner, targetInner, ctx.withVariable(patternBound, targetBound))(scopedCtx.withVariable(patternBound, targetBound))
       } else {
         UnificationFailure(s"Binder labels do not match, expected ${patternLabel.id} got ${targetLabel.id}")
       }

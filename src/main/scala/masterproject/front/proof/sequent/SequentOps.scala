@@ -25,7 +25,7 @@ trait SequentOps {
   given[S, I <: Iterable[S]]: IndexedSeqConverter[S, I] with
     override def apply(s: I): IndexedSeq[S] = s.toIndexedSeq
 
-  private def any2set[S, A, T <: A](any: T)(using IndexedSeqConverter[S, T]): IndexedSeq[S] = summon[IndexedSeqConverter[S, T]].apply(any)
+  protected def any2set[S, A, T <: A](any: T)(using IndexedSeqConverter[S, T]): IndexedSeq[S] = summon[IndexedSeqConverter[S, T]].apply(any)
 
   extension[A, T1 <: A] (left: T1)(using IndexedSeqConverter[Formula, T1])
     infix def |-[B, T2 <: B](right: T2)(using IndexedSeqConverter[Formula, T2]): Sequent = Sequent(any2set(left), any2set(right))

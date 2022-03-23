@@ -19,16 +19,16 @@ trait TermUtils {
     case FunctionTerm(label, args) => args.flatMap(functionsOf).toSet + label
   }
 
+  def schematicFunctionsOf(term: Term): Set[SchematicFunctionLabel[?]] =
+    functionsOf(term).collect { case schematic: SchematicFunctionLabel[?] => schematic }
 
   protected case class Scope(boundVariables: Set[VariableLabel] = Set.empty)
 
-  protected def isTermWellFormed(term: Term)(implicit ctx: Scope): Boolean = term match {
-    case VariableTerm(label) => ctx.boundVariables.contains(label) // Free variables are prohibited, use schemas
+  def isTermWellFormed(term: Term): Boolean = term match {
+    case VariableTerm(label) => true
     case FunctionTerm(label, args) =>
       (label.arity == -1 || label.arity == args.size) && args.forall(isTermWellFormed)
   }
-
-  def isWellFormed(term: Term): Boolean = isTermWellFormed(term)(Scope())
 
 
   def substituteVariables(term: Term, map: Map[VariableLabel, Term]): Term = term match {
