@@ -15,17 +15,21 @@ object Unifier {
 
   // TODO we should store information about which bound variables are in scope to avoid name clashes
   case class UnificationContext(
-                                 predicates: Map[SchematicPredicateLabel[0], Formula],
-                                 functions: Map[SchematicFunctionLabel[0], Term],
-                                 connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])]
-                               ) {
+    predicates: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])],
+    functions: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])],
+    connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])]
+  ) {
     def withPredicate(pattern: SchematicPredicateLabel[0], target: Formula): UnificationContext =
-      copy(predicates = predicates + (pattern -> target))
+      copy(predicates = predicates + (pattern -> (target, Seq.empty)))
     def withFunction(pattern: SchematicFunctionLabel[0], target: Term): UnificationContext =
-      copy(functions = functions + (pattern -> target))
-    def apply(predicate: SchematicPredicateLabel[0]): Formula = predicates(predicate)
-    def apply(function: SchematicFunctionLabel[0]): Term = functions(function)
-    def apply(connector: SchematicConnectorLabel[?]): (Formula, Seq[SchematicPredicateLabel[0]]) = connectors(connector)
+      copy(functions = functions + (pattern -> (target, Seq.empty)))
+    def withPredicate(pattern: SchematicPredicateLabel[?], target: Formula, args: Seq[VariableLabel]): UnificationContext =
+      copy(predicates = predicates + (pattern -> (target, args)))
+    def withFunction(pattern: SchematicFunctionLabel[?], target: Term, args: Seq[VariableLabel]): UnificationContext =
+      copy(functions = functions + (pattern -> (target, args)))
+    def apply(predicate: SchematicPredicateLabel[0]): Formula = predicates(predicate)._1
+    def apply(function: SchematicFunctionLabel[0]): Term = functions(function)._1
+    def applyMultiary(connector: SchematicConnectorLabel[?]): (Formula, Seq[SchematicPredicateLabel[0]]) = connectors(connector)
   }
   private val emptyUnificationContext = UnificationContext(Map.empty, Map.empty, Map.empty)
 
@@ -85,7 +89,7 @@ object Unifier {
         case SchematicFunctionLabel(_, 0) =>
           val nullaryLabel = patternSchematic.asInstanceOf[SchematicFunctionLabel[0]]
           ctx.functions.get(nullaryLabel) match {
-            case Some(expectedTarget) =>
+            case Some((expectedTarget, _)) =>
               if (isSame(target, expectedTarget)) {
                 UnificationSuccess(ctx)
               } else {
@@ -116,7 +120,7 @@ object Unifier {
         case SchematicPredicateLabel(_, 0) =>
           val nullaryLabel = patternSchematic.asInstanceOf[SchematicPredicateLabel[0]]
           ctx.predicates.get(nullaryLabel) match {
-            case Some(expectedTarget) =>
+            case Some((expectedTarget, _)) =>
               if(isSame(target, expectedTarget)) {
                 UnificationSuccess(ctx)
               } else {
@@ -182,8 +186,8 @@ object Unifier {
 
   def instantiateFormulaFromContext(formula: Formula, ctx: UnificationContext): Formula =
     instantiatePredicateSchemas(
-      instantiateFunctionSchemas(instantiateConnectorSchemas(formula, ctx.connectors), ctx.functions.view.mapValues(t => (t, Seq.empty[VariableLabel])).toMap),
-      ctx.predicates.view.mapValues(p => (p, Seq.empty[VariableLabel])).toMap
+      instantiateFunctionSchemas(instantiateConnectorSchemas(formula, ctx.connectors), ctx.functions),
+      ctx.predicates
     )
 
 }

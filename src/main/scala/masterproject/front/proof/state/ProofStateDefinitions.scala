@@ -9,13 +9,19 @@ import masterproject.front.proof.sequent.{SequentDefinitions, SequentOps}
 
 trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
 
-  case class Proof(initialState: ProofState, steps: Seq[AppliedTactic])
+  case class Proof(initialState: ProofState, steps: Seq[Tactic])
+  object Proof {
+    def apply(goals: Sequent*)(steps: Tactic*): Proof = Proof(ProofState(goals.toIndexedSeq), steps)
+  }
 
   final case class ProofState(goals: IndexedSeq[Sequent]) {
     override def toString: String =
       ((if (goals.nonEmpty) s"${goals.size} goal${if (goals.sizeIs > 1) "s" else ""}" else "[zero goals]") +:
         goals.map(_.toString)
         ).mkString("\n")
+  }
+  object ProofState {
+    def apply(goals: Sequent*): ProofState = ProofState(goals.toIndexedSeq)
   }
 
   sealed abstract class Tactic
@@ -28,24 +34,15 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     // The premises indexing is implicit:
     // * 0, 1, 2 will reference respectively the first, second and third steps in that array
     // * -1, -2, -3 will reference respectively the first second and third premises, as returned by `hypotheses`
-    def apply(proofGoal: Sequent, application: TacticParameters): Option[(IndexedSeq[Sequent], ReconstructGeneral)]
+    def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructGeneral)]
   }
-
-  case class AppliedTactic(tactic: Tactic, parameters: TacticParameters)
-
-  case class TacticParameters(
-    formulas: Option[(IndexedSeq[Int], IndexedSeq[Int])] = None,
-    functions: Map[SchematicFunctionLabel[0], Term] = Map.empty,
-    predicates: Map[SchematicPredicateLabel[0], Formula] = Map.empty,
-    connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])] = Map.empty,
-  )
 
   trait ReadableProofEnvironment {
     def contains(sequent: Sequent): Boolean
   }
 
-  def mutateProofGoal(proofGoal: Sequent, appliedTactic: AppliedTactic, proofContext: ReadableProofEnvironment): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
-    appliedTactic.tactic match {
+  def mutateProofGoal(proofGoal: Sequent, tactic: Tactic, proofContext: ReadableProofEnvironment): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
+    tactic match {
       case TacticApplyTheorem =>
         if(proofContext.contains(proofGoal)) {
           Some((
@@ -56,24 +53,24 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
           None
         }
       case general: GeneralTactic =>
-        general(proofGoal, appliedTactic.parameters).map { case (steps, f) => (steps, f) }
+        general(proofGoal).map { case (steps, f) => (steps, f) }
     }
   }
 
-  def mutateProofStateFirstGoal(proofState: ProofState, appliedTactic: AppliedTactic, proofContext: ReadableProofEnvironment): Option[(ProofState, ReconstructGeneral)] = {
+  def mutateProofStateFirstGoal(proofState: ProofState, tactic: Tactic, proofContext: ReadableProofEnvironment): Option[(ProofState, ReconstructGeneral)] = {
     proofState.goals match {
       case h +: t =>
-        mutateProofGoal(h, appliedTactic, proofContext).map { (newGoals, ctx) => (ProofState(newGoals ++ t), ctx) }
+        mutateProofGoal(h, tactic, proofContext).map { (newGoals, ctx) => (ProofState(newGoals ++ t), ctx) }
       case _ => None
     }
   }
 
-  def reconstructSCProof(proof: Proof, proofContext: ReadableProofEnvironment): Option[(SCProof, Map[Int, Sequent])] = {
+  def reconstructSCProof(proof: Proof, proofEnvironment: ReadableProofEnvironment): Option[(SCProof, Map[Int, Sequent])] = {
     // Each proof goal that is created (or updated) will be given a unique id
     // Then we use these ids to refer to them as a proof step in the SC proof
-    def recursive(nextId: Int, shadowProofState: IndexedSeq[Int], proofState: ProofState, remaining: Seq[AppliedTactic]): Option[(SCProof, Map[Int, Int], Map[Int, Sequent])] = remaining match {
-      case appliedTactic +: rest =>
-        mutateProofStateFirstGoal(proofState, appliedTactic, proofContext) match {
+    def recursive(nextId: Int, shadowProofState: IndexedSeq[Int], proofState: ProofState, remaining: Seq[Tactic]): Option[(SCProof, Map[Int, Int], Map[Int, Sequent])] = remaining match {
+      case tactic +: rest =>
+        mutateProofStateFirstGoal(proofState, tactic, proofEnvironment) match {
           case Some((newState, reconstructFunction)) =>
             // The id of the goal that was transformed (here, it's always the first one)
             val id = shadowProofState.head
@@ -88,7 +85,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
             recursive(nextId + nReplacedGoals, newShadowProofState, newState, rest) match {
               case Some((proof, translation, theorems)) =>
                 // Now we can reconstruct the SC proof steps
-                val (reconstructedSteps, isTheorem) = appliedTactic.tactic match { // TODO fix this ugly wart
+                val (reconstructedSteps, isTheorem) = tactic match { // TODO fix this ugly wart
                   case TacticApplyTheorem =>
                     (IndexedSeq.empty, true)
                   case general: GeneralTactic =>
@@ -146,7 +143,10 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
 
   object Notations {
     val (a, b, c, d, e) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"), SchematicPredicateLabel[0]("d"), SchematicPredicateLabel[0]("e"))
+    val (s, t) = (SchematicFunctionLabel[0]("s"), SchematicFunctionLabel[0]("t"))
     val f: SchematicConnectorLabel[1] = SchematicConnectorLabel[1]("f")
+    val p: SchematicPredicateLabel[1] = SchematicPredicateLabel[1]("p")
+    val x: VariableLabel = VariableLabel("x")
   }
 
 }

@@ -17,7 +17,7 @@ trait TermLabelDefinitions extends CommonDefinitions {
     def unsafe(id: String, arity: Int): ConstantFunctionLabel[?] = ConstantFunctionLabel(id, arity)
   }
 
-  object FunctionLabel {
+  object SchematicFunctionLabel {
     inline def apply[N <: Arity](id: String): SchematicFunctionLabel[N] = SchematicFunctionLabel(id, constValue[N])
     def unsafe(id: String, arity: Int): SchematicFunctionLabel[?] = SchematicFunctionLabel(id, arity)
   }

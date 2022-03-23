@@ -16,12 +16,13 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
       reconstructSCProof(proof, this) match {
         case Some((scProof, theoremImports)) =>
           require(scProof.imports.size == theoremImports.size, "All imports must have been proven")
+          require(!proven.contains(sequent), "This sequent already has a proof") // Should we disallow that?
           proven.addOne((sequent, (scProof.imports.indices.map(theoremImports), scProof)))
           Theorem(this, sequent)
         case None => throw new Exception
       }
     }
-    override def toString: String = proven.keySet.toSeq.map(new Theorem(this, _)).map(_.toString).mkString("\n")
+    override def toString: String = proven.keySet.toSeq.map(Theorem(this, _)).map(_.toString).mkString("\n")
   }
 
   case class Theorem private[ProofEnvironmentDefinitions](private[ProofEnvironmentDefinitions] val context: ProofEnvironment, sequent: Sequent) {

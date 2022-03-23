@@ -7,9 +7,13 @@ trait FormulaOps extends CommonOps {
 
   extension[N <: Arity] (label: PredicateLabel[N])
     def apply: FillTuple[Term, N] => PredicateFormula[N] = args => PredicateFormula(label, tuple2seq(args))
+  extension (label: PredicateLabel[0])
+    def apply(): PredicateFormula[0] = PredicateFormula(label, Seq.empty)
 
   extension[N <: Arity] (label: ConnectorLabel[N])
     def apply: FillTuple[Formula, N] => ConnectorFormula[N] = args => ConnectorFormula(label, tuple2seq(args))
+  extension (label: ConnectorLabel[0])
+    def apply(): ConnectorFormula[0] = ConnectorFormula(label, Seq.empty)
 
   extension[N <: Arity] (label: BinderLabel)
     def apply(bound: VariableLabel, inner: Formula): BinderFormula = BinderFormula(label, bound, inner)

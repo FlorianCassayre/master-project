@@ -21,16 +21,16 @@ import lisa.kernel.proof.SCProofChecker
       )
     ),
     Seq(
-      AppliedTactic(GeneralTacticSolver, TacticParameters()),
+      GeneralTacticSolver,
     )
   )
 
   println(fproof.initialState)
   println()
-  println(fproof.steps.map(_._1).mkString("\n\n"))
+  println(fproof.steps.mkString("\n\n"))
   println()
 
-  val universalContext = new ReadableProofContext {
+  val universalContext = new ReadableProofEnvironment {
     override def contains(sequent: Sequent): Boolean = true
   }
 

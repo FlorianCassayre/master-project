@@ -8,22 +8,21 @@ trait RuleDefinitions extends ProofStateDefinitions {
 
   type ReconstructRule = (lisa.kernel.proof.SequentCalculus.Sequent, UnificationContext) => IndexedSeq[SCProofStep]
 
-  abstract class Rule extends GeneralTactic {
-    def hypotheses: IndexedSeq[PartialSequent]
-    def conclusion: PartialSequent
+  case class RuleTacticParameters(
+    formulas: Option[(IndexedSeq[Int], IndexedSeq[Int])] = None,
+    functions: Map[SchematicFunctionLabel[0], Term] = Map.empty,
+    predicates: Map[SchematicPredicateLabel[0], Formula] = Map.empty,
+    connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])] = Map.empty,
+  )
 
-    def reconstruct: ReconstructRule
-
-    private def partials: Seq[PartialSequent] = hypotheses :+ conclusion
-
-    require(partials.forall(isSequentWellFormed))
-    require(partials.flatMap(_.formulas).flatMap(f => predicatesOf(f) ++ functionsOf(f)).forall(_.arity == 0))
-    require(partials.flatMap(schematicConnectorsOfSequent).forall(_.arity > 0)) // Please use predicates instead
-
-    override def apply(proofGoal: Sequent, application: TacticParameters): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
+  case class RuleTactic private[RuleDefinitions](rule: Rule, parameters: RuleTacticParameters) extends GeneralTactic {
+    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
+      val conclusion = rule.conclusion
+      val hypotheses = rule.hypotheses
+      val reconstruct = rule.reconstruct
       def parametersOption: Option[(IndexedSeq[Int], IndexedSeq[Int])] =
         if ((conclusion.partialLeft || conclusion.left.size == proofGoal.left.size) && (conclusion.partialRight || conclusion.right.size == proofGoal.right.size)) {
-          application.formulas match {
+          parameters.formulas match {
             case Some(pair@(explicitLeft, explicitRight)) =>
               require(conclusion.left.size == explicitLeft.size)
               require(conclusion.right.size == explicitRight.size)
@@ -60,16 +59,20 @@ trait RuleDefinitions extends ProofStateDefinitions {
       val connectorSchemas = (hypotheses :+ conclusion).flatMap(schematicConnectorsOfSequent).toSet
 
       // If the user enters invalid parameters, we choose to return None
-      if (nonUnifiableFunctions == application.functions.keySet && nonUnifiablePredicates == application.predicates.keySet && connectorSchemas == application.connectors.keySet) {
+      if (nonUnifiableFunctions == parameters.functions.keySet && nonUnifiablePredicates == parameters.predicates.keySet && connectorSchemas == parameters.connectors.keySet) {
         parametersOption.flatMap { case (leftIndices, rightIndices) =>
           val conclusionPatterns = conclusion.left.concat(conclusion.right)
           val conclusionTargets = leftIndices.map(proofGoal.left).concat(rightIndices.map(proofGoal.right))
-          unifyAllFormulas(conclusionPatterns.map(instantiateConnectorSchemas(_, application.connectors)), conclusionTargets.map(instantiateConnectorSchemas(_, application.connectors))) match {
+          unifyAllFormulas(conclusionPatterns.map(instantiateConnectorSchemas(_, parameters.connectors)), conclusionTargets.map(instantiateConnectorSchemas(_, parameters.connectors))) match {
             case UnificationSuccess(ctx) =>
               // By assumption, they are disjoint
               // Not sure if that's the best idea to "update" the context, since this object is technically
               // owned by `Unification`
-              val newCtx = UnificationContext(ctx.predicates ++ application.predicates, ctx.functions ++ application.functions, application.connectors)
+              val newCtx = UnificationContext(
+                ctx.predicates ++ parameters.predicates.view.mapValues(f => (f, Seq.empty)),
+                ctx.functions ++ parameters.functions.view.mapValues(t => (t, Seq.empty)),
+                parameters.connectors
+              )
 
               def removeIndices[T](array: IndexedSeq[T], indices: Seq[Int]): IndexedSeq[T] = {
                 val set = indices.toSet
@@ -84,8 +87,8 @@ trait RuleDefinitions extends ProofStateDefinitions {
               def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
                 formulas.map { formula =>
                   instantiatePredicateSchemas(
-                    instantiateFunctionSchemas(instantiateConnectorSchemas(formula, newCtx.connectors), newCtx.functions.view.mapValues(t => (t, Seq.empty[VariableLabel])).toMap),
-                    newCtx.predicates.view.mapValues(p => (p, Seq.empty[VariableLabel])).toMap
+                    instantiateFunctionSchemas(instantiateConnectorSchemas(formula, newCtx.connectors), newCtx.functions),
+                    newCtx.predicates
                   )
                 }
 
@@ -112,14 +115,30 @@ trait RuleDefinitions extends ProofStateDefinitions {
     }
 
     override def toString: String = {
-      val top = hypotheses.map(_.toString).mkString(" " * 6)
-      val bottom = conclusion.toString
+      val top = rule.hypotheses.map(_.toString).mkString(" " * 6)
+      val bottom = rule.conclusion.toString
       val length = Math.max(top.length, bottom.length)
 
       def pad(s: String): String = " " * ((length - s.length) / 2) + s
 
       Seq(pad(top), "=" * length, pad(bottom)).mkString("\n")
     }
+  }
+
+  abstract class Rule {
+    def hypotheses: IndexedSeq[PartialSequent]
+    def conclusion: PartialSequent
+
+    def reconstruct: ReconstructRule
+
+    private def partials: Seq[PartialSequent] = hypotheses :+ conclusion
+
+    require(partials.forall(isSequentWellFormed))
+    require(partials.flatMap(_.formulas).flatMap(f => predicatesOf(f) ++ functionsOf(f)).forall(_.arity == 0))
+    require(partials.flatMap(schematicConnectorsOfSequent).forall(_.arity > 0)) // Please use predicates instead
+
+    final def apply(parameters: RuleTacticParameters = RuleTacticParameters()): RuleTactic =
+      RuleTactic(this, parameters)
   }
 
   class RuleIntroduction(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule

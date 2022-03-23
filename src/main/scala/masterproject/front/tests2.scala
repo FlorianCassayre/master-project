@@ -11,7 +11,7 @@ import masterproject.front.proof.Proof.*
 
   val (w, x, y, z) = (SchematicPredicateLabel[0]("w"), SchematicPredicateLabel[0]("x"), SchematicPredicateLabel[0]("y"), SchematicPredicateLabel[0]("z"))
 
-  val ctx = new ProofContext
+  val ctx = new ProofEnvironment
 
   val fproof1 = Proof(
     ProofState(
@@ -23,7 +23,7 @@ import masterproject.front.proof.Proof.*
       )
     ),
     Seq(
-      AppliedTactic(GeneralTacticSolver, TacticParameters()),
+      GeneralTacticSolver,
     )
   )
 
@@ -39,15 +39,14 @@ import masterproject.front.proof.Proof.*
       )
     ),
     Seq(
-      AppliedTactic(
-        RuleSubstituteRightIff,
-        TacticParameters(
+      RuleSubstituteRightIff(
+        RuleTacticParameters(
           predicates = Map(Notations.a -> (a /\ b)),
           connectors = Map(Notations.f -> (x, Seq(x)))
         )
       ),
-      AppliedTactic(RuleHypothesis, TacticParameters()),
-      AppliedTactic(TacticApplyTheorem, TacticParameters()),
+      RuleHypothesis(),
+      TacticApplyTheorem,
     )
   )
 
