@@ -159,15 +159,16 @@ object Unifier {
       UnificationFailure(s"Types do not match, expected ${typeName(pattern).toLowerCase} got ${typeName(target).toLowerCase}")
   }
 
+  // TODO rename these and add `ctx` as parameter
   def unify(pattern: Term, target: Term): UnificationResult =
     unifyTerms(pattern, target, emptyUnificationContext)(emptyScopedUnificationContext)
   def unify(pattern: Formula, target: Formula): UnificationResult =
     unifyFormulas(pattern, target, emptyUnificationContext)(emptyScopedUnificationContext)
 
-  def unifyAllTerms(patterns: Seq[Term], targets: Seq[Term]): UnificationResult =
-    unifyZip[Term](unifyTerms(_, _, _)(emptyScopedUnificationContext), patterns, targets, emptyUnificationContext)
-  def unifyAllFormulas(patterns: Seq[Formula], targets: Seq[Formula]): UnificationResult =
-    unifyZip[Formula](unifyFormulas(_, _, _)(emptyScopedUnificationContext), patterns, targets, emptyUnificationContext)
+  def unifyAllTerms(patterns: Seq[Term], targets: Seq[Term], ctx: UnificationContext = emptyUnificationContext): UnificationResult =
+    unifyZip[Term](unifyTerms(_, _, _)(emptyScopedUnificationContext), patterns, targets, ctx)
+  def unifyAllFormulas(patterns: Seq[Formula], targets: Seq[Formula], ctx: UnificationContext = emptyUnificationContext): UnificationResult =
+    unifyZip[Formula](unifyFormulas(_, _, _)(emptyScopedUnificationContext), patterns, targets, ctx)
 
 
   private def reverseUnificationFormulas(substitutionMap: Map[PredicateLabel[0], Formula], target: Formula): Formula =

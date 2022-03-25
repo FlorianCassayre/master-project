@@ -1,6 +1,6 @@
 package masterproject.front.proof.state
 
-import lisa.kernel.proof.SCProof
+import lisa.kernel.proof.{SCProof, SCProofChecker}
 import lisa.kernel.proof.SequentCalculus.SCSubproof
 import masterproject.front.fol.FOL.*
 
@@ -10,22 +10,32 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
 
   class ProofEnvironment(private[ProofEnvironmentDefinitions] val proven: mutable.Map[Sequent, (IndexedSeq[Sequent], SCProof)] = mutable.Map.empty) extends ReadableProofEnvironment {
     override def contains(sequent: Sequent): Boolean = proven.contains(sequent)
+    private def addSequentToEnvironment(sequent: Sequent, scProof: SCProof, theoremImports: Map[Int, Sequent]): Theorem = {
+      require(scProof.imports.size == theoremImports.size && scProof.imports.indices.forall(theoremImports.contains),
+        "All imports must have been proven")
+      require(!proven.contains(sequent), "This sequent already has a proof") // Should we disallow that?
+      assert(lisa.kernel.proof.SequentCalculus.isSameSequent(sequentToKernel(sequent), scProof.conclusion),
+        "Error: the proof conclusion does not match the provided sequent")
+      assert(SCProofChecker.checkSCProof(scProof).isValid,
+        "Error: the theorem was found to produce an invalid proof; this could indicate a problem with a tactic or a bug in the implementation")
+      proven.addOne((sequent, (scProof.imports.indices.map(theoremImports), scProof)))
+      Theorem(this, sequent)
+    }
     def mkTheorem(proof: Proof): Theorem = {
       require(proof.initialState.goals.sizeIs == 1, "The proof must start with exactly one goal")
       val sequent = proof.initialState.goals.head
       reconstructSCProof(proof, this) match {
-        case Some((scProof, theoremImports)) =>
-          require(scProof.imports.size == theoremImports.size, "All imports must have been proven")
-          require(!proven.contains(sequent), "This sequent already has a proof") // Should we disallow that?
-          proven.addOne((sequent, (scProof.imports.indices.map(theoremImports), scProof)))
-          Theorem(this, sequent)
+        case Some((scProof, theoremImports)) => addSequentToEnvironment(sequent, scProof, theoremImports)
         case None => throw new Exception
       }
     }
+    private[state] def mkTheorem(sequent: Sequent, scProof: SCProof, theorems: IndexedSeq[Theorem]): Theorem =
+      addSequentToEnvironment(sequent, scProof, theorems.map(_.sequent).zipWithIndex.map(_.swap).toMap)
     override def toString: String = proven.keySet.toSeq.map(Theorem(this, _)).map(_.toString).mkString("\n")
   }
 
-  case class Theorem private[ProofEnvironmentDefinitions](private[ProofEnvironmentDefinitions] val context: ProofEnvironment, sequent: Sequent) {
+  case class Theorem private[ProofEnvironmentDefinitions](private[proof] val environment: ProofEnvironment, sequent: Sequent) {
+    def asKernel: lisa.kernel.proof.SequentCalculus.Sequent = sequentToKernel(sequent)
     override def toString: String = s"Theorem: $sequent"
   }
 
@@ -60,8 +70,8 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
 
   def reconstructSCProofForTheorem(theorem: Theorem): SCProof = {
     // Inefficient, no need to traverse/reconstruct the whole graph
-    val context = theorem.context
-    val sorted = topologicalSort(theorem.context.proven.view.mapValues(_._1.toSet).toMap.withDefaultValue(Set.empty)).reverse
+    val context = theorem.environment
+    val sorted = topologicalSort(theorem.environment.proven.view.mapValues(_._1.toSet).toMap.withDefaultValue(Set.empty)).reverse
     val sequentToIndex = sorted.zipWithIndex.toMap
 
     SCProof(sorted.map { sequent =>

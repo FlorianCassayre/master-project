@@ -24,10 +24,10 @@ trait TermUtils {
 
   protected case class Scope(boundVariables: Set[VariableLabel] = Set.empty)
 
-  def isTermWellFormed(term: Term): Boolean = term match {
+  def isWellFormed(term: Term): Boolean = term match {
     case VariableTerm(label) => true
     case FunctionTerm(label, args) =>
-      (label.arity == -1 || label.arity == args.size) && args.forall(isTermWellFormed)
+      (label.arity == -1 || label.arity == args.size) && args.forall(isWellFormed)
   }
 
 
@@ -57,6 +57,19 @@ trait TermUtils {
   private def instantiateFunctionSchemas(term: Term, map: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])]): Term = {
     require(map.forall { case (f, (_, args)) => f.arity == args.size })
     instantiateFunctionSchemasInternal(term, map)
+  }
+
+  def renameSchemas(
+    term: Term,
+    functionsMap: Map[SchematicFunctionLabel[?], SchematicFunctionLabel[?]],
+  ): Term = term match {
+    case _: VariableTerm => term
+    case FunctionTerm(label, args) =>
+      val newLabel = label match {
+        case schema: SchematicFunctionLabel[?] if functionsMap.contains(schema) => functionsMap(schema)
+        case _ => label
+      }
+      FunctionTerm(newLabel, args.map(renameSchemas(_, functionsMap)))
   }
 
 }

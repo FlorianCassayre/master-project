@@ -32,71 +32,71 @@ class ProofTests extends AnyFunSuite {
       Proof(
         (a(), b /\ c) |- (b /\ c, b())
       )(
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(1)(0)),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(1)(0)),
       ),
       Proof(
         (a /\ b) |- a()
       )(
         RuleIntroductionLeftAnd(),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
       ),
       Proof(
         (a(), b()) |- (a /\ b)
       )(
-        RuleIntroductionRightAnd(RuleTacticParametersBuilder.withIndices()(0)),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(1)(0)),
+        RuleIntroductionRightAnd(RuleBackwardParametersBuilder.withIndices()(0)),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(1)(0)),
       ),
       Proof(
         (a \/ b) |- (a(), b())
       )(
-        RuleIntroductionLeftOr(RuleTacticParametersBuilder.withIndices(0)()),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(1)),
+        RuleIntroductionLeftOr(RuleBackwardParametersBuilder.withIndices(0)()),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(1)),
       ),
       Proof(
         a() |- (a \/ b)
       )(
-        RuleIntroductionRightOr(RuleTacticParametersBuilder.withIndices()(0)),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+        RuleIntroductionRightOr(RuleBackwardParametersBuilder.withIndices()(0)),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
       ),
       Proof(
         (a ==> b, a()) |- b()
       )(
-        RuleIntroductionLeftImplies(RuleTacticParametersBuilder.withIndices(0)()),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(1)),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(1)(0)),
+        RuleIntroductionLeftImplies(RuleBackwardParametersBuilder.withIndices(0)()),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(1)),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(1)(0)),
       ),
       Proof(
         () |- (a ==> a)
       )(
-        RuleIntroductionRightImplies(RuleTacticParametersBuilder.withIndices()(0)),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+        RuleIntroductionRightImplies(RuleBackwardParametersBuilder.withIndices()(0)),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
       ),
       Proof(
         (a <=> b) |- (b ==> a)
       )(
-        RuleIntroductionLeftIff(RuleTacticParametersBuilder.withIndices(0)()),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(1)(0)),
+        RuleIntroductionLeftIff(RuleBackwardParametersBuilder.withIndices(0)()),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(1)(0)),
       ),
       Proof(
         (a ==> b, b ==> a) |- (a <=> b)
       )(
-        RuleIntroductionRightIff(RuleTacticParametersBuilder.withIndices()(0)),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(1)(0)),
+        RuleIntroductionRightIff(RuleBackwardParametersBuilder.withIndices()(0)),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(1)(0)),
       ),
       Proof(
         (a(), !a) |- b()
       )(
-        RuleIntroductionLeftNot(RuleTacticParametersBuilder.withIndices(1)()),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(1)), // FIXME shouldn't it be 0?
+        RuleIntroductionLeftNot(RuleBackwardParametersBuilder.withIndices(1)()),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(1)), // FIXME shouldn't it be 0?
       ),
       Proof(
         () |- (!a, a())
       )(
-        RuleIntroductionRightNot(RuleTacticParametersBuilder.withIndices()(0)),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+        RuleIntroductionRightNot(RuleBackwardParametersBuilder.withIndices()(0)),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
       ),
     )
   }
@@ -107,14 +107,44 @@ class ProofTests extends AnyFunSuite {
         forall(x, x === x) |- (s === s)
       )(
         RuleSubstituteLeftForall(
-          RuleTacticParametersBuilder
+          RuleBackwardParametersBuilder
             .withIndices(0)()
-            .withPredicate(Notations.p, y === y, y)
+            .withPredicate(Notations.p, x => x === x)
             .withFunction(Notations.t, s)
         ),
-        RuleHypothesis(RuleTacticParametersBuilder.withIndices(0)(0)),
+        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
       ),
     )
+
+    // TODO all the remaining rules
+  }
+
+  test("environment") {
+    val ctx = new ProofEnvironment
+
+    val thm1 = ctx.mkTheorem(
+      Proof(
+        () |- ((a /\ b) ==> (b /\ a))
+      )(
+        GeneralTacticSolver,
+      )
+    )
+
+    val thm2 = ctx.mkTheorem(
+      Proof(
+        () |- ((b /\ a) ==> (a /\ b))
+      )(
+        GeneralTacticSolver,
+      )
+    )
+
+    val thm3 = RuleIntroductionRightIff(thm1, thm2).get
+
+    val reconstructed = reconstructSCProofForTheorem(thm3)
+
+    println(Printer.prettySCProof(reconstructed))
+
+    assert(SCProofChecker.checkSCProof(reconstructed).isValid)
   }
 
 }

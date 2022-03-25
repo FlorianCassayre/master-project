@@ -94,7 +94,7 @@ trait FormulaUtils extends TermUtils {
 
   protected def isFormulaWellFormed(formula: Formula)(using ctx: Scope): Boolean = formula match {
     case PredicateFormula(label, args) =>
-      (label.arity == -1 || label.arity == args.size) && args.forall(isTermWellFormed)
+      (label.arity == -1 || label.arity == args.size) && args.forall(isWellFormed)
     case ConnectorFormula(label, args) =>
       (label.arity == -1 || label.arity == args.size) && args.forall(isFormulaWellFormed)
     case BinderFormula(label, bound, inner) =>
@@ -237,6 +237,21 @@ trait FormulaUtils extends TermUtils {
     require(predicates.forall { case (f, (_, args)) => f.arity == args.size })
     require(connectors.forall { case (f, (_, args)) => f.arity == args.size })
     instantiateSchemasInternal(formula, functions, predicates, connectors)
+  }
+
+  def renameSchemas(
+    formula: Formula,
+    functionsMap: Map[SchematicFunctionLabel[?], SchematicFunctionLabel[?]],
+    predicatesMap: Map[SchematicPredicateLabel[?], SchematicPredicateLabel[?]],
+  ): Formula = formula match {
+    case PredicateFormula(label, args) =>
+      val newLabel = label match {
+        case schema: SchematicPredicateLabel[?] if predicatesMap.contains(schema) => predicatesMap(schema)
+        case _ => label
+      }
+      PredicateFormula(newLabel, args.map(renameSchemas(_, functionsMap)))
+    case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(renameSchemas(_, functionsMap, predicatesMap)))
+    case BinderFormula(label, bound, inner) => BinderFormula(label, bound, renameSchemas(inner, functionsMap, predicatesMap))
   }
 
 }
