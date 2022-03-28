@@ -98,7 +98,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
 
   // Substitution
 
-  case object RuleSubstituteLeftForall extends RuleSubstitution(
+  case object RuleIntroductionLeftForall extends RuleIntroduction(
     *(p(t)) |- **,
     *(forall(x, p(x))) |- **,
     (bot, ctx) => {
@@ -110,7 +110,109 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     }
   )
 
-  case object RuleSubstituteRightIff extends RuleSubstitution(
+  case object RuleIntroductionRightForall extends RuleIntroduction(
+    ** |- *(p(x)),
+    ** |- *(forall(x, p(x))),
+    (bot, ctx) => {
+      // TODO x not already free in sequent; needs to be handled in `Rule`
+      val (fBody, fArgs) = ctx.applyMultiary(p)
+      val px = substituteVariables(fBody, Map(fArgs.head -> VariableTerm(ctx(x))))
+      IndexedSeq(
+        RightForall(bot, -1, px, x)
+      )
+    }
+  )
+
+  case object RuleIntroductionLeftExists extends RuleIntroduction(
+    *(p(x)) |- **,
+    *(exists(x, p(x))) |- **,
+    (bot, ctx) => {
+      val (fBody, fArgs) = ctx.applyMultiary(p)
+      val px = substituteVariables(fBody, Map(fArgs.head -> VariableTerm(ctx(x))))
+      IndexedSeq(
+        LeftExists(bot, -1, px, x)
+      )
+    }
+  )
+
+  case object RuleIntroductionRightExists extends RuleIntroduction(
+    ** |- *(p(t)),
+    ** |- *(exists(x, p(x))),
+    (bot, ctx) => {
+      val (fBody, fArgs) = ctx.applyMultiary(p)
+      val px = substituteVariables(fBody, Map(fArgs.head -> VariableTerm(ctx(x))))
+      IndexedSeq(
+        RightExists(bot, -1, px, ctx(x), ctx(t))
+      )
+    }
+  )
+
+  case object RuleIntroductionLeftExistsOne extends RuleIntroduction(
+    *(exists(y, exists(x, (x === y) <=> p(x)))) |- **,
+    *(existsOne(x, p(x))) |- **,
+    (bot, ctx) => {
+      // TODO y not free in p
+      val (fBody, fArgs) = ctx.applyMultiary(p)
+      val px = substituteVariables(fBody, Map(fArgs.head -> VariableTerm(ctx(x))))
+      ???
+    }
+  )
+
+  // RuleIntroductionLeftExistsOne
+
+  case object RuleIntroductionLeftSubstEq extends RuleIntroduction(
+    *(p(s)) |- **,
+    *(s === t, p(t)) |- **,
+    (bot, ctx) => {
+      val (fBody, fArgs) = ctx.applyMultiary(p)
+      val taken = schematicFunctionsOf(fBody).map(_.id)
+      val label = SchematicFunctionLabel[0](freshId(taken, "f"))
+      val ps = substituteVariables(fBody, Map(fArgs.head -> label()))
+      IndexedSeq(
+        LeftSubstEq(bot, -1, ctx(s), ctx(t), ps, label)
+      )
+    }
+  )
+
+  case object RuleIntroductionRightSubstEq extends RuleIntroduction(
+    ** |- *(p(s)),
+    *(s === t) |- *(p(t)),
+    (bot, ctx) => {
+      val (fBody, fArgs) = ctx.applyMultiary(p)
+      val taken = schematicFunctionsOf(fBody).map(_.id)
+      val label = SchematicFunctionLabel[0](freshId(taken, "f"))
+      val ps = substituteVariables(fBody, Map(fArgs.head -> label()))
+      IndexedSeq(
+        RightSubstEq(bot, -1, ctx(s), ctx(t), ps, label)
+      )
+    }
+  )
+
+  case object RuleIntroductionLeftSubstIff extends RuleIntroduction(
+    *(f(a)) |- **,
+    *(a <=> b, f(b)) |- **,
+    (bot, ctx) => {
+      val (fBody, fArgs) = ctx.applyMultiary(f)
+      IndexedSeq(
+        LeftSubstIff(bot, -1, ctx(a), ctx(b), fBody, fArgs.head)
+      )
+    }
+  )
+
+  case object RuleIntroductionRightSubstIff extends RuleIntroduction(
+    ** |- *(f(a)),
+    *(a <=> b) |- *(f(b)),
+    (bot, ctx) => {
+      val (fBody, fArgs) = ctx.applyMultiary(f)
+      IndexedSeq(
+        RightSubstIff(bot, -1, ctx(a), ctx(b), fBody, fArgs.head)
+      )
+    }
+  )
+
+  //
+
+  case object RuleSubstituteRightIff extends RuleIntroduction(
     (** |- *(f(a))) :+ ($$ |- $(a <=> b)),
     ** |- *(f(b)),
     (bot, ctx) => {
@@ -122,7 +224,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     }
   )
 
-  case object RuleSubstituteLeftIff extends RuleSubstitution(
+  case object RuleSubstituteLeftIff extends RuleIntroduction(
     (*(f(a)) |- **) :+ ($$ |- $(a <=> b)),
     *(f(b)) |- **,
     (bot, ctx) => {

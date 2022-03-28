@@ -35,6 +35,8 @@ trait TermConversions {
   }
 
   given Conversion[VariableLabel, lisa.kernel.fol.FOL.VariableLabel] = toKernel
+  given Conversion[ConstantFunctionLabel[?], lisa.kernel.fol.FOL.ConstantFunctionLabel] = toKernel
+  given Conversion[SchematicFunctionLabel[?], lisa.kernel.fol.FOL.SchematicFunctionLabel] = toKernel
   given Conversion[FunctionLabel[?], lisa.kernel.fol.FOL.FunctionLabel] = toKernel
   given Conversion[TermLabel, lisa.kernel.fol.FOL.TermLabel] = toKernel
   given Conversion[VariableTerm, lisa.kernel.fol.FOL.VariableTerm] = toKernel

@@ -9,7 +9,7 @@ import lisa.kernel.Printer
 class ProofTests extends AnyFunSuite {
 
   val (a, b, c) = (ConstantPredicateLabel[0]("a"), ConstantPredicateLabel[0]("b"), ConstantPredicateLabel[0]("c"))
-  val (s, t) = (ConstantFunctionLabel[0]("s"), ConstantFunctionLabel[0]("t"))
+  val (s, t, u) = (ConstantFunctionLabel[0]("s"), ConstantFunctionLabel[0]("t"), ConstantFunctionLabel[0]("u"))
   val (x, y) = (VariableLabel("x"), VariableLabel("y"))
 
   private def checkProofs(proofs: Proof*): Unit = {
@@ -98,25 +98,101 @@ class ProofTests extends AnyFunSuite {
         RuleIntroductionRightNot(RuleBackwardParametersBuilder.withIndices()(0)),
         RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
       ),
+      Proof(
+        () |- (t === t)
+      )(
+        RuleIntroductionLeftRefl(RuleBackwardParametersBuilder.withFunction(Notations.s, t)),
+        RuleHypothesis(),
+      ),
+      Proof(
+        () |- (t === t)
+      )(
+        RuleIntroductionRightRefl(RuleBackwardParametersBuilder.withFunction(Notations.s, t)),
+      ),
     )
   }
 
-  test("substitution rules") {
+  test("introduction higher order") {
     checkProofs(
       Proof(
-        forall(x, x === x) |- (s === s)
+        forall(x, u === x) |- (u === s)
       )(
-        RuleSubstituteLeftForall(
+        RuleIntroductionLeftForall(
           RuleBackwardParametersBuilder
-            .withIndices(0)()
-            .withPredicate(Notations.p, x => x === x)
+            .withPredicate(Notations.p, x => u === x)
             .withFunction(Notations.t, s)
         ),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
+        RuleHypothesis(),
+      ),
+      Proof(
+        a() |- forall(x, (u === x) \/ a)
+      )(
+        RuleIntroductionRightForall(
+          RuleBackwardParametersBuilder
+            .withPredicate(Notations.p, x => (u === x) \/ a)
+        ),
+        RuleIntroductionRightOr(),
+        RuleHypothesis(),
+      ),
+      Proof(
+        exists(x, (s === x) /\ a) |- a()
+      )(
+        RuleIntroductionLeftExists(
+          RuleBackwardParametersBuilder
+            .withPredicate(Notations.p, x => (s === x) /\ a)
+        ),
+        RuleIntroductionLeftAnd(),
+        RuleHypothesis(),
+      ),
+      Proof(
+        (s === t) |- exists(x, s === x)
+      )(
+        RuleIntroductionRightExists(
+          RuleBackwardParametersBuilder
+            .withPredicate(Notations.p, s === _)
+            .withFunction(Notations.t, t)
+        ),
+        RuleHypothesis(),
+      ),
+      Proof(
+        (s === t, u === t) |- (u === s)
+      )(
+        RuleIntroductionLeftSubstEq(
+          RuleBackwardParametersBuilder
+            .withPredicate(Notations.p, u === _)
+        ),
+        RuleHypothesis(),
+      ),
+      Proof(
+        (s === t, u === s) |- (u === t)
+      )(
+        RuleIntroductionRightSubstEq(
+          RuleBackwardParametersBuilder
+            .withPredicate(Notations.p, u === _)
+        ),
+        RuleHypothesis(),
+      ),
+      Proof(
+        (a <=> b, c <=> b) |- (c <=> a)
+      )(
+        RuleIntroductionLeftSubstIff(
+          RuleBackwardParametersBuilder
+            .withConnector(Notations.f, c <=> _)
+        ),
+        RuleHypothesis(),
+      ),
+      Proof(
+        (a <=> b, c <=> a) |- (c <=> b)
+      )(
+        RuleIntroductionRightSubstIff(
+          RuleBackwardParametersBuilder
+            .withConnector(Notations.f, c <=> _)
+        ),
+        RuleHypothesis(),
       ),
     )
 
-    // TODO all the remaining rules
+    // TODO remaining rules
   }
 
   test("environment") {

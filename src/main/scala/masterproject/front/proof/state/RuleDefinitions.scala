@@ -169,11 +169,11 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     patternsTo: IndexedSeq[PartialSequent],
     valuesFrom: IndexedSeq[Sequent]
   ): Option[(IndexedSeq[Sequent], UnificationContext)] = {
-    def parametersOption: Option[IndexedSeq[SequentSelector]] =
+    def parametersOption: View[IndexedSeq[SequentSelector]] =
       if(patternsFrom.size == valuesFrom.size) {
-        matchIndices(parameters.selectors, patternsFrom, valuesFrom).headOption // TODO keep the view, take the head later
+        matchIndices(parameters.selectors, patternsFrom, valuesFrom)
       } else {
-        None
+        View.empty
       }
 
     val allPartialFormulas = patternsFrom ++ patternsTo
@@ -280,7 +280,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
         val initialContext = UnificationContext(
           parameters.predicates.map { case (k, v) => predicatesMapping.getOrElse(k, k) -> v },
           parameters.functions.map { case (k, v) => functionsMapping.getOrElse(k, k) -> v },
-          Map.empty,
+          parameters.connectors,
           Map.empty,
         )
         unifyAllFormulas(formulaPatternsFrom, formulaValueFrom, initialContext) match {
@@ -326,7 +326,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
             Some((newValues, newCtx))
           case _ => None // Contradiction or unification failure
         }
-      }
+      }.headOption
     } else {
       None
     }
@@ -390,6 +390,5 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
 
   class RuleIntroduction(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
   class RuleElimination(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
-  class RuleSubstitution(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
 
 }

@@ -40,7 +40,7 @@ import masterproject.front.proof.Proof.*
     ),
     Seq(
       RuleSubstituteRightIff(
-        RuleTacticParametersBuilder
+        RuleBackwardParametersBuilder
           .withPredicate(Notations.a, a /\ b)
           .withConnector(Notations.f, x, x)
       ),
