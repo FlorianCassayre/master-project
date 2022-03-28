@@ -15,7 +15,7 @@ class ProofTests extends AnyFunSuite {
   private def checkProofs(proofs: Proof*): Unit = {
     val emptyEnvironment: ReadableProofEnvironment = _ => false
     proofs.foreach { proof =>
-      val result = reconstructSCProof(proof, emptyEnvironment)
+      val result = evaluateProof(proof)(emptyEnvironment).map(reconstructSCProof)
       assert(result.nonEmpty)
       val scProof = result.get._1
       val judgement = SCProofChecker.checkSCProof(scProof)

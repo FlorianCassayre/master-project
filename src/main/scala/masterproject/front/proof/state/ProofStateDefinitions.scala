@@ -65,80 +65,125 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     }
   }
 
-  def reconstructSCProof(proof: Proof, proofEnvironment: ReadableProofEnvironment): Option[(SCProof, Map[Int, Sequent])] = {
+  case class ProofStateSnapshot(
+    proofState: ProofState,
+    shadowProofState: IndexedSeq[Int],
+    nextId: Int,
+  )
+  case class ProofModeState(
+    initialSnapshot: ProofStateSnapshot,
+    steps: Seq[((Tactic, ReconstructGeneral), ProofStateSnapshot)], // Steps are in reverse direction (the first element is the latest)
+    environment: ReadableProofEnvironment,
+  ) {
+    def lastSnapshot: ProofStateSnapshot =
+      steps.headOption.map { case (_, snapshot) => snapshot }.getOrElse(initialSnapshot)
+    def zippedSteps: Seq[(ProofStateSnapshot, (Tactic, ReconstructGeneral), ProofStateSnapshot)] = {
+      val snapshots = steps.map { case (_, snapshot) => snapshot } :+ initialSnapshot
+      snapshots.zip(snapshots.tail).zip(steps.map { case (pair, _) => pair }).map {
+        case ((snapshotAfter, snapshotBefore), pair) =>
+          (snapshotBefore, pair, snapshotAfter)
+      }
+    }
+    def withNewStep(tactic: Tactic, reconstruct: ReconstructGeneral, nextSnapshot: ProofStateSnapshot): ProofModeState =
+      copy(steps = ((tactic, reconstruct), nextSnapshot) +: steps)
+  }
+
+  def applyTactic(proofModeState: ProofModeState, tactic: Tactic): Option[ProofModeState] = {
+    val lastSnapshot = proofModeState.lastSnapshot
+    val proofState = lastSnapshot.proofState
+    val shadowProofState = lastSnapshot.shadowProofState
+    val nextId = lastSnapshot.nextId
+    mutateProofStateFirstGoal(proofModeState.lastSnapshot.proofState, tactic, proofModeState.environment).map {
+      case (newState, reconstructFunction) =>
+        // The id of the goal that was transformed (here, it's always the first one)
+        val id = shadowProofState.head
+        val updatedGoal = proofState.goals.head
+        // Number of goals that have been created (or updated), possibly zero
+        // This corresponds to the number of premises in that rule
+        val nReplacedGoals = newState.goals.size - proofState.goals.size + 1
+        val newShadowGoals = nextId until (nextId + nReplacedGoals)
+        // Updated shadow proof state (= ids for the new proof state)
+        val newShadowProofState = newShadowGoals ++ shadowProofState.tail
+        // Since we created n new goals, we must increment the counter by n
+        val newNextId = nextId + nReplacedGoals
+
+        proofModeState.withNewStep(tactic, reconstructFunction, ProofStateSnapshot(newState, newShadowProofState, newNextId))
+    }
+  }
+
+  def evaluateProof(proof: Proof)(environment: ReadableProofEnvironment): Option[ProofModeState] = {
+    def applyTactics(tactics: Seq[Tactic], proofModeState: ProofModeState): Option[ProofModeState] = tactics match {
+      case tactic +: rest =>
+        applyTactic(proofModeState, tactic) match {
+          case Some(newProofModeState) => applyTactics(rest, newProofModeState)
+          case None => None
+        }
+      case _ => Some(proofModeState)
+    }
+    applyTactics(proof.steps, initialProofModeState(proof.initialState.goals: _*)(environment))
+  }
+
+  def reconstructSCProof(proofModeState: ProofModeState): (SCProof, Map[Int, Sequent]) = {
+    val proofEnvironment = proofModeState.environment
     // Each proof goal that is created (or updated) will be given a unique id
     // Then we use these ids to refer to them as a proof step in the SC proof
-    def recursive(nextId: Int, shadowProofState: IndexedSeq[Int], proofState: ProofState, remaining: Seq[Tactic]): Option[(SCProof, Map[Int, Int], Map[Int, Sequent])] = remaining match {
-      case tactic +: rest =>
-        mutateProofStateFirstGoal(proofState, tactic, proofEnvironment) match {
-          case Some((newState, reconstructFunction)) =>
-            // The id of the goal that was transformed (here, it's always the first one)
-            val id = shadowProofState.head
-            val updatedGoal = proofState.goals.head
-            // Number of goals that have been created (or updated), possibly zero
-            // This corresponds to the number of premises in that rule
-            val nReplacedGoals = newState.goals.size - proofState.goals.size + 1
-            val newShadowGoals = nextId until (nextId + nReplacedGoals)
-            // Updated shadow proof state (= ids for the new proof state)
-            val newShadowProofState = newShadowGoals ++ shadowProofState.tail
-            // We continue exploring the tree. The reconstruction happens when this function returns
-            recursive(nextId + nReplacedGoals, newShadowProofState, newState, rest) match {
-              case Some((proof, translation, theorems)) =>
-                // Now we can reconstruct the SC proof steps
-                val (reconstructedSteps, isTheorem) = tactic match { // TODO fix this ugly wart
-                  case TacticApplyTheorem =>
-                    (IndexedSeq.empty, true)
-                  case general: GeneralTactic =>
-                    (reconstructFunction(), false)
-                }
-                // We need to "fix" the indexing of these proof steps
-                def premiseMapping(p: Int): Int = {
-                  if(p < 0) {
-                    val i = Math.abs(p) - 1
-                    assert(i < nReplacedGoals)
-                    val selectedGoalId = newShadowGoals(i)
-                    translation(selectedGoalId)
-                  } else {
-                    assert(p < reconstructedSteps.size - 1)
-                    proof.steps.size + p
-                  }
-                }
-                val reconstructedAndRemappedSteps = reconstructedSteps.map(SCUtils.mapPremises(_, premiseMapping))
-                val newProof = proof.withNewSteps(reconstructedAndRemappedSteps)
-                // We return the expanded proof, along with the information to recover the last (= current) step as a premise
-                if(isTheorem) {
-                  val importId = newProof.imports.size
-                  val translatedId = -(importId + 1)
-                  Some((
-                    newProof.copy(imports = newProof.imports :+ sequentToKernel(updatedGoal)),
-                    translation + (id -> translatedId),
-                    theorems + (importId -> updatedGoal),
-                  ))
-                } else {
-                  val translatedId = newProof.steps.size - 1
-                  Some((
-                    newProof,
-                    translation + (id -> translatedId),
-                    theorems,
-                  ))
-                }
 
-              case None => None
-            }
-          case None =>
-            None
+    // For a complete proof the proof state should be empty
+    // However for testing purposes we may still allow incomplete proofs to exist,
+    // and for that we should convert unclosed branches into imports
+    val imports = proofModeState.lastSnapshot.proofState.goals.map(sequentToKernel)
+    val initialTranslation = proofModeState.lastSnapshot.shadowProofState.zipWithIndex.map { case (v, i) => v -> -(i + 1) }.toMap
+
+    val (finalProof, _, finalTheorems) = proofModeState.zippedSteps.foldLeft((SCProof(IndexedSeq.empty, imports), initialTranslation, Map.empty[Int, Sequent])) {
+      case ((proof, translation, theorems), (snapshotBefore, (tactic, reconstruct), snapshotAfter)) =>
+        val (reconstructedSteps, isTheorem) = tactic match { // TODO we have a repetition here
+          case TacticApplyTheorem =>
+            (IndexedSeq.empty, true)
+          case general: GeneralTactic =>
+            (reconstruct(), false)
         }
-      case _ => // Bottom of the front proof, now we go the other way
-        // For a complete proof the proof state should be empty
-        // However for testing purposes we may still allow incomplete proofs to exist,
-        // and for that we should convert unclosed branches into imports
-        val imports = proofState.goals.map(sequentToKernel)
-        val initialTranslation = shadowProofState.zipWithIndex.map { case (v, i) => v -> -(i + 1) }.toMap
-        Some((SCProof(IndexedSeq.empty, imports), initialTranslation, Map.empty))
+        val nReplacedGoals = snapshotAfter.nextId - snapshotBefore.nextId // TODO do not rely on the ids for that
+        val id = snapshotBefore.shadowProofState.head // TODO
+        val updatedGoal = snapshotBefore.proofState.goals.head
+        // We need to "fix" the indexing of these proof steps
+        def premiseMapping(p: Int): Int = {
+          if(p < 0) {
+            val i = Math.abs(p) - 1
+            assert(i < nReplacedGoals)
+            val selectedGoalId = snapshotAfter.shadowProofState(i)
+            translation(selectedGoalId)
+          } else {
+            assert(p < reconstructedSteps.size - 1)
+            proof.steps.size + p
+          }
+        }
+        val reconstructedAndRemappedSteps = reconstructedSteps.map(SCUtils.mapPremises(_, premiseMapping))
+        val newProof = proof.withNewSteps(reconstructedAndRemappedSteps)
+        // We return the expanded proof, along with the information to recover the last (= current) step as a premise
+        if(isTheorem) {
+          val importId = newProof.imports.size
+          val translatedId = -(importId + 1)
+          (
+            newProof.copy(imports = newProof.imports :+ sequentToKernel(updatedGoal)),
+            translation + (id -> translatedId),
+            theorems + (importId -> updatedGoal),
+          )
+        } else {
+          val translatedId = newProof.steps.size - 1
+          (
+            newProof,
+            translation + (id -> translatedId),
+            theorems,
+          )
+        }
     }
-    // The final conclusion is given the id 0, although it will never be referenced as a premise
-    recursive(proof.initialState.goals.size, proof.initialState.goals.indices, proof.initialState, proof.steps).map { case (proof, _, theorems) => (proof, theorems) }
+
+    (finalProof, finalTheorems)
   }
+
+  // The final conclusion is given the id 0, although it will never be referenced as a premise
+  def initialProofModeState(goals: Sequent*)(environment: ReadableProofEnvironment): ProofModeState =
+    ProofModeState(ProofStateSnapshot(ProofState(goals: _*), 0 until goals.size, goals.size), Seq.empty, environment)
 
   object Notations {
     val (a, b, c, d, e) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"), SchematicPredicateLabel[0]("d"), SchematicPredicateLabel[0]("e"))

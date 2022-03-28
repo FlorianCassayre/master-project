@@ -24,7 +24,7 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
     def mkTheorem(proof: Proof): Theorem = {
       require(proof.initialState.goals.sizeIs == 1, "The proof must start with exactly one goal")
       val sequent = proof.initialState.goals.head
-      reconstructSCProof(proof, this) match {
+      evaluateProof(proof)(this).map(reconstructSCProof) match {
         case Some((scProof, theoremImports)) => addSequentToEnvironment(sequent, scProof, theoremImports)
         case None => throw new Exception
       }

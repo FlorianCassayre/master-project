@@ -34,7 +34,7 @@ import lisa.kernel.proof.SCProofChecker
     override def contains(sequent: Sequent): Boolean = true
   }
 
-  val reconstructed = reconstructSCProof(fproof, universalContext)
+  val reconstructed = evaluateProof(fproof)(universalContext).map(reconstructSCProof)
 
   reconstructed match {
     case Some((proof, theorems)) =>
