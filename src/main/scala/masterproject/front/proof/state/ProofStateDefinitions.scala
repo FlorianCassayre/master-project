@@ -17,7 +17,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
   final case class ProofState(goals: IndexedSeq[Sequent]) {
     override def toString: String =
       ((if (goals.nonEmpty) s"${goals.size} goal${if (goals.sizeIs > 1) "s" else ""}" else "[zero goals]") +:
-        goals.map(_.toString)
+        goals.map(_.toString).map(s => s"- $s")
         ).mkString("\n")
   }
   object ProofState {
@@ -65,27 +65,31 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     }
   }
 
-  case class ProofStateSnapshot(
+  private case class ProofStateSnapshot(
     proofState: ProofState,
     shadowProofState: IndexedSeq[Int],
     nextId: Int,
   )
-  case class ProofModeState(
-    initialSnapshot: ProofStateSnapshot,
-    steps: Seq[((Tactic, ReconstructGeneral), ProofStateSnapshot)], // Steps are in reverse direction (the first element is the latest)
+  case class ProofModeState private[ProofStateDefinitions](
+    private[ProofStateDefinitions] val initialSnapshot: ProofStateSnapshot,
+    private[ProofStateDefinitions] val steps: Seq[((Tactic, ReconstructGeneral), ProofStateSnapshot)], // Steps are in reverse direction (the first element is the latest)
     environment: ReadableProofEnvironment,
   ) {
-    def lastSnapshot: ProofStateSnapshot =
+    private[ProofStateDefinitions] def lastSnapshot: ProofStateSnapshot =
       steps.headOption.map { case (_, snapshot) => snapshot }.getOrElse(initialSnapshot)
-    def zippedSteps: Seq[(ProofStateSnapshot, (Tactic, ReconstructGeneral), ProofStateSnapshot)] = {
+    private[ProofStateDefinitions] def zippedSteps: Seq[(ProofStateSnapshot, (Tactic, ReconstructGeneral), ProofStateSnapshot)] = {
       val snapshots = steps.map { case (_, snapshot) => snapshot } :+ initialSnapshot
       snapshots.zip(snapshots.tail).zip(steps.map { case (pair, _) => pair }).map {
         case ((snapshotAfter, snapshotBefore), pair) =>
           (snapshotBefore, pair, snapshotAfter)
       }
     }
-    def withNewStep(tactic: Tactic, reconstruct: ReconstructGeneral, nextSnapshot: ProofStateSnapshot): ProofModeState =
+    private[ProofStateDefinitions] def withNewStep(tactic: Tactic, reconstruct: ReconstructGeneral, nextSnapshot: ProofStateSnapshot): ProofModeState =
       copy(steps = ((tactic, reconstruct), nextSnapshot) +: steps)
+
+    def state: ProofState = lastSnapshot.proofState
+    def proving: ProofState = initialSnapshot.proofState
+    def tactics: Seq[Tactic] = steps.map { case ((tactic, _), _) => tactic }.reverse
   }
 
   def applyTactic(proofModeState: ProofModeState, tactic: Tactic): Option[ProofModeState] = {

@@ -29,7 +29,7 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
         case None => throw new Exception
       }
     }
-    private[state] def mkTheorem(sequent: Sequent, scProof: SCProof, theorems: IndexedSeq[Theorem]): Theorem =
+    private[proof] def mkTheorem(sequent: Sequent, scProof: SCProof, theorems: IndexedSeq[Theorem]): Theorem =
       addSequentToEnvironment(sequent, scProof, theorems.map(_.sequent).zipWithIndex.map(_.swap).toMap)
     override def toString: String = proven.keySet.toSeq.map(Theorem(this, _)).map(_.toString).mkString("\n")
   }

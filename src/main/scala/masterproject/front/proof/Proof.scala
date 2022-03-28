@@ -4,5 +4,5 @@ import masterproject.front.proof.state.*
 import masterproject.front.proof.predef.*
 
 object Proof
-  extends ProofEnvironmentDefinitions
+  extends ProofInterfaceDefinitions
   with PredefRulesDefinitions with PredefTacticsDefinitions

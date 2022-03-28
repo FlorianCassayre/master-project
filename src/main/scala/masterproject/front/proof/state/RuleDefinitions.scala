@@ -18,19 +18,13 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     val predicates: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])]
     val connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])]
 
-    private def generateParameters[N <: Arity, T, U](name: String => T, n: N, f: FillTuple[T, N] => U, taken: Set[String] = Set.empty): (FillTuple[T, N], U) = {
-      val newIds = LazyList.from(0).map(i => s"x$i").filter(!taken.contains(_)).take(n).toIndexedSeq
-      val parameters = fillTuple[T, N](n, i => name(newIds(i)))
-      (parameters, f(parameters))
-    }
-
     def withFunction[N <: Arity](
       label: SchematicFunctionLabel[N], value: Term, parameters: FillTuple[VariableLabel, N]
     ): T
     final def withFunction[N <: Arity](
       label: SchematicFunctionLabel[N], f: FillTuple[VariableLabel, N] => Term
     ): T = {
-      val (parameters, value) = generateParameters(VariableLabel.apply, label.arity, f)
+      val (parameters, value) = fillTupleParameters(VariableLabel.apply, label.arity, f)
       withFunction(label, value, parameters)
     }
     final def withFunction(label: SchematicFunctionLabel[0], value: Term): T =
@@ -41,7 +35,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     final def withPredicate[N <: Arity](
       label: SchematicPredicateLabel[N], f: FillTuple[VariableLabel, N] => Formula
     ): T = {
-      val (parameters, value) = generateParameters(VariableLabel.apply, label.arity, f)
+      val (parameters, value) = fillTupleParameters(VariableLabel.apply, label.arity, f)
       withPredicate(label, value, parameters)
     }
     final def withPredicate(label: SchematicPredicateLabel[0], value: Formula): T =
@@ -58,7 +52,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     final def withConnector[N <: Arity](
       label: SchematicConnectorLabel[N], f: FillTuple[SchematicPredicateLabel[0], N] => Formula
     ): T = {
-      val (parameters, value) = generateParameters(SchematicPredicateLabel.unsafe(_, 0).asInstanceOf[SchematicPredicateLabel[0]], label.arity, f)
+      val (parameters, value) = fillTupleParameters(SchematicPredicateLabel.unsafe(_, 0).asInstanceOf[SchematicPredicateLabel[0]], label.arity, f)
       withConnector(label, value, parameters)
     }
   }
@@ -91,6 +85,11 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
       copy(connectors = connectors + (label -> (value, parameters.toSeq)))
   }
   val RuleBackwardParametersBuilder: RuleBackwardParameters = RuleBackwardParameters()
+
+  object Parameters
+
+  given Conversion[Parameters.type, RuleBackwardParameters] = _ => RuleBackwardParametersBuilder
+  given Conversion[Parameters.type, RuleForwardParameters] = _ => RuleForwardParametersBuilder
 
   case class RuleForwardParameters(
     selectors: Map[Int, SequentSelector] = Map.empty,
@@ -390,5 +389,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
 
   class RuleIntroduction(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
   class RuleElimination(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
+
+  given Conversion[Rule, RuleTactic] = _()
 
 }

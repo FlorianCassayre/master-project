@@ -23,7 +23,7 @@ import masterproject.front.proof.Proof.*
       )
     ),
     Seq(
-      GeneralTacticSolver,
+      TacticSolver,
     )
   )
 

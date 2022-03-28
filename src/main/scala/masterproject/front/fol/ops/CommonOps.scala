@@ -17,6 +17,13 @@ trait CommonOps {
     case _ => FillTupleIter[T, N]
   }
 
+  private[front] def fillTupleParameters[N <: Arity, T, U](name: String => T, n: N, f: FillTuple[T, N] => U, taken: Set[String] = Set.empty): (FillTuple[T, N], U) = {
+    // TODO possible collision
+    val newIds = LazyList.from(0).map(i => s"x$i").filter(!taken.contains(_)).take(n).toIndexedSeq
+    val parameters = fillTuple[T, N](n, i => name(newIds(i)))
+    (parameters, f(parameters))
+  }
+
   protected def tuple2seq[T, N <: Arity](any: FillTuple[T, N]): Seq[T] =
     any match {
       case tuple: Tuple => tuple.productIterator.toSeq.asInstanceOf[Seq[T]]

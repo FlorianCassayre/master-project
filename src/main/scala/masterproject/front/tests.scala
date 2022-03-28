@@ -21,7 +21,7 @@ import lisa.kernel.proof.SCProofChecker
       )
     ),
     Seq(
-      GeneralTacticSolver,
+      TacticSolver,
     )
   )
 
