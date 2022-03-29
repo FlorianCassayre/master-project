@@ -1,17 +1,25 @@
-name := "master-project"
+lazy val root = (project in file("."))
+  .settings(
+    commonSettings,
+    name := "master-project",
+    organization := "me.cassayre.florian",
+    version := "0.1.0",
+    versionScheme := Some("semver-spec"),
+    scalaVersion := "3.1.1",
+    scalacOptions ++= Seq(
+      "-feature",
+      "-language:implicitConversions"
+    ),
+    libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1",
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.10" % "test",
+  )
+  .dependsOn(lisa)
 
-version := "0.1"
+lazy val lisa = (project in file("lisa")).settings(commonSettings)
 
-scalaVersion := "3.1.1"
-
-scalacOptions ++= Seq(
-  "-feature",
-  "-language:implicitConversions"
+lazy val commonSettings = Seq(
+  publishTo := Some(MavenCache("local-maven", file("releases"))),
+  Compile / packageDoc / publishArtifact := false,
+  //packageDoc / publishArtifact := false,
+  Compile / doc / sources := Seq.empty,
 )
-
-lazy val lisa = RootProject(file("lisa"))
-lazy val root = (project in file(".")).dependsOn(lisa)
-
-libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1"
-
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.10" % "test"
