@@ -1,11 +1,11 @@
 package masterproject.front.fol.utils
 
-import masterproject.front.fol.conversions.FormulaConversions
+import masterproject.front.fol.conversions.to.FormulaConversionsTo
 import masterproject.front.fol.definitions.FormulaDefinitions
 import masterproject.front.fol.ops.CommonOps
 
 trait FormulaUtils extends TermUtils {
-  this: FormulaDefinitions & FormulaConversions & CommonOps =>
+  this: FormulaDefinitions & FormulaConversionsTo & CommonOps =>
 
   def freshId(taken: Set[String], base: String): String = {
     def findFirst(i: Int): String = {

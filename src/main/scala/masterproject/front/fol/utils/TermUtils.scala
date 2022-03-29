@@ -1,11 +1,11 @@
 package masterproject.front.fol.utils
 
-import masterproject.front.fol.conversions.TermConversions
+import masterproject.front.fol.conversions.to.TermConversionsTo
 import masterproject.front.fol.definitions.TermDefinitions
 import masterproject.front.fol.ops.CommonOps
 
 trait TermUtils {
-  this: TermDefinitions & TermConversions & CommonOps =>
+  this: TermDefinitions & TermConversionsTo & CommonOps =>
 
   def isSame(t1: Term, t2: Term): Boolean =
     lisa.kernel.fol.FOL.isSame(t1, t2)

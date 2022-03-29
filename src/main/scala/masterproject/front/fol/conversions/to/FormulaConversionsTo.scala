@@ -1,27 +1,12 @@
-package masterproject.front.fol.conversions
+package masterproject.front.fol.conversions.to
 
+import masterproject.front.fol.conversions.FrontKernelMappings
 import masterproject.front.fol.definitions.FormulaDefinitions
 
-trait FormulaConversions extends TermConversions {
+trait FormulaConversionsTo extends TermConversionsTo with FrontKernelMappings {
   this: FormulaDefinitions =>
 
-  private val connectors: Map[ConstantConnectorLabel[?], lisa.kernel.fol.FOL.ConnectorLabel] = Map(
-    neg -> lisa.kernel.fol.FOL.Neg,
-    implies -> lisa.kernel.fol.FOL.Implies,
-    iff -> lisa.kernel.fol.FOL.Iff,
-    and -> lisa.kernel.fol.FOL.And,
-    or -> lisa.kernel.fol.FOL.Or,
-  )
-  private val binders: Map[BinderLabel, lisa.kernel.fol.FOL.BinderLabel] = Map(
-    forall -> lisa.kernel.fol.FOL.Forall,
-    exists -> lisa.kernel.fol.FOL.Exists,
-    existsOne -> lisa.kernel.fol.FOL.ExistsOne,
-  )
-  private val predicates: Map[ConstantPredicateLabel[?], lisa.kernel.fol.FOL.ConstantPredicateLabel] = Map(
-    equality -> lisa.kernel.fol.FOL.equality.asInstanceOf[lisa.kernel.fol.FOL.ConstantPredicateLabel], // Sadly...
-  )
-
-  def toKernel(label: ConstantConnectorLabel[?]): lisa.kernel.fol.FOL.ConnectorLabel = connectors(label)
+  def toKernel(label: ConstantConnectorLabel[?]): lisa.kernel.fol.FOL.ConnectorLabel = connectorsTo(label)
 
   def toKernel(label: ConnectorLabel[?]): lisa.kernel.fol.FOL.ConnectorLabel = label match {
     case constant: ConstantConnectorLabel[?] => toKernel(constant)
@@ -29,7 +14,7 @@ trait FormulaConversions extends TermConversions {
   }
 
   def toKernel(label: ConstantPredicateLabel[?]): lisa.kernel.fol.FOL.ConstantPredicateLabel =
-    predicates.getOrElse(label, lisa.kernel.fol.FOL.ConstantPredicateLabel(label.id, label.arity))
+    predicatesTo.getOrElse(label, lisa.kernel.fol.FOL.ConstantPredicateLabel(label.id, label.arity))
 
   def toKernel(label: SchematicPredicateLabel[?]): lisa.kernel.fol.FOL.SchematicPredicateLabel =
     lisa.kernel.fol.FOL.SchematicPredicateLabel(label.id, label.arity)
@@ -39,7 +24,7 @@ trait FormulaConversions extends TermConversions {
     case schematic: SchematicPredicateLabel[?] => toKernel(schematic)
   }
 
-  def toKernel(label: BinderLabel): lisa.kernel.fol.FOL.BinderLabel = binders(label)
+  def toKernel(label: BinderLabel): lisa.kernel.fol.FOL.BinderLabel = bindersTo(label)
 
   def toKernel(label: FormulaLabel): lisa.kernel.fol.FOL.FormulaLabel = label match {
     case predicate: PredicateLabel[?] => toKernel(predicate)

@@ -1,8 +1,8 @@
-package masterproject.front.fol.conversions
+package masterproject.front.fol.conversions.to
 
 import masterproject.front.fol.definitions.TermDefinitions
 
-trait TermConversions {
+trait TermConversionsTo {
   this: TermDefinitions =>
 
   def toKernel(label: VariableLabel): lisa.kernel.fol.FOL.VariableLabel = lisa.kernel.fol.FOL.VariableLabel(label.id)

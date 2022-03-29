@@ -290,13 +290,13 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     (bot, ctx) => {
       ctx(t) match {
         case FunctionTerm(pl: SchematicFunctionLabel[?], Seq()) =>
-          val vx = ctx(x)
+          val vx = VariableTerm(ctx(x))
           val (px, pt) = (ctx(p)(vx), ctx(p)(ctx(t)))
           val cBot = bot -> forall(ctx(x), px)
           IndexedSeq(
             Hypothesis(cBot +< px +> px, px),
-            InstFunSchema(cBot +< pt +> px, 0, pl, VariableTerm(vx), Seq.empty),
-            RightForall(bot +< pt, 1, px, vx),
+            InstFunSchema(cBot +< pt +> px, 0, pl, vx, Seq.empty),
+            RightForall(bot +< pt, 1, px, vx.label),
             Cut(bot, -1, 2, pt),
           )
         case e => throw new MatchError(e)

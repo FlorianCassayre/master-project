@@ -32,6 +32,8 @@ object SCUtils {
     case s: LeftSubstIff => s.copy(t1 = mapping(s.t1))
     case s: RightSubstIff => s.copy(t1 = mapping(s.t1))
     case s: SCSubproof => s.copy(premises = s.premises.map(mapping))
+    case s: InstFunSchema => s.copy(t1 = mapping(s.t1))
+    case s: InstPredSchema => s.copy(t1 = mapping(s.t1))
   }
-  
+
 }
