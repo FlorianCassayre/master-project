@@ -2,9 +2,10 @@ package masterproject.front.fol.utils
 
 import masterproject.front.fol.conversions.FormulaConversions
 import masterproject.front.fol.definitions.FormulaDefinitions
+import masterproject.front.fol.ops.CommonOps
 
 trait FormulaUtils extends TermUtils {
-  this: FormulaDefinitions & FormulaConversions =>
+  this: FormulaDefinitions & FormulaConversions & CommonOps =>
 
   def freshId(taken: Set[String], base: String): String = {
     def findFirst(i: Int): String = {
@@ -252,6 +253,18 @@ trait FormulaUtils extends TermUtils {
       PredicateFormula(newLabel, args.map(renameSchemas(_, functionsMap)))
     case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(renameSchemas(_, functionsMap, predicatesMap)))
     case BinderFormula(label, bound, inner) => BinderFormula(label, bound, renameSchemas(inner, functionsMap, predicatesMap))
+  }
+
+  def fillTupleParametersPredicate[N <: Arity](n: N, f: FillTuple[VariableLabel, N] => Formula): (FillTuple[VariableLabel, N], Formula) = {
+    val dummyVariable = VariableLabel("")
+    val taken = freeVariablesOf(fillTupleParameters(_ => dummyVariable, n, f)._2).map(_.id)
+    fillTupleParameters(VariableLabel.apply, n, f, taken)
+  }
+
+  def fillTupleParametersConnector[N <: Arity](n: N, f: FillTuple[SchematicPredicateLabel[0], N] => Formula): (FillTuple[SchematicPredicateLabel[0], N], Formula) = {
+    val dummyPredicate = SchematicPredicateLabel[0]("")
+    val taken = schematicPredicatesOf(fillTupleParameters(_ => dummyPredicate, n, f)._2).map(_.id)
+    fillTupleParameters(SchematicPredicateLabel[0](_), n, f, taken)
   }
 
 }

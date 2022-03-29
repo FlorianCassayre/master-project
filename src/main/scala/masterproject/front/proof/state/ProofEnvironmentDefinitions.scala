@@ -1,5 +1,6 @@
 package masterproject.front.proof.state
 
+import lisa.kernel.Printer
 import lisa.kernel.proof.{SCProof, SCProofChecker}
 import lisa.kernel.proof.SequentCalculus.SCSubproof
 import masterproject.front.fol.FOL.*
@@ -16,8 +17,16 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
       require(!proven.contains(sequent), "This sequent already has a proof") // Should we disallow that?
       assert(lisa.kernel.proof.SequentCalculus.isSameSequent(sequentToKernel(sequent), scProof.conclusion),
         "Error: the proof conclusion does not match the provided sequent")
-      assert(SCProofChecker.checkSCProof(scProof).isValid,
-        "Error: the theorem was found to produce an invalid proof; this could indicate a problem with a tactic or a bug in the implementation")
+      val judgement = SCProofChecker.checkSCProof(scProof)
+      if(!judgement.isValid) {
+        throw new AssertionError(
+          Seq(
+            "Error: the theorem was found to produce an invalid proof; this could indicate a problem with a tactic or a bug in the implementation",
+            "The produced proof is shown below for reference:",
+            Printer.prettySCProof(scProof, judgement)
+          ).mkString("\n")
+        )
+      }
       proven.addOne((sequent, (scProof.imports.indices.map(theoremImports), scProof)))
       Theorem(this, sequent)
     }

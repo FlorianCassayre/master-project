@@ -8,7 +8,7 @@ import scala.collection.View
 
 trait RuleDefinitions extends ProofEnvironmentDefinitions {
 
-  type ReconstructRule = (lisa.kernel.proof.SequentCalculus.Sequent, UnificationContext) => IndexedSeq[SCProofStep]
+  type ReconstructRule = PartialFunction[(lisa.kernel.proof.SequentCalculus.Sequent, UnificationContext), IndexedSeq[SCProofStep]]
 
   sealed abstract class CommonRuleParameters {
     protected type T <: CommonRuleParameters
@@ -24,7 +24,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     final def withFunction[N <: Arity](
       label: SchematicFunctionLabel[N], f: FillTuple[VariableLabel, N] => Term
     ): T = {
-      val (parameters, value) = fillTupleParameters(VariableLabel.apply, label.arity, f)
+      val (parameters, value) = fillTupleParametersFunction(label.arity, f)
       withFunction(label, value, parameters)
     }
     final def withFunction(label: SchematicFunctionLabel[0], value: Term): T =
@@ -35,7 +35,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     final def withPredicate[N <: Arity](
       label: SchematicPredicateLabel[N], f: FillTuple[VariableLabel, N] => Formula
     ): T = {
-      val (parameters, value) = fillTupleParameters(VariableLabel.apply, label.arity, f)
+      val (parameters, value) = fillTupleParametersPredicate(label.arity, f)
       withPredicate(label, value, parameters)
     }
     final def withPredicate(label: SchematicPredicateLabel[0], value: Formula): T =
@@ -52,7 +52,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     final def withConnector[N <: Arity](
       label: SchematicConnectorLabel[N], f: FillTuple[SchematicPredicateLabel[0], N] => Formula
     ): T = {
-      val (parameters, value) = fillTupleParameters(SchematicPredicateLabel.unsafe(_, 0).asInstanceOf[SchematicPredicateLabel[0]], label.arity, f)
+      val (parameters, value) = fillTupleParametersConnector(label.arity, f)
       withConnector(label, value, parameters)
     }
   }
@@ -85,11 +85,6 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
       copy(connectors = connectors + (label -> (value, parameters.toSeq)))
   }
   val RuleBackwardParametersBuilder: RuleBackwardParameters = RuleBackwardParameters()
-
-  object Parameters
-
-  given Conversion[Parameters.type, RuleBackwardParameters] = _ => RuleBackwardParametersBuilder
-  given Conversion[Parameters.type, RuleForwardParameters] = _ => RuleForwardParametersBuilder
 
   case class RuleForwardParameters(
     selectors: Map[Int, SequentSelector] = Map.empty,
@@ -166,7 +161,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     parameters: CommonRuleParameters,
     patternsFrom: IndexedSeq[PartialSequent],
     patternsTo: IndexedSeq[PartialSequent],
-    valuesFrom: IndexedSeq[Sequent]
+    valuesFrom: IndexedSeq[Sequent],
   ): Option[(IndexedSeq[Sequent], UnificationContext)] = {
     def parametersOption: View[IndexedSeq[SequentSelector]] =
       if(patternsFrom.size == valuesFrom.size) {
@@ -206,7 +201,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
       label.arity == args.size && args.distinct == args && isWellFormed(t) && freeVariablesOf(t).subsetOf(args.toSet)
     } &&
       parameters.predicates.forall { case (label, (f, args)) =>
-        label.arity == args.size && args.distinct == args && isWellFormed(f) && freeVariablesOf(f).subsetOf(args.toSet)
+        label.arity == args.size && args.distinct == args && isWellFormed(f) && freeVariablesOf(f).subsetOf(args.toSet) && schematicConnectorsOf(f).isEmpty
       } &&
       parameters.connectors.forall { case (label, (f, args)) =>
         label.arity == args.size && args.distinct == args && isWellFormed(f) && freeVariablesOf(f).isEmpty && schematicConnectorsOf(f).isEmpty
@@ -333,10 +328,10 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
 
   case class RuleTactic private[RuleDefinitions](rule: Rule, parameters: RuleBackwardParameters) extends GeneralTactic {
     override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
-      applyRuleInference(parameters, IndexedSeq(rule.conclusion), rule.hypotheses, IndexedSeq(proofGoal)).map {
+      applyRuleInference(parameters, IndexedSeq(rule.conclusion), rule.hypotheses, IndexedSeq(proofGoal)).flatMap {
         case (newGoals, ctx) =>
-          val reconstruction = () => rule.reconstruct(proofGoal, ctx)
-          (newGoals, reconstruction)
+          val stepsOption = rule.reconstruct.andThen(Some.apply).applyOrElse((proofGoal, ctx), _ => None)
+          stepsOption.map(steps => (newGoals, () => steps))
       }
     }
 
@@ -356,6 +351,8 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     def conclusion: PartialSequent
 
     def reconstruct: ReconstructRule
+
+    def isValid(ctx: UnificationContext): Boolean = true // This function can be used to specify additional constraints
 
     private def partials: Seq[PartialSequent] = hypotheses :+ conclusion
 
@@ -377,11 +374,12 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
 
     def apply(parameters: RuleForwardParameters)(theorems: Theorem*)(using env: ProofEnvironment): Option[Theorem] = {
       val theoremsSeq = theorems.toIndexedSeq
-      applyRuleInference(parameters, hypotheses, IndexedSeq(conclusion), theoremsSeq.map(_.sequent)).map {
+      applyRuleInference(parameters, hypotheses, IndexedSeq(conclusion), theoremsSeq.map(_.sequent)).flatMap {
         case (IndexedSeq(newSequent), ctx) =>
-          val scSteps = reconstruct(newSequent, ctx)
-          val scProof = lisa.kernel.proof.SCProof(scSteps, theoremsSeq.map(_.asKernel))
-          env.mkTheorem(newSequent, scProof, theoremsSeq)
+          reconstruct.andThen(Some.apply).applyOrElse((newSequent, ctx), _ => None).map { scSteps =>
+            val scProof = lisa.kernel.proof.SCProof(scSteps, theoremsSeq.map(_.asKernel))
+            env.mkTheorem(newSequent, scProof, theoremsSeq)
+          }
         case _ => throw new Error
       }
     }

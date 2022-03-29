@@ -13,7 +13,9 @@ class ProofTests extends AnyFunSuite {
   val (x, y) = (VariableLabel("x"), VariableLabel("y"))
 
   private def checkProofs(proofs: Proof*): Unit = {
-    val emptyEnvironment: ReadableProofEnvironment = _ => false
+    val emptyEnvironment: ProofEnvironment = new ProofEnvironment {
+      override def contains(sequent: Sequent): Boolean = false
+    }
     proofs.foreach { proof =>
       val result = evaluateProof(proof)(emptyEnvironment).map(reconstructSCProof)
       assert(result.nonEmpty)

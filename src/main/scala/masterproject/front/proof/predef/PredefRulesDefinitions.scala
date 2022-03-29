@@ -284,6 +284,26 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     }
   )
 
+  case object RuleIntroductionRightForallSchema extends RuleIntroduction(
+    ** |- *(p(t)),
+    ** |- *(forall(x, p(x))),
+    (bot, ctx) => {
+      ctx(t) match {
+        case FunctionTerm(pl: SchematicFunctionLabel[?], Seq()) =>
+          val vx = ctx(x)
+          val (px, pt) = (ctx(p)(vx), ctx(p)(ctx(t)))
+          val cBot = bot -> forall(ctx(x), px)
+          IndexedSeq(
+            Hypothesis(cBot +< px +> px, px),
+            InstFunSchema(cBot +< pt +> px, 0, pl, VariableTerm(vx), Seq.empty),
+            RightForall(bot +< pt, 1, px, vx),
+            Cut(bot, -1, 2, pt),
+          )
+        case e => throw new MatchError(e)
+      }
+    }
+  )
+
   // Aliases
 
   val introHypo: RuleHypothesis.type = RuleHypothesis
@@ -307,10 +327,11 @@ trait PredefRulesDefinitions extends RuleDefinitions {
   val introLSubstIff: RuleIntroductionLeftSubstIff.type = RuleIntroductionLeftSubstIff
   val introRSubstIff: RuleIntroductionRightSubstIff.type = RuleIntroductionRightSubstIff
   // RuleIntroductionLeftExistsOne & RuleIntroductionRightExistsOne
+  val introRForallS: RuleIntroductionRightForallSchema.type = RuleIntroductionRightForallSchema
 
   val elimCut: RuleCut.type = RuleCut
   val elimLRefl: RuleIntroductionLeftRefl.type = RuleIntroductionLeftRefl
-  
+
 
   // TODO more rules
 

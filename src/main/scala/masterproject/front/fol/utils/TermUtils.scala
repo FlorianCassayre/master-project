@@ -2,9 +2,10 @@ package masterproject.front.fol.utils
 
 import masterproject.front.fol.conversions.TermConversions
 import masterproject.front.fol.definitions.TermDefinitions
+import masterproject.front.fol.ops.CommonOps
 
 trait TermUtils {
-  this: TermDefinitions & TermConversions =>
+  this: TermDefinitions & TermConversions & CommonOps =>
 
   def isSame(t1: Term, t2: Term): Boolean =
     lisa.kernel.fol.FOL.isSame(t1, t2)
@@ -70,6 +71,12 @@ trait TermUtils {
         case _ => label
       }
       FunctionTerm(newLabel, args.map(renameSchemas(_, functionsMap)))
+  }
+
+  def fillTupleParametersFunction[N <: Arity](n: N, f: FillTuple[VariableLabel, N] => Term): (FillTuple[VariableLabel, N], Term) = {
+    val dummyVariable = VariableLabel("") // Used to identify the existing free variables, doesn't matter if this name collides
+    val taken = freeVariablesOf(fillTupleParameters(_ => dummyVariable, n, f)._2).map(_.id)
+    fillTupleParameters(VariableLabel.apply, n, f, taken)
   }
 
 }

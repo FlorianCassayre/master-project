@@ -36,6 +36,18 @@ object Unifier {
     def applyMultiary(function: SchematicFunctionLabel[?]): (Term, Seq[VariableLabel]) = functions(function)
     def applyMultiary(predicate: SchematicPredicateLabel[?]): (Formula, Seq[VariableLabel]) = predicates(predicate)
     def applyMultiary(connector: SchematicConnectorLabel[?]): (Formula, Seq[SchematicPredicateLabel[0]]) = connectors(connector)
+    def apply[N <: Arity](function: SchematicFunctionLabel[N])(args: FillTuple[Term, N]): Term = {
+      val (body, argsSeq) = functions(function)
+      substituteVariables(body, argsSeq.zip(args.toSeq).toMap)
+    }
+    def apply[N <: Arity](predicate: SchematicPredicateLabel[N])(args: FillTuple[Term, N]): Formula = {
+      val (body, argsSeq) = predicates(predicate)
+      substituteVariables(body, argsSeq.zip(args.toSeq).toMap)
+    }
+    def apply[N <: Arity](connector: SchematicConnectorLabel[N])(args: FillTuple[Formula, N]): Formula = {
+      val (body, argsSeq) = connectors(connector)
+      instantiatePredicateSchemas(body, argsSeq.zip(args.toSeq.map(_ -> Seq.empty)).toMap)
+    }
   }
   private val emptyUnificationContext = UnificationContext(Map.empty, Map.empty, Map.empty, Map.empty)
 

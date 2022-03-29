@@ -41,7 +41,9 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     def contains(sequent: Sequent): Boolean
   }
 
-  def mutateProofGoal(proofGoal: Sequent, tactic: Tactic, proofContext: ReadableProofEnvironment): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
+  type ProofEnvironment <: ReadableProofEnvironment
+
+  def mutateProofGoal(proofGoal: Sequent, tactic: Tactic, proofContext: ProofEnvironment): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
     tactic match {
       case TacticApplyTheorem =>
         if(proofContext.contains(proofGoal)) {
@@ -57,7 +59,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     }
   }
 
-  def mutateProofStateFirstGoal(proofState: ProofState, tactic: Tactic, proofContext: ReadableProofEnvironment): Option[(ProofState, ReconstructGeneral)] = {
+  def mutateProofStateFirstGoal(proofState: ProofState, tactic: Tactic, proofContext: ProofEnvironment): Option[(ProofState, ReconstructGeneral)] = {
     proofState.goals match {
       case h +: t =>
         mutateProofGoal(h, tactic, proofContext).map { (newGoals, ctx) => (ProofState(newGoals ++ t), ctx) }
@@ -73,7 +75,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
   case class ProofModeState private[ProofStateDefinitions](
     private[ProofStateDefinitions] val initialSnapshot: ProofStateSnapshot,
     private[ProofStateDefinitions] val steps: Seq[((Tactic, ReconstructGeneral), ProofStateSnapshot)], // Steps are in reverse direction (the first element is the latest)
-    environment: ReadableProofEnvironment,
+    environment: ProofEnvironment,
   ) {
     private[ProofStateDefinitions] def lastSnapshot: ProofStateSnapshot =
       steps.headOption.map { case (_, snapshot) => snapshot }.getOrElse(initialSnapshot)
@@ -115,7 +117,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     }
   }
 
-  def evaluateProof(proof: Proof)(environment: ReadableProofEnvironment): Option[ProofModeState] = {
+  def evaluateProof(proof: Proof)(environment: ProofEnvironment): Option[ProofModeState] = {
     def applyTactics(tactics: Seq[Tactic], proofModeState: ProofModeState): Option[ProofModeState] = tactics match {
       case tactic +: rest =>
         applyTactic(proofModeState, tactic) match {
@@ -186,7 +188,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
   }
 
   // The final conclusion is given the id 0, although it will never be referenced as a premise
-  def initialProofModeState(goals: Sequent*)(environment: ReadableProofEnvironment): ProofModeState =
+  def initialProofModeState(goals: Sequent*)(environment: ProofEnvironment): ProofModeState =
     ProofModeState(ProofStateSnapshot(ProofState(goals: _*), 0 until goals.size, goals.size), Seq.empty, environment)
 
   object Notations {
