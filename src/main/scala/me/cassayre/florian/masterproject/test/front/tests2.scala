@@ -45,7 +45,7 @@ import me.cassayre.florian.masterproject.front.proof.Proof.*
           .withConnector(Notations.f, x, x)
       ),
       RuleHypothesis(),
-      TacticApplyTheorem,
+      TacticApplyJustification,
     )
   )
 

@@ -66,6 +66,17 @@ resolvers += "Florian Cassayre" at "https://maven.cassayre.me"
 libraryDependencies += "me.cassayre.florian" %% "master-project" % "0.1.0"
 ```
 
+Or alternatively, if you would like to include it from the sources:
+
+```sbt
+lazy val lisa = ???
+lazy val masterproject = ProjectRef(uri("https://github.com/FlorianCassayre/master-project.git#$COMMIT"), "lisa")
+
+lazy val root = (project in file(".")).dependsOn(lisa, masterproject)
+```
+
+(replace `$COMMIT` by the commit hash)
+
 ## Development
 
 The Scala project depends on LISA, included as a git submodule:

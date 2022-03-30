@@ -25,12 +25,15 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
   }
 
   sealed abstract class Tactic
+  sealed abstract class TacticCurrentGoal extends Tactic
 
-  case object TacticApplyTheorem extends Tactic
+  case class TacticFocusGoal(goal: Int) extends Tactic
+
+  case object TacticApplyJustification extends TacticCurrentGoal
 
   type ReconstructGeneral = () => IndexedSeq[SCProofStep]
 
-  abstract class GeneralTactic extends Tactic {
+  abstract class GeneralTactic extends TacticCurrentGoal {
     // The premises indexing is implicit:
     // * 0, 1, 2 will reference respectively the first, second and third steps in that array
     // * -1, -2, -3 will reference respectively the first second and third premises, as returned by `hypotheses`
@@ -43,55 +46,34 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
 
   type ProofEnvironment <: ReadableProofEnvironment
 
-  def mutateProofGoal(proofGoal: Sequent, tactic: Tactic, proofContext: ProofEnvironment): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
-    tactic match {
-      case TacticApplyTheorem =>
-        if(proofContext.contains(proofGoal)) {
-          Some((
-            IndexedSeq.empty,
-            () => IndexedSeq.empty, // TODO exception?
-          ))
-        } else {
-          None
-        }
-      case general: GeneralTactic =>
-        general(proofGoal).map { case (steps, f) => (steps, f) }
-    }
-  }
-
-  def mutateProofStateFirstGoal(proofState: ProofState, tactic: Tactic, proofContext: ProofEnvironment): Option[(ProofState, ReconstructGeneral)] = {
-    proofState.goals match {
-      case h +: t =>
-        mutateProofGoal(h, tactic, proofContext).map { (newGoals, ctx) => (ProofState(newGoals ++ t), ctx) }
-      case _ => None
-    }
-  }
-
   private case class ProofStateSnapshot(
     proofState: ProofState,
     shadowProofState: IndexedSeq[Int],
     nextId: Int,
   )
+
+  private case class AppliedTactic(id: Int, tactic: Tactic, reconstruct: ReconstructGeneral, isTheorem: Boolean)
+
   case class ProofModeState private[ProofStateDefinitions](
     private[ProofStateDefinitions] val initialSnapshot: ProofStateSnapshot,
-    private[ProofStateDefinitions] val steps: Seq[((Tactic, ReconstructGeneral), ProofStateSnapshot)], // Steps are in reverse direction (the first element is the latest)
+    private[ProofStateDefinitions] val steps: Seq[(AppliedTactic, ProofStateSnapshot)], // Steps are in reverse direction (the first element is the latest)
     environment: ProofEnvironment,
   ) {
     private[ProofStateDefinitions] def lastSnapshot: ProofStateSnapshot =
       steps.headOption.map { case (_, snapshot) => snapshot }.getOrElse(initialSnapshot)
-    private[ProofStateDefinitions] def zippedSteps: Seq[(ProofStateSnapshot, (Tactic, ReconstructGeneral), ProofStateSnapshot)] = {
+    private[ProofStateDefinitions] def zippedSteps: Seq[(ProofStateSnapshot, AppliedTactic, ProofStateSnapshot)] = {
       val snapshots = steps.map { case (_, snapshot) => snapshot } :+ initialSnapshot
-      snapshots.zip(snapshots.tail).zip(steps.map { case (pair, _) => pair }).map {
-        case ((snapshotAfter, snapshotBefore), pair) =>
-          (snapshotBefore, pair, snapshotAfter)
+      snapshots.zip(snapshots.tail).zip(steps.map { case (applied, _) => applied }).map {
+        case ((snapshotAfter, snapshotBefore), applied) =>
+          (snapshotBefore, applied, snapshotAfter)
       }
     }
-    private[ProofStateDefinitions] def withNewStep(tactic: Tactic, reconstruct: ReconstructGeneral, nextSnapshot: ProofStateSnapshot): ProofModeState =
-      copy(steps = ((tactic, reconstruct), nextSnapshot) +: steps)
+    private[ProofStateDefinitions] def withNewStep(applied: AppliedTactic, nextSnapshot: ProofStateSnapshot): ProofModeState =
+      copy(steps = (applied, nextSnapshot) +: steps)
 
     def state: ProofState = lastSnapshot.proofState
     def proving: ProofState = initialSnapshot.proofState
-    def tactics: Seq[Tactic] = steps.map { case ((tactic, _), _) => tactic }.reverse
+    def tactics: Seq[Tactic] = steps.map { case (AppliedTactic(_, tactic, _, _), _) => tactic }.reverse
   }
 
   def applyTactic(proofModeState: ProofModeState, tactic: Tactic): Option[ProofModeState] = {
@@ -99,21 +81,51 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     val proofState = lastSnapshot.proofState
     val shadowProofState = lastSnapshot.shadowProofState
     val nextId = lastSnapshot.nextId
-    mutateProofStateFirstGoal(proofModeState.lastSnapshot.proofState, tactic, proofModeState.environment).map {
-      case (newState, reconstructFunction) =>
-        // The id of the goal that was transformed (here, it's always the first one)
-        val id = shadowProofState.head
-        val updatedGoal = proofState.goals.head
-        // Number of goals that have been created (or updated), possibly zero
-        // This corresponds to the number of premises in that rule
-        val nReplacedGoals = newState.goals.size - proofState.goals.size + 1
-        val newShadowGoals = nextId until (nextId + nReplacedGoals)
-        // Updated shadow proof state (= ids for the new proof state)
-        val newShadowProofState = newShadowGoals ++ shadowProofState.tail
-        // Since we created n new goals, we must increment the counter by n
-        val newNextId = nextId + nReplacedGoals
 
-        proofModeState.withNewStep(tactic, reconstructFunction, ProofStateSnapshot(newState, newShadowProofState, newNextId))
+    tactic match {
+      case tacticCurrentGoal: TacticCurrentGoal =>
+        (proofState.goals, shadowProofState) match {
+          case (proofGoal +: tailGoals, id +: tailShadowProofState) =>
+            tacticCurrentGoal match {
+              case TacticApplyJustification =>
+                if(proofModeState.environment.contains(proofGoal)) {
+                  Some(proofModeState.withNewStep(
+                    AppliedTactic(id, tactic, () => IndexedSeq.empty, true), ProofStateSnapshot(ProofState(tailGoals), tailShadowProofState, nextId)
+                  ))
+                } else {
+                  None
+                }
+              case general: GeneralTactic =>
+                general(proofGoal).map { case (steps, f) => (steps, f) }.map { case (newGoals, reconstruct) =>
+                  // We prepend the newly created goals
+                  val newProofState = ProofState(newGoals ++ tailGoals)
+                  // Number of goals that have been created (or updated), possibly zero
+                  // This corresponds to the number of premises in that rule
+                  val nReplacedGoals = newProofState.goals.size - proofState.goals.size + 1
+                  val newShadowGoals = nextId until (nextId + nReplacedGoals)
+                  // Updated shadow proof state (= ids for the new proof state)
+                  val newShadowProofState = newShadowGoals ++ tailShadowProofState
+                  // Since we created n new goals, we must increment the counter by n
+                  val newNextId = nextId + nReplacedGoals
+
+                  proofModeState.withNewStep(AppliedTactic(id, tactic, reconstruct, false), ProofStateSnapshot(newProofState, newShadowProofState, newNextId))
+                }
+            }
+          case _ => None
+        }
+      case TacticFocusGoal(goal) =>
+        if(proofState.goals.indices.contains(goal)) {
+          // This function moves the element of index `goal` to the front
+          def bringToFront[T](goals: IndexedSeq[T]): IndexedSeq[T] =
+            goals(goal) +: (goals.take(goal) ++ goals.drop(goal + 1))
+          val newProofState = ProofState(bringToFront(proofState.goals))
+          val newShadowProofState = bringToFront(shadowProofState)
+          Some(proofModeState.withNewStep(
+            AppliedTactic(-1, tactic, () => IndexedSeq.empty, false), ProofStateSnapshot(newProofState, newShadowProofState, nextId)
+          ))
+        } else {
+          None
+        }
     }
   }
 
@@ -141,15 +153,11 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     val initialTranslation = proofModeState.lastSnapshot.shadowProofState.zipWithIndex.map { case (v, i) => v -> -(i + 1) }.toMap
 
     val (finalProof, _, finalTheorems) = proofModeState.zippedSteps.foldLeft((SCProof(IndexedSeq.empty, imports), initialTranslation, Map.empty[Int, Sequent])) {
-      case ((proof, translation, theorems), (snapshotBefore, (tactic, reconstruct), snapshotAfter)) =>
-        val (reconstructedSteps, isTheorem) = tactic match { // TODO we have a repetition here
-          case TacticApplyTheorem =>
-            (IndexedSeq.empty, true)
-          case general: GeneralTactic =>
-            (reconstruct(), false)
-        }
+      case ((proof, translation, theorems), (snapshotBefore, applied, snapshotAfter)) =>
+        val reconstructedSteps = applied.reconstruct()
+        val isTheorem = applied.isTheorem
         val nReplacedGoals = snapshotAfter.nextId - snapshotBefore.nextId // TODO do not rely on the ids for that
-        val id = snapshotBefore.shadowProofState.head // TODO
+        val id = applied.id // TODO
         val updatedGoal = snapshotBefore.proofState.goals.head
         // We need to "fix" the indexing of these proof steps
         def premiseMapping(p: Int): Int = {
