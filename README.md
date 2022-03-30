@@ -27,7 +27,14 @@ otherwise you might encounter incompatibilities.
 
 Assuming you are in your project's directory and `$COMMIT` is the hash of the desired commit in LISA:
 
-* **git repository or submodule**:
+* **sbt managed dependency** (easiest):
+  * Add the following in your `build.sbt` (or adapt your existing configuration):
+    ```sbt
+    lazy val lisa = ProjectRef(uri("https://github.com/epfl-lara/lisa.git#$COMMIT"), "lisa")
+    
+    lazy val root = (project in file(".")).dependsOn(lisa)
+    ```
+* **git repository or submodule** (if you need to develop on LISA at the same time):
   * If your project **is already** a git repository, then you can add LISA as a submodule:
     ```
     git submodule add git@github.com:epfl-lara/lisa.git lisa
@@ -43,19 +50,12 @@ Assuming you are in your project's directory and `$COMMIT` is the hash of the de
     git checkout $COMMIT
     cd ..
     ```
-* **sbt managed dependency**:
-  * Add the following in your `build.sbt` (or adapt your existing configuration):
-    ```sbt
-    lazy val lisa = ProjectRef(uri("https://github.com/epfl-lara/lisa.git#$COMMIT"), "lisa")
-    
-    lazy val root = (project in file(".")).dependsOn(lisa)
-    ```
 
 The table below indicates the version compatibility (= value of `$COMMIT`):
 
 | `master-project` |                   `lisa`                   |
 |:----------------:|:------------------------------------------:|
-|      `0.1`       | `eacb9c06aa2975b9ae2bc993847c597eb3c54995` |
+|     `0.1.0`      | `eacb9c06aa2975b9ae2bc993847c597eb3c54995` |
 
 </details>
 
@@ -63,7 +63,7 @@ Then, add these two lines to your `build.sbt`:
 ```sbt
 resolvers += "Florian Cassayre" at "https://maven.cassayre.me"
 
-libraryDependencies += "me.cassayre.florian" %% "master-project" % "0.1"
+libraryDependencies += "me.cassayre.florian" %% "master-project" % "0.1.0"
 ```
 
 ## Development

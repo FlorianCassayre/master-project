@@ -1,6 +1,7 @@
 Documentation
 ===
 
+* [Library](library.md)
 * [Front Proof](front-proof.md)
 * [Front DSL](front-dsl.md)
 * [Unification](unification.md)
