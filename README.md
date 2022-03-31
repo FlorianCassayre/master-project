@@ -79,14 +79,18 @@ lazy val root = (project in file(".")).dependsOn(lisa, masterproject)
 
 ## Development
 
-The Scala project depends on LISA, included as a git submodule:
-make sure to run `git submodule update --init --recursive` the first time.
-It runs on the same Scala/sbt versions as LISA to avoid problems.
+Clone the repository:
+```
+git clone git@github.com:FlorianCassayre/master-project.git --recurse-submodules --remote-submodule
+```
+
+(or run `git submodule update --init --recursive` if you have already cloned the repository without initializing the submodules).
 
 The relevant commands are:
 
+* `sbt console` to start a REPL session
 * `sbt test` to run the tests
-
+* `sbt publish` to generate the artifacts under `releases/`
 
 <details>
   <summary>Updating LISA</summary>

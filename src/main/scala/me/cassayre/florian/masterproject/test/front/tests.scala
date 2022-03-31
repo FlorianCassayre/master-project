@@ -30,9 +30,7 @@ import lisa.kernel.proof.SCProofChecker
   println(fproof.steps.mkString("\n\n"))
   println()
 
-  val universalContext = new ProofEnvironment {
-    override def contains(sequent: Sequent): Boolean = true
-  }
+  val universalContext = newEmptyEnvironment()
 
   val reconstructed = evaluateProof(fproof)(universalContext).map(reconstructSCProof)
 

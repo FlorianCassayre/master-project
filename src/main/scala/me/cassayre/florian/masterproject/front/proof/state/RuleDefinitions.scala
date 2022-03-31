@@ -280,7 +280,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
         unifyAllFormulas(formulaPatternsFrom, formulaValueFrom, initialContext) match {
           case UnificationSuccess(ctxRenamed) =>
 
-            // We safely restore the original schema names
+            // We safely restore the original schema names, recursively
             val newCtx = UnificationContext(
               ctxRenamed.predicates.map { case (k, v) => reversePredicatesMapping.getOrElse(k, k) -> v },
               ctxRenamed.functions.map { case (k, v) => reverseFunctionsMapping.getOrElse(k, k) -> v },
@@ -297,7 +297,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
             }
 
             def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
-              formulas.map(formula => instantiateSchemas(formula, newCtx.functions, newCtx.predicates, newCtx.connectors))
+              formulas.map(formula => instantiateSchemas(formula, ctxRenamed.functions, ctxRenamed.predicates, ctxRenamed.connectors))
 
             def createValueTo(common: IndexedSeq[Formula], pattern: IndexedSeq[Formula], partial: Boolean): IndexedSeq[Formula] = {
               val instantiated = instantiate(pattern)
@@ -362,23 +362,23 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     final def apply(parameters: RuleBackwardParameters = RuleBackwardParametersBuilder): RuleTactic =
       RuleTactic(this, parameters)
 
-    final def apply(theorem0: Theorem, rest: Theorem*): Option[Theorem] =
-      apply(RuleForwardParametersBuilder)((theorem0 +: rest): _*)(using theorem0.environment)
-    final def apply(parameters: RuleForwardParameters)(theorem0: Theorem, rest: Theorem*): Option[Theorem] = {
-      val env = theorem0.environment
-      val theorems = theorem0 +: rest
-      apply(parameters)(theorems: _*)(using env)
-    }
+    final def apply(justification0: Justified, rest: Justified*): Option[Theorem] =
+      apply(RuleForwardParametersBuilder)((justification0 +: rest): _*)(using justification0.environment)
+    /*final def apply(parameters: RuleForwardParameters)(justification0: Justified, rest: Justified*): Option[Theorem] = {
+      val env = justification0.environment
+      val justifications = justification0 +: rest
+      apply(parameters)(justifications: _*)(using env)
+    }*/
     final def apply(parameters: RuleForwardParameters)(using env: ProofEnvironment): Option[Theorem] =
       apply(parameters)()
 
-    def apply(parameters: RuleForwardParameters)(theorems: Theorem*)(using env: ProofEnvironment): Option[Theorem] = {
-      val theoremsSeq = theorems.toIndexedSeq
-      applyRuleInference(parameters, hypotheses, IndexedSeq(conclusion), theoremsSeq.map(_.sequent)).flatMap {
+    def apply(parameters: RuleForwardParameters)(justifications: Justified*)(using env: ProofEnvironment): Option[Theorem] = {
+      val justificationsSeq = justifications.toIndexedSeq
+      applyRuleInference(parameters, hypotheses, IndexedSeq(conclusion), justificationsSeq.map(_.sequent)).flatMap {
         case (IndexedSeq(newSequent), ctx) =>
           reconstruct.andThen(Some.apply).applyOrElse((newSequent, ctx), _ => None).map { scSteps =>
-            val scProof = lisa.kernel.proof.SCProof(scSteps, theoremsSeq.map(_.asKernel))
-            env.mkTheorem(newSequent, scProof, theoremsSeq)
+            val scProof = lisa.kernel.proof.SCProof(scSteps, justificationsSeq.map(_.sequentAsKernel))
+            env.mkTheorem(newSequent, scProof, justificationsSeq)
           }
         case _ => throw new Error
       }

@@ -13,9 +13,7 @@ class ProofTests extends AnyFunSuite {
   val (x, y) = (VariableLabel("x"), VariableLabel("y"))
 
   private def checkProofs(proofs: Proof*): Unit = {
-    val emptyEnvironment: ProofEnvironment = new ProofEnvironment {
-      override def contains(sequent: Sequent): Boolean = false
-    }
+    val emptyEnvironment: ProofEnvironment = newEmptyEnvironment()
     proofs.foreach { proof =>
       val result = evaluateProof(proof)(emptyEnvironment).map(reconstructSCProof)
       assert(result.nonEmpty)
@@ -197,8 +195,64 @@ class ProofTests extends AnyFunSuite {
     // TODO remaining rules
   }
 
+  test("elimination rules") {
+    checkProofs(
+      Proof(
+        (s === t) |- (t === s)
+      )(
+        RuleEliminationLeftSubstIff(
+          RuleBackwardParametersBuilder
+            .withConnector(Notations.f, identity)
+            .withPredicate(Notations.a, t === s)
+            .withPredicate(Notations.b, s === t)
+        ),
+        RuleHypothesis(),
+        TacticalRewrite((s === t) |- (s === t)),
+        RuleHypothesis(),
+      ),
+      Proof(
+        (s === t) |- (t === s)
+      )(
+        RuleEliminationRightSubstIff(
+          RuleBackwardParametersBuilder
+            .withConnector(Notations.f, identity)
+            .withPredicate(Notations.a, s === t)
+            .withPredicate(Notations.b, t === s)
+        ),
+        RuleHypothesis(),
+        TacticalRewrite((s === t) |- (s === t)),
+        RuleHypothesis(),
+      ),
+      Proof(
+        (s === t, t === u) |- (s === u)
+      )(
+        RuleEliminationLeftSubstEq(
+          RuleBackwardParametersBuilder
+            .withPredicate(Notations.p, _ === u)
+            .withFunction(Notations.s, s)
+            .withFunction(Notations.t, t)
+        ),
+        RuleHypothesis(),
+        RuleHypothesis(),
+      ),
+      Proof(
+        (s === t, t === u) |- (s === u)
+      )(
+        RuleEliminationRightSubstEq(
+          RuleBackwardParametersBuilder
+            .withPredicate(Notations.p, _ === u)
+            .withFunction(Notations.s, t)
+            .withFunction(Notations.t, s)
+        ),
+        RuleHypothesis(),
+        TacticalRewrite((s === t, t === u) |- (s === t)),
+        RuleHypothesis(),
+      ),
+    )
+  }
+
   test("environment") {
-    val ctx = new ProofEnvironment
+    val ctx = newEmptyEnvironment()
 
     val thm1 = ctx.mkTheorem(
       Proof(

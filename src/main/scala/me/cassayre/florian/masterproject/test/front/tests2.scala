@@ -11,7 +11,7 @@ import me.cassayre.florian.masterproject.front.proof.Proof.*
 
   val (w, x, y, z) = (SchematicPredicateLabel[0]("w"), SchematicPredicateLabel[0]("x"), SchematicPredicateLabel[0]("y"), SchematicPredicateLabel[0]("z"))
 
-  val ctx = new ProofEnvironment
+  val ctx = newEmptyEnvironment()
 
   val fproof1 = Proof(
     ProofState(

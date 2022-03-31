@@ -113,8 +113,8 @@ trait PredefRulesDefinitions extends RuleDefinitions {
   case object RuleIntroductionRightForall extends RuleIntroduction(
     ** |- *(p(x)),
     ** |- *(forall(x, p(x))),
-    (bot, ctx) => {
-      // TODO x not already free in sequent; needs to be handled in `Rule`
+    { case (bot, ctx) if !(bot.left ++ bot.right).flatMap(_.freeVariables).contains(ctx(x)) =>
+      // TODO x not already free in sequent; ideally this should be handled automatically in `Rule`, not here
       val (fBody, fArgs) = ctx.applyMultiary(p)
       val px = substituteVariables(fBody, Map(fArgs.head -> VariableTerm(ctx(x))))
       IndexedSeq(
@@ -126,7 +126,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
   case object RuleIntroductionLeftExists extends RuleIntroduction(
     *(p(x)) |- **,
     *(exists(x, p(x))) |- **,
-    (bot, ctx) => {
+    { case (bot, ctx) if !(bot.left ++ bot.right).flatMap(_.freeVariables).contains(ctx(x)) =>
       val (fBody, fArgs) = ctx.applyMultiary(p)
       val px = substituteVariables(fBody, Map(fArgs.head -> VariableTerm(ctx(x))))
       IndexedSeq(
@@ -274,6 +274,27 @@ trait PredefRulesDefinitions extends RuleDefinitions {
       )
   )
 
+  case object RuleEliminationRightForallSchema extends RuleElimination(
+    ** |- *(forall(x, p(x))),
+    ** |- *(p(t)),
+    (bot, ctx) => {
+      ctx(t) match {
+        case FunctionTerm(_: SchematicFunctionLabel[?], Seq()) =>
+          val vx = VariableTerm(ctx(x))
+          val tv = ctx(t)
+          val (px, pt) = (ctx(p)(vx), ctx(p)(tv))
+          val fpx = forall(ctx(x), px)
+          val cBot = bot -> pt
+          IndexedSeq(
+            Hypothesis(bot +< pt, pt),
+            LeftForall(bot +< fpx, 0, px, vx.label, tv),
+            Cut(bot, -1, 1, fpx),
+          )
+        case e => throw new MatchError(e)
+      }
+    }
+  )
+
   case object RuleModusPonens extends RuleElimination(
     (** |- *(a)) :+ ($(a) |- $(b)),
     ** |- *(b),
@@ -304,6 +325,60 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     }
   )
 
+  case object RuleEliminationLeftSubstEq extends RuleElimination(
+    (*(p(s)) |- **) +: (** |- *(s === t)),
+    *(p(t)) |- **,
+    (bot, ctx) => {
+      val (fBody, fArgs) = ctx.applyMultiary(p)
+      val taken = schematicFunctionsOf(fBody).map(_.id)
+      val label = SchematicFunctionLabel[0](freshId(taken, "f"))
+      val ps = substituteVariables(fBody, Map(fArgs.head -> label()))
+      IndexedSeq(
+        LeftSubstEq(bot +< (ctx(s) === ctx(t)), -1, ctx(s), ctx(t), ps, label),
+        Cut(bot, -2, 0, ctx(s) === ctx(t))
+      )
+    }
+  )
+
+  case object RuleEliminationRightSubstEq extends RuleElimination(
+    (** |- *(p(s))) +: (** |- *(s === t)),
+    ** |- *(p(t)),
+    (bot, ctx) => {
+      val (fBody, fArgs) = ctx.applyMultiary(p)
+      val taken = schematicFunctionsOf(fBody).map(_.id)
+      val label = SchematicFunctionLabel[0](freshId(taken, "f"))
+      val ps = substituteVariables(fBody, Map(fArgs.head -> label()))
+      IndexedSeq(
+        RightSubstEq(bot +< (ctx(s) === ctx(t)), -1, ctx(s), ctx(t), ps, label),
+        Cut(bot, -2, 0, ctx(s) === ctx(t))
+      )
+    }
+  )
+
+  case object RuleEliminationLeftSubstIff extends RuleElimination(
+    (*(f(a)) |- **) +: (** |- *(a <=> b)),
+    *(f(b)) |- **,
+    (bot, ctx) => {
+      val (fBody, fArgs) = ctx.applyMultiary(f)
+      IndexedSeq(
+        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), fBody, fArgs.head),
+        Cut(bot, -2, 0, ctx(a) <=> ctx(b))
+      )
+    }
+  )
+
+  case object RuleEliminationRightSubstIff extends RuleElimination(
+    (** |- *(f(a))) +: (** |- *(a <=> b)),
+    ** |- *(f(b)),
+    (bot, ctx) => {
+      val (fBody, fArgs) = ctx.applyMultiary(f)
+      IndexedSeq(
+        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), fBody, fArgs.head),
+        Cut(bot, -2, 0, ctx(a) <=> ctx(b))
+      )
+    }
+  )
+
   // Aliases
 
   val introHypo: RuleHypothesis.type = RuleHypothesis
@@ -331,7 +406,11 @@ trait PredefRulesDefinitions extends RuleDefinitions {
 
   val elimCut: RuleCut.type = RuleCut
   val elimLRefl: RuleIntroductionLeftRefl.type = RuleIntroductionLeftRefl
-
+  val elimRForallS: RuleEliminationRightForallSchema.type = RuleEliminationRightForallSchema
+  val elimLSubstIff: RuleEliminationLeftSubstIff.type = RuleEliminationLeftSubstIff
+  val elimRSubstIff: RuleEliminationRightSubstIff.type = RuleEliminationRightSubstIff
+  val elimLSubstEq: RuleEliminationLeftSubstEq.type = RuleEliminationLeftSubstEq
+  val elimRSubstEq: RuleEliminationRightSubstEq.type = RuleEliminationRightSubstEq
 
   // TODO more rules
 

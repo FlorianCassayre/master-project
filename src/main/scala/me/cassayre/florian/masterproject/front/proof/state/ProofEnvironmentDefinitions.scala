@@ -1,19 +1,22 @@
 package me.cassayre.florian.masterproject.front.proof.state
 
 import lisa.kernel.Printer
-import lisa.kernel.proof.{SCProof, SCProofChecker}
-import lisa.kernel.proof.SequentCalculus.SCSubproof
+import lisa.kernel.proof.{RunningTheory, SCProof, SCProofChecker}
+import lisa.kernel.proof.SequentCalculus.{SCSubproof, sequentToFormula}
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 
 trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
 
   import scala.collection.mutable
 
-  class ProofEnvironment(private[ProofEnvironmentDefinitions] val proven: mutable.Map[Sequent, (IndexedSeq[Sequent], SCProof)] = mutable.Map.empty) extends ReadableProofEnvironment {
+  final class ProofEnvironment private[front] (
+    private[ProofEnvironmentDefinitions] val runningTheory: RunningTheory,
+    private[ProofEnvironmentDefinitions] val proven: mutable.Map[Sequent, (IndexedSeq[Sequent], SCProof)] = mutable.Map.empty,
+  ) extends ReadableProofEnvironment {
     override def contains(sequent: Sequent): Boolean = proven.contains(sequent)
-    private def addSequentToEnvironment(sequent: Sequent, scProof: SCProof, theoremImports: Map[Int, Sequent]): Theorem = {
-      require(scProof.imports.size == theoremImports.size && scProof.imports.indices.forall(theoremImports.contains),
-        "All imports must have been proven")
+    private def addSequentToEnvironment(sequent: Sequent, scProof: SCProof, justifiedImports: Map[Int, Sequent]): Theorem = {
+      require(scProof.imports.size == justifiedImports.size && scProof.imports.indices.forall(justifiedImports.contains),
+        "All imports must be justified")
       require(!proven.contains(sequent), "This sequent already has a proof") // Should we disallow that?
       assert(lisa.kernel.proof.SequentCalculus.isSameSequent(sequentToKernel(sequent), scProof.conclusion),
         "Error: the proof conclusion does not match the provided sequent")
@@ -27,7 +30,7 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
           ).mkString("\n")
         )
       }
-      proven.addOne((sequent, (scProof.imports.indices.map(theoremImports), scProof)))
+      proven.addOne((sequent, (scProof.imports.indices.map(justifiedImports), scProof)))
       Theorem(this, sequent)
     }
     def mkTheorem(proof: Proof): Theorem = {
@@ -38,13 +41,30 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
         case None => throw new Exception
       }
     }
-    private[proof] def mkTheorem(sequent: Sequent, scProof: SCProof, theorems: IndexedSeq[Theorem]): Theorem =
+    def mkAxiom(formula: Formula): Axiom = {
+      require(runningTheory.isAxiom(formula))
+      Axiom(this, formula)
+    }
+    //def mkDefinition() // TODO
+    private[proof] def mkTheorem(sequent: Sequent, scProof: SCProof, theorems: IndexedSeq[Justified]): Theorem =
       addSequentToEnvironment(sequent, scProof, theorems.map(_.sequent).zipWithIndex.map(_.swap).toMap)
-    override def toString: String = proven.keySet.toSeq.map(Theorem(this, _)).map(_.toString).mkString("\n")
+    //override def toString: String = proven.keySet.toSeq.map(Theorem(this, _)).map(_.toString).mkString("\n")
   }
 
-  case class Theorem private[ProofEnvironmentDefinitions](private[proof] val environment: ProofEnvironment, sequent: Sequent) {
-    def asKernel: lisa.kernel.proof.SequentCalculus.Sequent = sequentToKernel(sequent)
+  def newEmptyEnvironment(): ProofEnvironment = new ProofEnvironment(new RunningTheory)
+
+  sealed abstract class Justified {
+    private[proof] val environment: ProofEnvironment
+    def sequent: Sequent
+    final def sequentAsKernel: lisa.kernel.proof.SequentCalculus.Sequent = sequentToKernel(sequent)
+  }
+
+  case class Axiom private[ProofEnvironmentDefinitions](private[proof] val environment: ProofEnvironment, formula: Formula) extends Justified {
+    override def sequent: Sequent = () |- formula
+    override def toString: String = s"Axiom: $sequent"
+  }
+
+  case class Theorem private[ProofEnvironmentDefinitions](private[proof] val environment: ProofEnvironment, sequent: Sequent) extends Justified {
     override def toString: String = s"Theorem: $sequent"
   }
 

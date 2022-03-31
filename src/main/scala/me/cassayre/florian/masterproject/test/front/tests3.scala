@@ -9,8 +9,7 @@ import me.cassayre.florian.masterproject.front.fol.FOL.*
   val s = SchematicFunctionLabel[0]("s")
   val v = VariableLabel("v")
 
-  val ctx = new ProofEnvironment
-  given ProofEnvironment = ctx
+  given ProofEnvironment = newEmptyEnvironment()
 
   val thmAndAssoc = {
     val proofMode = ProofMode(((x /\ y) /\ z) |- (x /\ (y /\ z)))
