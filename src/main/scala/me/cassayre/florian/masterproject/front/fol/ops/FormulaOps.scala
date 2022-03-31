@@ -6,33 +6,33 @@ trait FormulaOps extends CommonOps {
   this: FormulaDefinitions =>
 
   extension[N <: Arity] (label: PredicateLabel[N])
-    def apply: FillTuple[Term, N] => PredicateFormula[N] = args => PredicateFormula(label, tuple2seq(args))
+    def apply: FillArgs[Term, N] => PredicateFormula = args => PredicateFormula(label, tuple2seq(args))
   extension (label: PredicateLabel[0])
-    def apply(): PredicateFormula[0] = PredicateFormula(label, Seq.empty)
+    def apply(): PredicateFormula = PredicateFormula(label, Seq.empty)
 
   extension[N <: Arity] (label: ConnectorLabel[N])
-    def apply: FillTuple[Formula, N] => ConnectorFormula[N] = args => ConnectorFormula(label, tuple2seq(args))
+    def apply: FillArgs[Formula, N] => ConnectorFormula = args => ConnectorFormula(label, tuple2seq(args))
   extension (label: ConnectorLabel[0])
-    def apply(): ConnectorFormula[0] = ConnectorFormula(label, Seq.empty)
+    def apply(): ConnectorFormula = ConnectorFormula(label, Seq.empty)
 
   extension[N <: Arity] (label: BinderLabel)
     def apply(bound: VariableLabel, inner: Formula): BinderFormula = BinderFormula(label, bound, inner)
 
-  given Conversion[PredicateLabel[0], PredicateFormula[0]] = PredicateFormula(_, Seq.empty)
-  given Conversion[ConnectorLabel[0], ConnectorFormula[0]] = ConnectorFormula(_, Seq.empty) // For completeness
+  given Conversion[PredicateLabel[0], PredicateFormula] = PredicateFormula(_, Seq.empty)
+  given Conversion[ConnectorLabel[0], ConnectorFormula] = ConnectorFormula(_, Seq.empty) // For completeness
 
   given Conversion[Formula, FormulaLabel] = _.label
 
   extension (f: Formula) {
-    def unary_! : ConnectorFormula[1] = ConnectorFormula(neg, Seq(f))
-    infix def ==>(g: Formula): ConnectorFormula[2] = ConnectorFormula(implies, Seq(f, g))
-    infix def <=>(g: Formula): ConnectorFormula[2] = ConnectorFormula(iff, Seq(f, g))
-    infix def /\(g: Formula): ConnectorFormula[2] = ConnectorFormula(and, Seq(f, g))
-    infix def \/(g: Formula): ConnectorFormula[2] = ConnectorFormula(or, Seq(f, g))
+    def unary_! : ConnectorFormula = ConnectorFormula(neg, Seq(f))
+    infix def ==>(g: Formula): ConnectorFormula = ConnectorFormula(implies, Seq(f, g))
+    infix def <=>(g: Formula): ConnectorFormula = ConnectorFormula(iff, Seq(f, g))
+    infix def /\(g: Formula): ConnectorFormula = ConnectorFormula(and, Seq(f, g))
+    infix def \/(g: Formula): ConnectorFormula = ConnectorFormula(or, Seq(f, g))
   }
 
   extension (t: Term) {
-    infix def ===(u: Term): PredicateFormula[2] = PredicateFormula(equality, Seq(t, u))
+    infix def ===(u: Term): PredicateFormula = PredicateFormula(equality, Seq(t, u))
   }
 
   // Extractors

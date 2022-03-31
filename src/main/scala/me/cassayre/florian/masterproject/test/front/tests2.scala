@@ -2,8 +2,7 @@ package me.cassayre.florian.masterproject.test.front
 
 import lisa.kernel.Printer
 import lisa.kernel.proof.SCProofChecker
-import me.cassayre.florian.masterproject.front.fol.FOL.*
-import me.cassayre.florian.masterproject.front.proof.Proof.*
+import me.cassayre.florian.masterproject.front.*
 
 @main def tests2(): Unit = {
 

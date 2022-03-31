@@ -36,15 +36,15 @@ object Unifier {
     def applyMultiary(function: SchematicFunctionLabel[?]): (Term, Seq[VariableLabel]) = functions(function)
     def applyMultiary(predicate: SchematicPredicateLabel[?]): (Formula, Seq[VariableLabel]) = predicates(predicate)
     def applyMultiary(connector: SchematicConnectorLabel[?]): (Formula, Seq[SchematicPredicateLabel[0]]) = connectors(connector)
-    def apply[N <: Arity](function: SchematicFunctionLabel[N])(args: FillTuple[Term, N]): Term = {
+    def apply[N <: Arity](function: SchematicFunctionLabel[N])(args: FillArgs[Term, N]): Term = {
       val (body, argsSeq) = functions(function)
       substituteVariables(body, argsSeq.zip(args.toSeq).toMap)
     }
-    def apply[N <: Arity](predicate: SchematicPredicateLabel[N])(args: FillTuple[Term, N]): Formula = {
+    def apply[N <: Arity](predicate: SchematicPredicateLabel[N])(args: FillArgs[Term, N]): Formula = {
       val (body, argsSeq) = predicates(predicate)
       substituteVariables(body, argsSeq.zip(args.toSeq).toMap)
     }
-    def apply[N <: Arity](connector: SchematicConnectorLabel[N])(args: FillTuple[Formula, N]): Formula = {
+    def apply[N <: Arity](connector: SchematicConnectorLabel[N])(args: FillArgs[Formula, N]): Formula = {
       val (body, argsSeq) = connectors(connector)
       instantiatePredicateSchemas(body, argsSeq.zip(args.toSeq.map(_ -> Seq.empty)).toMap)
     }
@@ -122,7 +122,7 @@ object Unifier {
     case _ =>
       def typeName(t: Term): String = t match {
         case _: VariableTerm => "Variable"
-        case _: FunctionTerm[_] => "Function"
+        case _: FunctionTerm => "Function"
       }
       UnificationFailure(s"Types do not match, expected ${typeName(pattern).toLowerCase} got ${typeName(target).toLowerCase}")
   }
@@ -164,8 +164,8 @@ object Unifier {
       }
     case _ =>
       def typeName(f: Formula): String = f match {
-        case _: PredicateFormula[_] => "Predicate"
-        case _: ConnectorFormula[_] => "Connector"
+        case _: PredicateFormula => "Predicate"
+        case _: ConnectorFormula => "Connector"
         case _: BinderFormula => "Binder"
       }
       UnificationFailure(s"Types do not match, expected ${typeName(pattern).toLowerCase} got ${typeName(target).toLowerCase}")
@@ -187,7 +187,7 @@ object Unifier {
     substitutionMap.toSeq.filter { case (_, f) => isSame(f, target) } match {
       case Seq() =>
         target match {
-          case _: PredicateFormula[_] => target
+          case _: PredicateFormula => target
           case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(reverseUnificationFormulas(substitutionMap, _)))
           case BinderFormula(label, bound, inner) => BinderFormula(label, bound, reverseUnificationFormulas(substitutionMap, inner))
         }

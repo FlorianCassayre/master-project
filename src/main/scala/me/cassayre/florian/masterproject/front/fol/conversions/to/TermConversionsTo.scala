@@ -26,12 +26,12 @@ trait TermConversionsTo {
   def toKernel(term: VariableTerm): lisa.kernel.fol.FOL.VariableTerm =
     lisa.kernel.fol.FOL.VariableTerm(toKernel(term.label))
 
-  def toKernel(term: FunctionTerm[?]): lisa.kernel.fol.FOL.FunctionTerm =
+  def toKernel(term: FunctionTerm): lisa.kernel.fol.FOL.FunctionTerm =
     lisa.kernel.fol.FOL.FunctionTerm(toKernel(term.label), term.args.map(toKernel))
 
   def toKernel(term: Term): lisa.kernel.fol.FOL.Term = term match {
     case variable: VariableTerm => toKernel(variable)
-    case function: FunctionTerm[?] => toKernel(function)
+    case function: FunctionTerm => toKernel(function)
   }
 
   given Conversion[VariableLabel, lisa.kernel.fol.FOL.VariableLabel] = toKernel
@@ -40,7 +40,7 @@ trait TermConversionsTo {
   given Conversion[FunctionLabel[?], lisa.kernel.fol.FOL.FunctionLabel] = toKernel
   given Conversion[TermLabel, lisa.kernel.fol.FOL.TermLabel] = toKernel
   given Conversion[VariableTerm, lisa.kernel.fol.FOL.VariableTerm] = toKernel
-  given Conversion[FunctionTerm[?], lisa.kernel.fol.FOL.FunctionTerm] = toKernel
+  given Conversion[FunctionTerm, lisa.kernel.fol.FOL.FunctionTerm] = toKernel
   given Conversion[Term, lisa.kernel.fol.FOL.Term] = toKernel
 
 }

@@ -73,7 +73,7 @@ trait TermUtils {
       FunctionTerm(newLabel, args.map(renameSchemas(_, functionsMap)))
   }
 
-  def fillTupleParametersFunction[N <: Arity](n: N, f: FillTuple[VariableLabel, N] => Term): (FillTuple[VariableLabel, N], Term) = {
+  def fillTupleParametersFunction[N <: Arity](n: N, f: FillArgs[VariableLabel, N] => Term): (FillArgs[VariableLabel, N], Term) = {
     val dummyVariable = VariableLabel("") // Used to identify the existing free variables, doesn't matter if this name collides
     val taken = freeVariablesOf(fillTupleParameters(_ => dummyVariable, n, f)._2).map(_.id)
     fillTupleParameters(VariableLabel.apply, n, f, taken)

@@ -459,7 +459,7 @@ object Meta {
   // Dirty
   def prettyMetaLogical(meta: MetaLogical): String = {
     def removeSchematicConnectors(formula: Formula): Formula = formula match {
-      case _: PredicateFormula[?] => formula
+      case _: PredicateFormula => formula
       case ConnectorFormula(label: SchematicConnectorLabel[?], _) =>
         ConnectorFormula(ConstantConnectorLabel("?", 0), Seq.empty)
       case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(removeSchematicConnectors))

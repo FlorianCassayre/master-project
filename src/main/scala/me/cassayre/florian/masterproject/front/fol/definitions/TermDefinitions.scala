@@ -6,12 +6,12 @@ trait TermDefinitions extends TermLabelDefinitions {
 
   final case class VariableTerm(label: VariableLabel) extends Term
 
-  final case class FunctionTerm[N <: Arity] protected(label: FunctionLabel[N], args: Seq[Term]) extends Term {
+  final case class FunctionTerm protected(label: FunctionLabel[?], args: Seq[Term]) extends Term {
     require(label.arity == -1 || label.arity == args.size)
     val arity: Int = label.arity
   }
   object FunctionTerm {
-    def unsafe(label: FunctionLabel[?], args: Seq[Term]): FunctionTerm[?] = FunctionTerm(label, args)
+    def unsafe(label: FunctionLabel[?], args: Seq[Term]): FunctionTerm = FunctionTerm(label, args)
   }
 
 }

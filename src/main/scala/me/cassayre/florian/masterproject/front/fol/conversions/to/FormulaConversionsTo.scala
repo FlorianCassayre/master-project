@@ -32,23 +32,23 @@ trait FormulaConversionsTo extends TermConversionsTo with FrontKernelMappings {
     case binder: BinderLabel => toKernel(binder)
   }
 
-  def toKernel(formula: PredicateFormula[?]): lisa.kernel.fol.FOL.PredicateFormula =
+  def toKernel(formula: PredicateFormula): lisa.kernel.fol.FOL.PredicateFormula =
     lisa.kernel.fol.FOL.PredicateFormula(toKernel(formula.label), formula.args.map(toKernel))
 
-  def toKernel(formula: ConnectorFormula[?]): lisa.kernel.fol.FOL.ConnectorFormula =
+  def toKernel(formula: ConnectorFormula): lisa.kernel.fol.FOL.ConnectorFormula =
     lisa.kernel.fol.FOL.ConnectorFormula(toKernel(formula.label), formula.args.map(toKernel))
 
   def toKernel(formula: BinderFormula): lisa.kernel.fol.FOL.BinderFormula =
     lisa.kernel.fol.FOL.BinderFormula(toKernel(formula.label), toKernel(formula.bound), toKernel(formula.inner))
 
   def toKernel(formula: Formula): lisa.kernel.fol.FOL.Formula = formula match {
-    case predicate: PredicateFormula[?] => toKernel(predicate)
-    case connector: ConnectorFormula[?] => toKernel(connector)
+    case predicate: PredicateFormula => toKernel(predicate)
+    case connector: ConnectorFormula => toKernel(connector)
     case binder: BinderFormula => toKernel(binder)
   }
 
-  given Conversion[PredicateFormula[?], lisa.kernel.fol.FOL.PredicateFormula] = toKernel
-  given Conversion[ConnectorFormula[?], lisa.kernel.fol.FOL.ConnectorFormula] = toKernel
+  given Conversion[PredicateFormula, lisa.kernel.fol.FOL.PredicateFormula] = toKernel
+  given Conversion[ConnectorFormula, lisa.kernel.fol.FOL.ConnectorFormula] = toKernel
   given Conversion[BinderFormula, lisa.kernel.fol.FOL.BinderFormula] = toKernel
   given Conversion[Formula, lisa.kernel.fol.FOL.Formula] = toKernel
   given Conversion[ConstantPredicateLabel[?], lisa.kernel.fol.FOL.ConstantPredicateLabel] = toKernel

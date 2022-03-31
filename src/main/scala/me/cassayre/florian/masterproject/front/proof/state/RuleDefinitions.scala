@@ -19,10 +19,10 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     val connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])]
 
     def withFunction[N <: Arity](
-      label: SchematicFunctionLabel[N], value: Term, parameters: FillTuple[VariableLabel, N]
+      label: SchematicFunctionLabel[N], value: Term, parameters: FillArgs[VariableLabel, N]
     ): T
     final def withFunction[N <: Arity](
-      label: SchematicFunctionLabel[N], f: FillTuple[VariableLabel, N] => Term
+      label: SchematicFunctionLabel[N], f: FillArgs[VariableLabel, N] => Term
     ): T = {
       val (parameters, value) = fillTupleParametersFunction(label.arity, f)
       withFunction(label, value, parameters)
@@ -30,10 +30,10 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     final def withFunction(label: SchematicFunctionLabel[0], value: Term): T =
       withFunction(label, value, EmptyTuple)
     def withPredicate[N <: Arity](
-      label: SchematicPredicateLabel[N], value: Formula, parameters: FillTuple[VariableLabel, N]
+      label: SchematicPredicateLabel[N], value: Formula, parameters: FillArgs[VariableLabel, N]
     ): T
     final def withPredicate[N <: Arity](
-      label: SchematicPredicateLabel[N], f: FillTuple[VariableLabel, N] => Formula
+      label: SchematicPredicateLabel[N], f: FillArgs[VariableLabel, N] => Formula
     ): T = {
       val (parameters, value) = fillTupleParametersPredicate(label.arity, f)
       withPredicate(label, value, parameters)
@@ -41,16 +41,16 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     final def withPredicate(label: SchematicPredicateLabel[0], value: Formula): T =
       withPredicate(label, value, EmptyTuple)
     protected def withConnectorInternal[N <: Arity](
-      label: SchematicConnectorLabel[N], value: Formula, parameters: FillTuple[SchematicPredicateLabel[0], N]
+      label: SchematicConnectorLabel[N], value: Formula, parameters: FillArgs[SchematicPredicateLabel[0], N]
     ): T
     final def withConnector[N <: Arity](
-      label: SchematicConnectorLabel[N], value: Formula, parameters: FillTuple[SchematicPredicateLabel[0], N]
+      label: SchematicConnectorLabel[N], value: Formula, parameters: FillArgs[SchematicPredicateLabel[0], N]
     ): T = {
       require(label.arity > 0, "For consistency, use nullary predicate schemas instead of connectors")
       withConnectorInternal(label, value, parameters)
     }
     final def withConnector[N <: Arity](
-      label: SchematicConnectorLabel[N], f: FillTuple[SchematicPredicateLabel[0], N] => Formula
+      label: SchematicConnectorLabel[N], f: FillArgs[SchematicPredicateLabel[0], N] => Formula
     ): T = {
       val (parameters, value) = fillTupleParametersConnector(label.arity, f)
       withConnector(label, value, parameters)
@@ -72,15 +72,15 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     def withIndices(left: Int*)(right: Int*): RuleBackwardParameters =
       copy(selector = (left.toIndexedSeq, right.toIndexedSeq))
     override def withFunction[N <: Arity](
-      label: SchematicFunctionLabel[N], value: Term, parameters: FillTuple[VariableLabel, N]
+      label: SchematicFunctionLabel[N], value: Term, parameters: FillArgs[VariableLabel, N]
     ): RuleBackwardParameters =
       copy(functions = functions + (label -> (value, parameters.toSeq)))
     override def withPredicate[N <: Arity](
-      label: SchematicPredicateLabel[N], value: Formula, parameters: FillTuple[VariableLabel, N]
+      label: SchematicPredicateLabel[N], value: Formula, parameters: FillArgs[VariableLabel, N]
     ): RuleBackwardParameters =
       copy(predicates = predicates + (label -> (value, parameters.toSeq)))
     override protected def withConnectorInternal[N <: Arity](
-      label: SchematicConnectorLabel[N], value: Formula, parameters: FillTuple[SchematicPredicateLabel[0], N]
+      label: SchematicConnectorLabel[N], value: Formula, parameters: FillArgs[SchematicPredicateLabel[0], N]
     ): RuleBackwardParameters =
       copy(connectors = connectors + (label -> (value, parameters.toSeq)))
   }
@@ -99,15 +99,15 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
       copy(selectors = selectors + (i -> pair))
     }
     override def withFunction[N <: Arity](
-      label: SchematicFunctionLabel[N], value: Term, parameters: FillTuple[VariableLabel, N]
+      label: SchematicFunctionLabel[N], value: Term, parameters: FillArgs[VariableLabel, N]
     ): RuleForwardParameters =
       copy(functions = functions + (label -> (value, parameters.toSeq)))
     override def withPredicate[N <: Arity](
-      label: SchematicPredicateLabel[N], value: Formula, parameters: FillTuple[VariableLabel, N]
+      label: SchematicPredicateLabel[N], value: Formula, parameters: FillArgs[VariableLabel, N]
     ): RuleForwardParameters =
       copy(predicates = predicates + (label -> (value, parameters.toSeq)))
     override protected def withConnectorInternal[N <: Arity](
-      label: SchematicConnectorLabel[N], value: Formula, parameters: FillTuple[SchematicPredicateLabel[0], N]
+      label: SchematicConnectorLabel[N], value: Formula, parameters: FillArgs[SchematicPredicateLabel[0], N]
     ): RuleForwardParameters =
       copy(connectors = connectors + (label -> (value, parameters.toSeq)))
   }

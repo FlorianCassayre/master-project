@@ -59,4 +59,23 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     asTheorem()
   }
 
+  /*
+      apply(elimCut(
+      RuleBackwardParametersBuilder.
+        withPredicate(Notations.a, forall(z, (z in s) <=> (z in t)))
+    ))
+    focus(1)
+    apply(introLSubstEq(
+      RuleBackwardParametersBuilder.
+        withPredicate(Notations.p, x => forall(z, (z in s) <=> (z in x)))
+    ))
+  */
+
+  /*val theorem2 = {
+    val proofMode = ProofMode(((s === t) /\ (t === u)) |- (s === u))
+    import proofMode.*
+
+    apply(introLAnd)
+  }*/
+
 }

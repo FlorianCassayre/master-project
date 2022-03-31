@@ -16,9 +16,9 @@ trait FormulaUtils extends TermUtils {
   }
 
   def adaptConnectorSchemas(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] = {
-    def recursive(formula: Formula, predicates: Set[SchematicPredicateLabel[?]], translation: Map[ConnectorFormula[?], SchematicPredicateLabel[?]]):
-    (Formula, Set[SchematicPredicateLabel[?]], Map[ConnectorFormula[?], SchematicPredicateLabel[?]]) = formula match {
-      case other: PredicateFormula[?] => (other, predicates, translation)
+    def recursive(formula: Formula, predicates: Set[SchematicPredicateLabel[?]], translation: Map[ConnectorFormula, SchematicPredicateLabel[?]]):
+    (Formula, Set[SchematicPredicateLabel[?]], Map[ConnectorFormula, SchematicPredicateLabel[?]]) = formula match {
+      case other: PredicateFormula => (other, predicates, translation)
       case connector @ ConnectorFormula(label, args) =>
         label match {
           case schematic: SchematicConnectorLabel[?] =>
@@ -42,7 +42,7 @@ trait FormulaUtils extends TermUtils {
         (BinderFormula(label, bound, newInner), newPredicates, newTranslation)
     }
     val schematicPredicates = formulas.flatMap(schematicPredicatesOf).toSet
-    val (translatedFormulas, _, _) = formulas.foldLeft((IndexedSeq.empty[Formula], schematicPredicates, Map.empty[ConnectorFormula[?], SchematicPredicateLabel[?]])) {
+    val (translatedFormulas, _, _) = formulas.foldLeft((IndexedSeq.empty[Formula], schematicPredicates, Map.empty[ConnectorFormula, SchematicPredicateLabel[?]])) {
       case ((acc, taken, currentTranslation), formula) =>
         val (translatedFormula, newTaken, newTranslation) = recursive(formula, taken, currentTranslation)
         (acc :+ translatedFormula, newTaken, newTranslation)
@@ -255,13 +255,13 @@ trait FormulaUtils extends TermUtils {
     case BinderFormula(label, bound, inner) => BinderFormula(label, bound, renameSchemas(inner, functionsMap, predicatesMap))
   }
 
-  def fillTupleParametersPredicate[N <: Arity](n: N, f: FillTuple[VariableLabel, N] => Formula): (FillTuple[VariableLabel, N], Formula) = {
+  def fillTupleParametersPredicate[N <: Arity](n: N, f: FillArgs[VariableLabel, N] => Formula): (FillArgs[VariableLabel, N], Formula) = {
     val dummyVariable = VariableLabel("")
     val taken = freeVariablesOf(fillTupleParameters(_ => dummyVariable, n, f)._2).map(_.id)
     fillTupleParameters(VariableLabel.apply, n, f, taken)
   }
 
-  def fillTupleParametersConnector[N <: Arity](n: N, f: FillTuple[SchematicPredicateLabel[0], N] => Formula): (FillTuple[SchematicPredicateLabel[0], N], Formula) = {
+  def fillTupleParametersConnector[N <: Arity](n: N, f: FillArgs[SchematicPredicateLabel[0], N] => Formula): (FillArgs[SchematicPredicateLabel[0], N], Formula) = {
     val dummyPredicate = SchematicPredicateLabel[0]("")
     val taken = schematicPredicatesOf(fillTupleParameters(_ => dummyPredicate, n, f)._2).map(_.id)
     fillTupleParameters(SchematicPredicateLabel[0](_), n, f, taken)

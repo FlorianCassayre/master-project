@@ -77,7 +77,7 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
         None
       }
     }
-    def apply[N <: Arity](f: SchematicFunctionLabel[N], r: FillTuple[VariableLabel, N] => Term): Theorem = {
+    def apply[N <: Arity](f: SchematicFunctionLabel[N], r: FillArgs[VariableLabel, N] => Term): Theorem = {
       val (args, term) = fillTupleParameters(VariableLabel.apply, f.arity, r)
       val argsSeq = args.toSeq
       apply(f, term, argsSeq).get // Never fails by assumption
@@ -102,7 +102,7 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
         None
       }
     }
-    def apply[N <: Arity](f: SchematicPredicateLabel[N], r: FillTuple[VariableLabel, N] => Formula): Theorem = {
+    def apply[N <: Arity](f: SchematicPredicateLabel[N], r: FillArgs[VariableLabel, N] => Formula): Theorem = {
       val (args, formula) = fillTupleParameters(VariableLabel.apply, f.arity, r)
       val argsSeq = args.toSeq
       apply(f, formula, argsSeq).get // ditto
