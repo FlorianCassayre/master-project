@@ -28,6 +28,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
   sealed abstract class TacticCurrentGoal extends Tactic
 
   case class TacticFocusGoal(goal: Int) extends Tactic
+  case object TacticCancelPrevious extends Tactic
 
   case object TacticApplyJustification extends TacticCurrentGoal
 
@@ -125,6 +126,12 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
           ))
         } else {
           None
+        }
+      case TacticCancelPrevious =>
+        proofModeState.steps match {
+          case _ +: previousSteps =>
+            Some(proofModeState.copy(steps = previousSteps))
+          case _ => None
         }
     }
   }

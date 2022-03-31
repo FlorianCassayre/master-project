@@ -32,6 +32,7 @@ trait ProofInterfaceDefinitions extends ProofEnvironmentDefinitions {
       result
     }
     def focus(goal: Int): Boolean = apply(TacticFocusGoal(goal))
+    def back(): Boolean = apply(TacticCancelPrevious)
     def asTheorem(): Theorem = {
       require(state.goals.isEmpty, "The proof is incomplete and thus cannot be converted into a theorem")
       val env = currentState.environment

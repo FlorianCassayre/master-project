@@ -101,7 +101,7 @@ class ProofTests extends AnyFunSuite {
       Proof(
         () |- (t === t)
       )(
-        RuleIntroductionLeftRefl(RuleBackwardParametersBuilder.withFunction(Notations.s, t)),
+        RuleEliminationLeftRefl(RuleBackwardParametersBuilder.withFunction(Notations.s, t)),
         RuleHypothesis(),
       ),
       Proof(

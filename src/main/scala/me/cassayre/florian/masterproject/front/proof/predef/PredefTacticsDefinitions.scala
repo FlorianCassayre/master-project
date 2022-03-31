@@ -117,9 +117,4 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
       }
   }
 
-  // Aliases
-
-  val solveProp: TacticSolver.type = TacticSolver
-  val rewrite: TacticalRewrite.type = TacticalRewrite
-
 }

@@ -77,6 +77,17 @@ lazy val root = (project in file(".")).dependsOn(lisa, masterproject)
 
 (replace `$COMMIT` by the commit hash)
 
+## Structure
+
+* [Source code](src/main/scala/me/cassayre/florian/masterproject)
+  * [`front`](src/main/scala/me/cassayre/florian/masterproject/front): the complete implementation of the front
+  * [`parser`](src/main/scala/me/cassayre/florian/masterproject/parser): a parser for LISA
+  * [`util`](src/main/scala/me/cassayre/florian/masterproject/util): some utilities for LISA
+  * [`legacy`](src/main/scala/me/cassayre/florian/masterproject/legacy): old proof-of-concept implementations that are kept for reference
+  * [`test`](src/main/scala/me/cassayre/florian/masterproject/test): main methods that serve as examples or test files
+* [Weekly notes](notes/weekly) relating the work done stating the future objectives
+* [Documentation](notes/documentation) about the various components
+
 ## Development
 
 Clone the repository:

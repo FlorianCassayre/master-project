@@ -244,7 +244,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     (bot, ctx) => IndexedSeq(Cut(bot, -1, -2, ctx(a)))
   )
 
-  case object RuleIntroductionLeftRefl extends RuleElimination(
+  case object RuleEliminationLeftRefl extends RuleElimination(
     *(s === s) |- **,
     ** |- **,
     (bot, ctx) => IndexedSeq(LeftRefl(bot, -1, ctx(s) === ctx(s)))
@@ -378,39 +378,6 @@ trait PredefRulesDefinitions extends RuleDefinitions {
       )
     }
   )
-
-  // Aliases
-
-  val introHypo: RuleHypothesis.type = RuleHypothesis
-  val introLAnd: RuleIntroductionLeftAnd.type = RuleIntroductionLeftAnd
-  val introRAnd: RuleIntroductionRightAnd.type = RuleIntroductionRightAnd
-  val introLOr: RuleIntroductionLeftOr.type = RuleIntroductionLeftOr
-  val introROr: RuleIntroductionRightOr.type = RuleIntroductionRightOr
-  val introLImp: RuleIntroductionLeftImplies.type = RuleIntroductionLeftImplies
-  val introRImp: RuleIntroductionRightImplies.type = RuleIntroductionRightImplies
-  val introLIff: RuleIntroductionLeftIff.type = RuleIntroductionLeftIff
-  val introRIff: RuleIntroductionRightIff.type = RuleIntroductionRightIff
-  val introLNot: RuleIntroductionLeftNot.type = RuleIntroductionLeftNot
-  val introRNot: RuleIntroductionRightNot.type = RuleIntroductionRightNot
-  val introRRefl: RuleIntroductionRightRefl.type = RuleIntroductionRightRefl
-  val introLForall: RuleIntroductionLeftForall.type = RuleIntroductionLeftForall
-  val introRForall: RuleIntroductionRightForall.type = RuleIntroductionRightForall
-  val introLExists: RuleIntroductionLeftExists.type = RuleIntroductionLeftExists
-  val introRExists: RuleIntroductionRightExists.type = RuleIntroductionRightExists
-  val introLSubstEq: RuleIntroductionLeftSubstEq.type = RuleIntroductionLeftSubstEq
-  val introRSubstEq: RuleIntroductionRightSubstEq.type = RuleIntroductionRightSubstEq
-  val introLSubstIff: RuleIntroductionLeftSubstIff.type = RuleIntroductionLeftSubstIff
-  val introRSubstIff: RuleIntroductionRightSubstIff.type = RuleIntroductionRightSubstIff
-  // RuleIntroductionLeftExistsOne & RuleIntroductionRightExistsOne
-  val introRForallS: RuleIntroductionRightForallSchema.type = RuleIntroductionRightForallSchema
-
-  val elimCut: RuleCut.type = RuleCut
-  val elimLRefl: RuleIntroductionLeftRefl.type = RuleIntroductionLeftRefl
-  val elimRForallS: RuleEliminationRightForallSchema.type = RuleEliminationRightForallSchema
-  val elimLSubstIff: RuleEliminationLeftSubstIff.type = RuleEliminationLeftSubstIff
-  val elimRSubstIff: RuleEliminationRightSubstIff.type = RuleEliminationRightSubstIff
-  val elimLSubstEq: RuleEliminationLeftSubstEq.type = RuleEliminationLeftSubstEq
-  val elimRSubstEq: RuleEliminationRightSubstEq.type = RuleEliminationRightSubstEq
 
   // TODO more rules
 
