@@ -159,7 +159,7 @@ At the proof state level:
 
 At the proof tree level:
 * Cancel the last step: in case the user made mistake, this command restores the proof state
-  to its original prior to the last step.
+  to its original state prior to the last step.
 
 
 Moreover, the following should also be possible (but are not currently implemented):
