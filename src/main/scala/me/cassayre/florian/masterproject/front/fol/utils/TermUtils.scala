@@ -63,14 +63,17 @@ trait TermUtils {
   def renameSchemas(
     term: Term,
     functionsMap: Map[SchematicFunctionLabel[?], SchematicFunctionLabel[?]],
+    variablesMap: Map[VariableLabel, VariableLabel],
   ): Term = term match {
-    case _: VariableTerm => term
+    case VariableTerm(label) =>
+      val newLabel = variablesMap.getOrElse(label, label)
+      VariableTerm(newLabel)
     case FunctionTerm(label, args) =>
       val newLabel = label match {
         case schema: SchematicFunctionLabel[?] if functionsMap.contains(schema) => functionsMap(schema)
         case _ => label
       }
-      FunctionTerm(newLabel, args.map(renameSchemas(_, functionsMap)))
+      FunctionTerm(newLabel, args.map(renameSchemas(_, functionsMap, variablesMap)))
   }
 
   def fillTupleParametersFunction[N <: Arity](n: N, f: FillArgs[VariableLabel, N] => Term): (FillArgs[VariableLabel, N], Term) = {

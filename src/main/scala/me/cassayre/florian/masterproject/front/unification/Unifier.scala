@@ -50,6 +50,14 @@ object Unifier {
     }
   }
   private val emptyUnificationContext = UnificationContext(Map.empty, Map.empty, Map.empty, Map.empty)
+  
+  case class RenamingContext(
+    predicates: Map[SchematicPredicateLabel[?], SchematicPredicateLabel[?]],
+    functions: Map[SchematicFunctionLabel[?], SchematicFunctionLabel[?]],
+    connectors: Map[SchematicConnectorLabel[?], SchematicConnectorLabel[?]],
+    variables: Map[VariableLabel, VariableLabel],
+  )
+  val emptyRenamingContext: RenamingContext = RenamingContext(Map.empty, Map.empty, Map.empty, Map.empty)
 
   sealed abstract class UnificationResult {
     // This is not really needed for now

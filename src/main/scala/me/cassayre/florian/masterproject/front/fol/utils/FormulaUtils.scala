@@ -92,6 +92,12 @@ trait FormulaUtils extends TermUtils {
     case BinderFormula(_, _, inner) => schematicConnectorsOf(inner)
   }
 
+  def declaredBoundVariablesOf(formula: Formula): Set[VariableLabel] = formula match {
+    case PredicateFormula(_, args) => Set.empty
+    case ConnectorFormula(_, args) => args.flatMap(declaredBoundVariablesOf).toSet
+    case BinderFormula(_, bound, inner) => declaredBoundVariablesOf(inner) + bound
+  }
+
 
   protected def isFormulaWellFormed(formula: Formula)(using ctx: Scope): Boolean = formula match {
     case PredicateFormula(label, args) =>
@@ -244,20 +250,30 @@ trait FormulaUtils extends TermUtils {
     formula: Formula,
     functionsMap: Map[SchematicFunctionLabel[?], SchematicFunctionLabel[?]],
     predicatesMap: Map[SchematicPredicateLabel[?], SchematicPredicateLabel[?]],
+    connectorsMap: Map[SchematicConnectorLabel[?], SchematicConnectorLabel[?]],
+    variablesMap: Map[VariableLabel, VariableLabel],
   ): Formula = formula match {
     case PredicateFormula(label, args) =>
       val newLabel = label match {
         case schema: SchematicPredicateLabel[?] if predicatesMap.contains(schema) => predicatesMap(schema)
         case _ => label
       }
-      PredicateFormula(newLabel, args.map(renameSchemas(_, functionsMap)))
-    case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(renameSchemas(_, functionsMap, predicatesMap)))
-    case BinderFormula(label, bound, inner) => BinderFormula(label, bound, renameSchemas(inner, functionsMap, predicatesMap))
+      PredicateFormula(newLabel, args.map(renameSchemas(_, functionsMap, variablesMap)))
+    case ConnectorFormula(label, args) =>
+      val newLabel = label match {
+        case schema: SchematicConnectorLabel[?] if connectorsMap.contains(schema) => connectorsMap(schema)
+        case _ => label
+      }
+      ConnectorFormula(label, args.map(renameSchemas(_, functionsMap, predicatesMap, connectorsMap, variablesMap)))
+    case BinderFormula(label, bound, inner) =>
+      val newBound = variablesMap.getOrElse(bound, bound)
+      BinderFormula(label, newBound, renameSchemas(inner, functionsMap, predicatesMap, connectorsMap, variablesMap))
   }
 
   def fillTupleParametersPredicate[N <: Arity](n: N, f: FillArgs[VariableLabel, N] => Formula): (FillArgs[VariableLabel, N], Formula) = {
     val dummyVariable = VariableLabel("")
-    val taken = freeVariablesOf(fillTupleParameters(_ => dummyVariable, n, f)._2).map(_.id)
+    val dummyFormula = fillTupleParameters(_ => dummyVariable, n, f)._2
+    val taken = (freeVariablesOf(dummyFormula) ++ declaredBoundVariablesOf(dummyFormula)).map(_.id)
     fillTupleParameters(VariableLabel.apply, n, f, taken)
   }
 

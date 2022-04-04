@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.front.proof.state
 
-import lisa.kernel.proof.SequentCalculus.SCProofStep
+import lisa.kernel.proof.SequentCalculus.{SCProofStep, SCSubproof}
 import me.cassayre.florian.masterproject.front.unification.Unifier.*
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 
@@ -251,8 +251,8 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
       def instantiatePatternsMappings(patterns: IndexedSeq[PartialSequent]): IndexedSeq[PartialSequent] =
         patterns.map(partial =>
           partial.copy(
-            left = partial.left.map(renameSchemas(_, functionsMapping, predicatesMapping)),
-            right = partial.right.map(renameSchemas(_, functionsMapping, predicatesMapping)),
+            left = partial.left.map(renameSchemas(_, functionsMapping, predicatesMapping, Map.empty, Map.empty)),
+            right = partial.right.map(renameSchemas(_, functionsMapping, predicatesMapping, Map.empty, Map.empty)),
           )
         )
         .map { partial =>
@@ -352,8 +352,6 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
 
     def reconstruct: ReconstructRule
 
-    def isValid(ctx: UnificationContext): Boolean = true // This function can be used to specify additional constraints
-
     private def partials: Seq[PartialSequent] = hypotheses :+ conclusion
 
     require(partials.forall(isSequentWellFormed))
@@ -372,7 +370,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
     final def apply(parameters: RuleForwardParameters)(using env: ProofEnvironment): Option[Theorem] =
       apply(parameters)()
 
-    def apply(parameters: RuleForwardParameters)(justifications: Justified*)(using env: ProofEnvironment): Option[Theorem] = {
+    final def apply(parameters: RuleForwardParameters)(justifications: Justified*)(using env: ProofEnvironment): Option[Theorem] = {
       val justificationsSeq = justifications.toIndexedSeq
       applyRuleInference(parameters, hypotheses, IndexedSeq(conclusion), justificationsSeq.map(_.sequent)).flatMap {
         case (IndexedSeq(newSequent), ctx) =>
@@ -383,11 +381,51 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions {
         case _ => throw new Error
       }
     }
+
+    // Map[this_hypothesis_formula_index, that_conclusion_formula_index] (left and right)
+    // RenamingContext(that_symbol -> this_symbol)
+    final def compose(map: Map[Int, (Rule, Map[Int, Int], Map[Int, Int], RenamingContext)]): CompoundRule = {
+      val composed = map.map { case (hypothesisIndex, (rule, formulaMappingLeft, formulaMappingRight, renamingContext)) =>
+        require(hypotheses.indices.contains(hypothesisIndex))
+        val hypothesis = hypotheses(hypothesisIndex)
+        // `rule` is allowed to produce unused formulas
+        require(formulaMappingLeft.size == hypothesis.left.size && formulaMappingRight.size == hypothesis.right.size)
+        require(formulaMappingLeft.values.forall(rule.conclusion.left.indices.contains) &&
+          formulaMappingRight.values.forall(rule.conclusion.right.indices.contains))
+        def rename(f: Formula): Formula =
+          renameSchemas(f, renamingContext.functions, renamingContext.predicates, renamingContext.connectors, renamingContext.variables)
+        def renameSequent(s: PartialSequent): PartialSequent =
+          s.copy(left = s.left.map(rename), right = s.right.map(rename))
+        val renamedConclusion = renameSequent(rule.conclusion)
+        // TODO would it be safe to call isSame here? Probably not it seems
+        require(formulaMappingLeft.forall { case (i, j) => hypothesis.left(i) == renamedConclusion.left(j) } &&
+          formulaMappingRight.forall { case (i, j) => hypothesis.right(i) == renamedConclusion.right(j) })
+        val renamedHypotheses = rule.hypotheses.map(renameSequent)
+
+        hypothesisIndex -> (???, renamedHypotheses)
+      }
+      val newHypotheses = hypotheses.zipWithIndex.flatMap { case (originalSequent, i) =>
+        composed.get(i).map { case (_, sequent) => sequent }.getOrElse(IndexedSeq(originalSequent))
+      }
+      val newReconstruct: ReconstructRule = (bot, ctx) => {
+        val thisSteps = reconstruct(bot, ctx)
+        val ttt = hypotheses.zipWithIndex.map { case (hypothesis, i) =>
+          composed.get(i)
+        }
+        //SCSubproof()
+        // TODO extract unifyAllFormulas into a separate function
+
+        ???
+      }
+      CompoundRule(newHypotheses, conclusion, ???)
+    }
   }
 
   class RuleIntroduction(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
   class RuleElimination(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
 
   given Conversion[Rule, RuleTactic] = _()
+
+  case class CompoundRule private[RuleDefinitions](override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
 
 }
