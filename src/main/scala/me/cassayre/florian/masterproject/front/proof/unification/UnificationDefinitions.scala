@@ -10,12 +10,11 @@ trait UnificationDefinitions {
   }
   private val emptyScopedUnificationContext = ScopedUnificationContext(Map.empty)
 
-  // TODO we should store information about which bound variables are in scope to avoid name clashes
   case class UnificationContext(
     predicates: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])],
     functions: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])],
     connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])],
-    variables: Map[VariableLabel, VariableLabel], // TODO enforce uniqueness in pattern
+    variables: Map[VariableLabel, VariableLabel],
   ) {
     def withPredicate(pattern: SchematicPredicateLabel[0], target: Formula): UnificationContext =
       copy(predicates = predicates + (pattern -> (target, Seq.empty)))
@@ -46,7 +45,7 @@ trait UnificationDefinitions {
       instantiatePredicateSchemas(body, argsSeq.zip(args.toSeq.map(_ -> Seq.empty)).toMap)
     }
   }
-  private val emptyUnificationContext = UnificationContext(Map.empty, Map.empty, Map.empty, Map.empty)
+  val emptyUnificationContext: UnificationContext = UnificationContext(Map.empty, Map.empty, Map.empty, Map.empty)
 
   case class RenamingContext(
     predicates: Map[SchematicPredicateLabel[?], SchematicPredicateLabel[?]],

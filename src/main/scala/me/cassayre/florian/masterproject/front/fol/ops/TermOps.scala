@@ -13,6 +13,7 @@ trait TermOps extends CommonOps {
   given Conversion[VariableLabel, VariableTerm] = VariableTerm.apply
   given Conversion[FunctionLabel[0], FunctionTerm] = FunctionTerm(_, Seq.empty)
 
+  @deprecated
   given Conversion[Term, TermLabel] = _.label
 
 }

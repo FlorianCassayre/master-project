@@ -55,7 +55,7 @@ trait TermUtils {
     }
   }
 
-  private def instantiateFunctionSchemas(term: Term, map: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])]): Term = {
+  def instantiateFunctionSchemas(term: Term, map: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])]): Term = {
     require(map.forall { case (f, (_, args)) => f.arity == args.size })
     instantiateFunctionSchemasInternal(term, map)
   }

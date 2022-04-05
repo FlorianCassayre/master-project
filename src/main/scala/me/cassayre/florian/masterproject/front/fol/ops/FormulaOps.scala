@@ -21,6 +21,7 @@ trait FormulaOps extends CommonOps {
   given Conversion[PredicateLabel[0], PredicateFormula] = PredicateFormula(_, Seq.empty)
   given Conversion[ConnectorLabel[0], ConnectorFormula] = ConnectorFormula(_, Seq.empty) // For completeness
 
+  @deprecated
   given Conversion[Formula, FormulaLabel] = _.label
 
   extension (f: Formula) {

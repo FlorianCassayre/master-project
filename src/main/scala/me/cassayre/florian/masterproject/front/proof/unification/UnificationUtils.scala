@@ -36,7 +36,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
     def merge(o1: ConstraintsResult, o2: ConstraintsResult): ConstraintsResult =
       for {
         c1 <- o1
-          c2 <- o2
+        c2 <- o2
       } yield c1 ++ c2
 
     def collectRecursiveTerm(pattern: Term, value: Term)(using ctx: Context): ConstraintsResult = (pattern, value) match {
@@ -81,7 +81,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
   ): Option[UnificationContext] = {
     if(constraints.nonEmpty) {
       def isSolvableTerm(pattern: Term)(using ctx: Set[VariableLabel]): Boolean = pattern match {
-        case VariableTerm(label) => ctx.contains(label) || valueVariables.contains(label)
+        case VariableTerm(label) => /*ctx.contains(label) ||*/ valueVariables.contains(label) // TODO is this correct?
         case FunctionTerm(_: ConstantFunctionLabel[?], args) => args.forall(isSolvableTerm)
         case FunctionTerm(schematic: SchematicFunctionLabel[?], args) => valueFunctions.contains(schematic) && args.forall(isSolvableTerm)
         case _ => false
@@ -94,29 +94,68 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
         case BinderFormula(_, bound, inner) => valueVariables.contains(bound) && isSolvableFormula(inner)(using ctx + bound)
         case _ => false
       }
+      def instantiateTerm(term: Term, assignment: UnificationContext): Term =
+        instantiateFunctionSchemas(renameSchemas(term, Map.empty, assignment.variables), assignment.functions)
+      def instantiateFormula(formula: Formula, assignment: UnificationContext): Formula =
+        instantiateSchemas(renameSchemas(formula, Map.empty, Map.empty, Map.empty, assignment.variables), assignment.functions, assignment.predicates, assignment.connectors)
+      def instantiateConstraint(constraint: Constraint, assignment: UnificationContext): Constraint = constraint match {
+        case cse @ SchematicFunction(label, args, value, ctx) => cse.copy(args = args.map(instantiateTerm(_, assignment)))
+        case cse @ SchematicPredicate(label, args, value, ctx) => cse.copy(args = args.map(instantiateTerm(_, assignment)))
+        case cse @ SchematicConnector(label, args, value, ctx) => cse.copy(args = args.map(instantiateFormula(_, assignment)))
+        case _: Variable => constraint // Nothing to do for variables
+      }
 
-      def handler(constraint: Constraint): Option[Option[(Constraints, UnificationContext, Constraint => Constraint)]] = constraint match {
+      def greedyFactoringFunction(term: Term, args: IndexedSeq[(VariableLabel, Term)], assignment: Map[VariableLabel, Term]): (Term, Map[VariableLabel, Term]) = {
+        args.find { case (_, t) => t == term } match {
+          case Some((variable, value)) => (variable, if(!assignment.contains(variable)) assignment + (variable -> value) else assignment)
+          case None =>
+            term match {
+              case _: VariableTerm => (term, assignment)
+              case FunctionTerm(label, fArgs) =>
+                val (finalArgs, finalAssignment) = fArgs.foldLeft((Seq.empty[Term], assignment)) { case ((argsAcc, currentAssignment), arg) =>
+                  val (newTerm, newAssignment) = greedyFactoringFunction(arg, args, currentAssignment)
+                  (argsAcc :+ newTerm, newAssignment)
+                }
+                (FunctionTerm(label, finalArgs), finalAssignment)
+            }
+        }
+      }
+
+      def handler(constraint: Constraint): Option[Option[(Constraints, UnificationContext)]] = constraint match {
         case SchematicFunction(label, args, value, ctx) if args.forall(isSolvableTerm(_)(using ctx.map(_._1))) =>
-          // TODO substitute
-          ???
+          // TODO are all bound variables already instantiated?
+          // TODO rename args before comparing
+          partialAssignment.functions.get(label) match {
+            case Some((fBody, fArgs)) =>
+              val instantiatedExisting = substituteVariables(fBody, fArgs.zip(args).toMap)
+              if(isSame(value, instantiatedExisting)) {
+                Some(Some((IndexedSeq.empty, partialAssignment)))
+              } else { // Contradiction with the environment
+                Some(None)
+              }
+            case None =>
+              val valueArgs = args.map(renameSchemas(_, Map.empty, ctx.toMap))
+              val (fBody, fArgs) = greedyFactoringFunction(value, ???, ???)
+              Some(Some((IndexedSeq.empty, partialAssignment.withFunction(label, fBody, ???))))
+          }
         case SchematicPredicate(label, args, value, ctx) if args.forall(isSolvableTerm(_)(using ctx.map(_._1))) =>
           ???
         case SchematicConnector(label, args, value, ctx) if args.forall(isSolvableFormula(_)(using ctx.map(_._1))) =>
           ???
         case Variable(pattern, value) =>
           if(partialAssignment.variables.forall { case (l, r) => l != pattern || r == value }) {
-            // TODO replace
-            Some(Some((IndexedSeq.empty, partialAssignment.withVariable(pattern, value), ???)))
+            Some(Some((IndexedSeq.empty, partialAssignment.withVariable(pattern, value))))
           } else {
             Some(None) // Contradiction
           }
         case _ => None
       }
       constraints.view.zipWithIndex.flatMap { case (constraint, i) =>
-        handler(constraint).map(_.map { case (newConstraints, newContext, replacement) => (newConstraints, newContext, replacement, i) })
+        handler(constraint).map(_.map { case (newConstraints, newContext) => (newConstraints, newContext, i) })
       }.headOption match {
         case Some(option) => option match {
-          case Some((newConstraints, newContext, replacement, i)) =>
+          case Some((newConstraints, newContext, i)) =>
+            def replacement(constraint: Constraint): Constraint = instantiateConstraint(constraint, newContext)
             unifyFromConstraints(constraints.take(i).map(replacement) ++ newConstraints ++ constraints.drop(i + 1).map(replacement), newContext,
               valueFunctions, valuePredicates, valueConnectors, valueVariables)
           case None => None // Explicit error
@@ -225,6 +264,8 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
         finalMap
       }
 
+      // TODO rename variables args
+
       val functionsFreshMapping = freshMapping(initialTakenFunctions, allPatternsFunctions, (label, newName) => SchematicFunctionLabel.unsafe(newName, label.arity))
       val predicatesFreshMapping = freshMapping(initialTakenPredicates, allPatternsPredicates, (label, newName) => SchematicPredicateLabel.unsafe(newName, label.arity))
       val connectorsFreshMapping = freshMapping(initialTakenConnectors, allPatternsConnectors, (label, newName) => SchematicConnectorLabel.unsafe(newName, label.arity))
@@ -282,9 +323,9 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
           (l1 ++ l2.diff(l1), r1 ++ r2.diff(r1))
         }
 
-        // TODO variables
         def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
-          formulas.map(formula => instantiateSchemas(formula, renamedAssignment.functions, renamedAssignment.predicates, renamedAssignment.connectors))
+          formulas.map(formula => instantiateSchemas(renameSchemas(formula, Map.empty, Map.empty, Map.empty, renamedAssignment.variables),
+            renamedAssignment.functions, renamedAssignment.predicates, renamedAssignment.connectors))
 
         def createValueTo(common: IndexedSeq[Formula], pattern: IndexedSeq[Formula], partial: Boolean): IndexedSeq[Formula] = {
           val instantiated = instantiate(pattern)
