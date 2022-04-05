@@ -102,6 +102,7 @@ trait FormulaUtils extends TermUtils {
   protected def isFormulaWellFormed(formula: Formula)(using ctx: Scope): Boolean = formula match {
     case PredicateFormula(label, args) =>
       (label.arity == -1 || label.arity == args.size) && args.forall(isWellFormed)
+    case ConnectorFormula(_: SchematicConnectorLabel[?], Seq()) => false // Use nullary predicates instead
     case ConnectorFormula(label, args) =>
       (label.arity == -1 || label.arity == args.size) && args.forall(isFormulaWellFormed)
     case BinderFormula(label, bound, inner) =>

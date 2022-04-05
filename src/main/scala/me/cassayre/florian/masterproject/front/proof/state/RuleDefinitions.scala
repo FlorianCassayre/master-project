@@ -3,10 +3,11 @@ package me.cassayre.florian.masterproject.front.proof.state
 import lisa.kernel.proof.SequentCalculus.{SCProofStep, SCSubproof}
 import me.cassayre.florian.masterproject.front.unification.Unifier.*
 import me.cassayre.florian.masterproject.front.fol.FOL.*
+import me.cassayre.florian.masterproject.front.proof.unification.UnificationUtils
 
 import scala.collection.View
 
-trait RuleDefinitions extends ProofEnvironmentDefinitions {
+trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils {
 
   type ReconstructRule = PartialFunction[(lisa.kernel.proof.SequentCalculus.Sequent, UnificationContext), IndexedSeq[SCProofStep]]
 

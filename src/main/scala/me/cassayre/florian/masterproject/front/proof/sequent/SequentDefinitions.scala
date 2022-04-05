@@ -44,6 +44,11 @@ trait SequentDefinitions {
 
   def schematicConnectorsOfSequent(sequent: SequentBase): Set[SchematicConnectorLabel[?]] =
     sequent.formulas.flatMap(schematicConnectorsOf).toSet
+    
+  def freeVariablesOfSequent(sequent: SequentBase): Set[VariableLabel] = sequent.formulas.flatMap(freeVariablesOf).toSet
+
+  def declaredBoundVariablesOfSequent(sequent: SequentBase): Set[VariableLabel] =
+    sequent.formulas.flatMap(declaredBoundVariablesOf).toSet
 
   def isSequentWellFormed(sequent: SequentBase): Boolean =
     sequent.formulas.forall(isWellFormed)
