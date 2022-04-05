@@ -1,13 +1,13 @@
-package me.cassayre.florian.masterproject.parser
+package me.cassayre.florian.masterproject.legacy.parser
 
 import lisa.kernel.Printer
-import me.cassayre.florian.masterproject.parser.SCParsed.*
+import me.cassayre.florian.masterproject.legacy.parser.SCParsed.*
 import lisa.kernel.fol.FOL.*
 import lisa.kernel.proof.SCProof
 import lisa.kernel.proof.SequentCalculus.*
 import me.cassayre.florian.masterproject.util.SCProofStepFinder
 import me.cassayre.florian.masterproject.util.SCProofStepFinder.NoProofStepFound
-import me.cassayre.florian.masterproject.parser.ReadingException.ResolutionException
+import me.cassayre.florian.masterproject.legacy.parser.ReadingException.ResolutionException
 
 import scala.util.{Failure, Success, Try}
 import scala.util.parsing.input.{Position, Positional}

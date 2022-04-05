@@ -1,4 +1,4 @@
-package me.cassayre.florian.masterproject.parser
+package me.cassayre.florian.masterproject.legacy.parser
 
 import scala.util.parsing.input.{Position, Positional}
 

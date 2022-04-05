@@ -1,8 +1,8 @@
-package me.cassayre.florian.masterproject.parser
+package me.cassayre.florian.masterproject.legacy.parser
 
-import me.cassayre.florian.masterproject.parser.ReadingException.LexingException
-import me.cassayre.florian.masterproject.parser.SCToken
-import me.cassayre.florian.masterproject.parser.SCToken.*
+import me.cassayre.florian.masterproject.legacy.parser.ReadingException.LexingException
+import me.cassayre.florian.masterproject.legacy.parser.SCToken
+import me.cassayre.florian.masterproject.legacy.parser.SCToken.*
 
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.RegexParsers

@@ -1,4 +1,4 @@
-package me.cassayre.florian.masterproject.parser
+package me.cassayre.florian.masterproject.legacy.parser
 
 import lisa.kernel.proof.SequentCalculus.Sequent
 import lisa.kernel.fol.FOL.*

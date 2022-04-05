@@ -1,0 +1,51 @@
+package me.cassayre.florian.masterproject.front.parser
+
+import scala.util.parsing.input.Positional
+
+private[parser] enum FrontToken extends Positional {
+
+  case Identifier(identifier: String)
+  case SchematicIdentifier(identifier: String)
+
+  case IntegerLiteral(value: Int)
+
+  case Indentation(spaces: Int)
+
+  case NewLineWithIndentation(spaces: Int)
+  case InitialIndentation(spaces: Int)
+
+  // The reason these *must* be case classes is because they extend `Positional`,
+  // which contains a position attribute (that shouldn't be shared between instances)
+
+  case Turnstile()
+  case And()
+  case Or()
+  case Implies()
+  case Iff()
+  case Equal()
+  case Membership()
+  case Subset()
+  case SameCardinality()
+  case Forall()
+  case Exists()
+  case ExistsOne()
+  case Not()
+  case EmptySet()
+  case LocalBinder()
+
+  case CurlyBracketOpen()
+  case CurlyBracketClose()
+  case ParenthesisOpen()
+  case ParenthesisClose()
+
+  case Dot()
+  case Comma()
+  case Semicolon()
+
+  case RuleName(name: String)
+
+  case NewLine()
+
+  case End()
+
+}

@@ -1,4 +1,4 @@
-package me.cassayre.florian.masterproject.parser
+package me.cassayre.florian.masterproject.legacy.parser
 
 import lisa.kernel.Printer
 import lisa.kernel.proof.SCProofChecker

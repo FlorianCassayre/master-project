@@ -1,10 +1,10 @@
-package me.cassayre.florian.masterproject.parser
+package me.cassayre.florian.masterproject.legacy.parser
 
-import me.cassayre.florian.masterproject.parser.ReadingException.ParsingException
-import me.cassayre.florian.masterproject.parser.SCToken
-import me.cassayre.florian.masterproject.parser.SCToken.*
-import me.cassayre.florian.masterproject.parser.SCParsed
-import me.cassayre.florian.masterproject.parser.SCParsed.*
+import me.cassayre.florian.masterproject.legacy.parser.ReadingException.ParsingException
+import me.cassayre.florian.masterproject.legacy.parser.SCToken
+import me.cassayre.florian.masterproject.legacy.parser.SCToken.*
+import me.cassayre.florian.masterproject.legacy.parser.SCParsed
+import me.cassayre.florian.masterproject.legacy.parser.SCParsed.*
 
 import scala.util.parsing.combinator.Parsers
 

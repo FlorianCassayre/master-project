@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.legacy
 
-import me.cassayre.florian.masterproject.parser.SCReader
+import me.cassayre.florian.masterproject.legacy.parser.SCReader
 import me.cassayre.florian.masterproject.legacy.GoalBasedProofSystem.*
 
 import java.util.Scanner
