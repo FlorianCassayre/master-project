@@ -1,6 +1,7 @@
 package me.cassayre.florian.masterproject.front.printer
 
 import me.cassayre.florian.masterproject.front.fol.FOL.*
+import me.cassayre.florian.masterproject.front.parser.FrontSymbols
 import me.cassayre.florian.masterproject.front.proof.Proof.*
 import me.cassayre.florian.masterproject.front.theory.SetTheory
 import me.cassayre.florian.masterproject.front.printer.FrontPrintNode.*
@@ -9,6 +10,42 @@ import me.cassayre.florian.masterproject.front.printer.FrontPrintNode.*
  * A set of methods to positioned-print kernel trees.
  */
 object FrontPositionedPrinter {
+
+  private case class Parameters(s: FrontSymbols, ascii: Boolean, compact: Boolean) {
+    //export S.*
+  }
+  private object Parameters {
+    def apply(ascii: Boolean, compact: Boolean): Parameters =
+      Parameters(if(ascii) FrontSymbols.FrontAsciiSymbols else FrontSymbols.FrontUnicodeSymbols, ascii, compact)
+  }
+
+
+  private def isTermPrintableInternal(term: Term, variables: Set[String]): Boolean = term match {
+    case VariableTerm(label) =>
+      assert(variables.contains(label.id)) // By assumption
+      true
+    case FunctionTerm(label, args) =>
+      val isLabelPrintable = label match {
+        case SchematicFunctionLabel(id, _) => !variables.contains(id)
+        case _ => true
+      }
+      isLabelPrintable && args.forall(isTermPrintableInternal(_, variables))
+  }
+
+  private def isTermPrintable(term: Term, freeVariables: Set[VariableLabel]): Boolean =
+    isWellFormed(term) && isTermPrintableInternal(term, freeVariables.map(_.id))
+
+  private def isFormulaPrintableInternal(formula: Formula, variables: Set[String]): Boolean = formula match {
+    case PredicateFormula(label, args) => args.forall(isTermPrintableInternal(_, variables))
+    case ConnectorFormula(label, args) => args.forall(isFormulaPrintableInternal(_, variables))
+    case BinderFormula(label, bound, inner) =>
+      assert(!variables.contains(bound.id)) // By assumption
+      isFormulaPrintableInternal(inner, variables + bound.id)
+  }
+
+  private def isFormulaPrintable(formula: Formula, freeVariables: Set[VariableLabel]): Boolean =
+    isWellFormed(formula) && isFormulaPrintableInternal(formula, freeVariables.map(_.id))
+
 
   private def mkSep(items: FrontPrintNode*)(separator: FrontLeaf): IndexedSeq[FrontPrintNode] = {
     val nodes = items match {
@@ -19,19 +56,29 @@ object FrontPositionedPrinter {
     nodes.toIndexedSeq
   }
 
-  private def spaceSeparator(compact: Boolean): String = if(compact) "" else " "
-  private def commaSeparator(compact: Boolean, symbol: String = ","): String = s"$symbol${spaceSeparator(compact)}"
+  private def spaceSeparator(using p: Parameters): String = if(p.compact) "" else " "
+  private def commaSeparator(separator: String)(using Parameters): String = s"$separator$spaceSeparator"
+  private def commaSeparator(using p: Parameters): String = commaSeparator(p.s.Comma)
 
-  private def positionedParentheses(content: FrontPrintNode): IndexedSeq[FrontPrintNode] = IndexedSeq("(", content, ")")
-
-  private def positionedFunction(name: String, args: Seq[FrontBranch], compact: Boolean, dropParentheses: Boolean = true): FrontBranch = {
-    if(dropParentheses && args.isEmpty) FrontBranch(name) else FrontBranch(FrontLeaf(s"$name(") +: mkSep(args: _*)(commaSeparator(compact)) :+ FrontLeaf(")"))
+  private def prettyLabel(label: LabelType, double: Boolean = false)(using p: Parameters): String = label match {
+    case _: SchematicLabelType => s"${if(double) p.s.QuestionMark else ""}${p.s.QuestionMark}${label.id}"
+    case _ => label.id
   }
 
-  private def positionedInfix(operator: String, left: FrontPrintNode, right: FrontPrintNode, compact: Boolean): FrontBranch =
-    FrontBranch(mkSep(left, operator, right)(spaceSeparator(compact)))
-  private def positionedInfix(operator: FrontPrintNode, left: IndexedSeq[FrontPrintNode], right: IndexedSeq[FrontPrintNode], compact: Boolean): FrontBranch =
-    FrontBranch(mkSep((left ++ IndexedSeq(operator) ++ right): _*)(spaceSeparator(compact)))
+  private def positionedParentheses(content: FrontPrintNode)(using p: Parameters): IndexedSeq[FrontPrintNode] =
+    IndexedSeq(p.s.ParenthesisOpen, content, p.s.ParenthesisClose)
+
+  private def positionedFunction(name: String, args: Seq[FrontBranch], dropParentheses: Boolean = true)(using p: Parameters): FrontBranch = {
+    if(dropParentheses && args.isEmpty)
+      FrontBranch(name)
+    else
+      FrontBranch(FrontLeaf(s"$name${p.s.ParenthesisOpen}") +: mkSep(args: _*)(commaSeparator) :+ FrontLeaf(p.s.ParenthesisClose))
+  }
+
+  private def positionedInfix(operator: String, left: FrontPrintNode, right: FrontPrintNode)(using Parameters): FrontBranch =
+    FrontBranch(mkSep(left, operator, right)(spaceSeparator))
+  private def positionedInfix(operator: FrontPrintNode, left: IndexedSeq[FrontPrintNode], right: IndexedSeq[FrontPrintNode])(using Parameters): FrontBranch =
+    FrontBranch(left ++ Seq(FrontLeaf(spaceSeparator)) ++ IndexedSeq(operator) ++ Seq(FrontLeaf(spaceSeparator)) ++ right)
 
   // Special symbols that aren't defined in this theory
   private val (membership, subsetOf, sameCardinality) = (
@@ -49,30 +96,26 @@ object FrontPositionedPrinter {
   )
   private val nonAtomicPredicates = Set[PredicateLabel[?]](equality, membership, subsetOf, sameCardinality) // Predicates which require parentheses (for readability)
 
-  private def positionedFormulaInternal(formula: Formula, isRightMost: Boolean, compact: Boolean): FrontBranch = formula match {
+  private def positionedFormulaInternal(formula: Formula, isRightMost: Boolean)(using p: Parameters): FrontBranch = formula match {
     case PredicateFormula(label, args) => label match {
       case `equality` => args match {
-        case Seq(l, r) => positionedInfix(label.id, positionedTerm(l), positionedTerm(r), compact)
-        case _ => throw new Exception
+        case Seq(l, r) => positionedInfix(p.s.Equal, positionedTermInternal(l), positionedTermInternal(r))
+        case _ => throw new Error
       }
       case `membership` => args match {
-        case Seq(l, r) => positionedInfix("∈", positionedTerm(l), positionedTerm(r), compact)
-        case _ => throw new Exception
+        case Seq(l, r) => positionedInfix(p.s.Membership, positionedTermInternal(l), positionedTermInternal(r))
+        case _ => throw new Error
       }
       case `subsetOf` => args match {
-        case Seq(l, r) => positionedInfix("⊆", positionedTerm(l), positionedTerm(r), compact)
-        case _ => throw new Exception
+        case Seq(l, r) => positionedInfix(p.s.Subset, positionedTermInternal(l), positionedTermInternal(r))
+        case _ => throw new Error
       }
       case `sameCardinality` => args match {
-        case Seq(l, r) => positionedInfix("~", positionedTerm(l), positionedTerm(r), compact)
-        case _ => throw new Exception
+        case Seq(l, r) => positionedInfix(p.s.Tilde, positionedTermInternal(l), positionedTermInternal(r))
+        case _ => throw new Error
       }
       case _ =>
-        val labelString = label match {
-          case ConstantPredicateLabel(id, _) => id
-          case SchematicPredicateLabel(id, _) => s"?$id"
-        }
-        positionedFunction(labelString, args.map(positionedTerm(_, compact)), compact)
+        positionedFunction(prettyLabel(label), args.map(positionedTermInternal(_)))
     }
     case ConnectorFormula(label, args) =>
       (label, args) match {
@@ -82,15 +125,21 @@ object FrontPositionedPrinter {
             case ConnectorFormula(`neg`, _) => true
             case _ => false
           }
-          val bodyString = positionedFormulaInternal(arg, isRightMost, compact)
+          val bodyString = positionedFormulaInternal(arg, isRightMost)
           val bodyParenthesized = if(isAtomic) IndexedSeq(bodyString) else positionedParentheses(bodyString)
-          FrontBranch(FrontLeaf(label.id) +: bodyParenthesized)
+          FrontBranch(FrontLeaf(p.s.Exclamation) +: bodyParenthesized)
         case (binary @ (`implies` | `iff` | `and` | `or`), Seq(l, r)) =>
           val precedences: Map[ConnectorLabel[?], Int] = Map(
             and -> 1,
             or -> 2,
             implies -> 3,
             iff -> 4,
+          )
+          val symbols: Map[ConnectorLabel[?], String] = Map(
+            and -> p.s.And,
+            or -> p.s.Or,
+            implies -> p.s.Implies,
+            iff -> p.s.Iff,
           )
           val precedence = precedences(binary)
           val isLeftParentheses = l match {
@@ -103,23 +152,28 @@ object FrontPositionedPrinter {
             case PredicateFormula(leftLabel, _) => nonAtomicPredicates.contains(leftLabel)
             case ConnectorFormula(rightLabel, _) => precedences.get(rightLabel).exists(_ > precedence)
           }
-          val (leftString, rightString) = (positionedFormulaInternal(l, isLeftParentheses, compact), positionedFormulaInternal(r, isRightMost || isRightParentheses, compact))
+          val (leftString, rightString) = (positionedFormulaInternal(l, isLeftParentheses), positionedFormulaInternal(r, isRightMost || isRightParentheses))
           val leftParenthesized = if(isLeftParentheses) positionedParentheses(leftString) else IndexedSeq(leftString)
           val rightParenthesized = if(isRightParentheses) positionedParentheses(rightString) else IndexedSeq(rightString)
-          positionedInfix(label.id, leftParenthesized, rightParenthesized, compact)
+          positionedInfix(symbols(label), leftParenthesized, rightParenthesized)
         case (nary @ (`and` | `or`), args) if args.nonEmpty =>
           // FIXME wrong indexing if we do that
           // Rewriting to match the above case; namely op(a) --> a, and op(a, ...rest) --> op(a, op(...rest))
           // Empty args aren't allowed here
           // Invariant: args.size > 2
           if(args.sizeIs == 1) {
-            positionedFormulaInternal(args.head, isRightMost, compact)
+            positionedFormulaInternal(args.head, isRightMost)
           } else {
-            positionedFormulaInternal(ConnectorFormula(nary, Seq(args.head, ConnectorFormula(nary, args.tail))), isRightMost, compact)
+            positionedFormulaInternal(ConnectorFormula(nary, Seq(args.head, ConnectorFormula(nary, args.tail))), isRightMost)
           }
-        case _ => positionedFunction(label.id, args.map(a => positionedFormulaInternal(a, isRightMost, compact)), compact)
+        case _ => positionedFunction(prettyLabel(label, double = true), args.map(a => positionedFormulaInternal(a, isRightMost)))
       }
     case BinderFormula(label, bound, inner) =>
+      val symbols: Map[BinderLabel, String] = Map(
+        forall -> p.s.Forall,
+        exists -> p.s.Exists,
+        existsOne -> p.s.ExistsOne,
+      )
       def accumulateNested(f: Formula, acc: Seq[VariableLabel]): (Seq[VariableLabel], Formula) = f match {
         case BinderFormula(`label`, nestBound, nestInner) => accumulateNested(nestInner, nestBound +: acc)
         case _ => (acc, f)
@@ -127,10 +181,17 @@ object FrontPositionedPrinter {
       val (bounds, innerNested) = accumulateNested(inner, Seq(bound))
 
       val innerTree = FrontBranch(mkSep(
-        FrontLeaf(s"${label.id}${bounds.reverse.map(_.id).mkString(commaSeparator(compact))}."),
-        positionedFormulaInternal(innerNested, true, compact),
-      )(spaceSeparator(compact)))
+        FrontLeaf(s"${symbols(label)}${if(p.ascii) " " else ""}${bounds.reverse.map(_.id).mkString(commaSeparator)}${p.s.Dot}"),
+        positionedFormulaInternal(innerNested, true),
+      )(spaceSeparator))
       bounds.tail.foldLeft(innerTree)((acc, _) => FrontBranch(acc))
+  }
+
+  private def positionedExpression(freeVariables: Set[VariableLabel], expression: FrontBranch)(using p: Parameters): FrontBranch = {
+    if(freeVariables.nonEmpty)
+      FrontBranch(mkSep((s"${p.s.Backslash}${freeVariables.map(_.id).mkString(commaSeparator)}${p.s.Dot}" +: expression.children): _*)(spaceSeparator))
+    else
+      FrontBranch(expression.children)
   }
 
   /**
@@ -140,20 +201,53 @@ object FrontPositionedPrinter {
    * ∀x, y. (∀z. (z ∈ x) ↔ (z ∈ y)) ↔ (x = y)
    * </pre>
    * @param formula the formula
+   * @param ascii whether it should be printed in ASCII or unicode
    * @param compact whether spaces should be omitted between tokens
    * @return the string representation of this formula
    */
-  def positionedFormula(formula: Formula, compact: Boolean = false): FrontBranch = {
-    val f = positionedFormulaInternal(formula, true, compact)
-    val freeVariables = formula.freeVariables
-    if(freeVariables.nonEmpty)
-      FrontBranch(mkSep((s"\\${freeVariables.map(_.id).mkString(commaSeparator(compact))}." +: f.children): _*)(spaceSeparator(compact)))
-    else
-      f
+  def positionedFormula(formula: Formula, ascii: Boolean = false, compact: Boolean = false): FrontBranch = {
+    given Parameters = Parameters(ascii, compact)
+    val f = positionedFormulaInternal(formula, true)
+    val freeVariables = freeVariablesOf(formula)
+    require(isFormulaPrintable(formula, freeVariables))
+    positionedExpression(freeVariables, f)
   }
 
-  def prettyFormula(formula: Formula, compact: Boolean = false): String =
-    positionedFormula(formula, compact).print
+  def prettyFormula(formula: Formula, ascii: Boolean = false, compact: Boolean = false): String =
+    positionedFormula(formula, ascii, compact).print
+
+  private def positionedTermInternal(term: Term)(using p: Parameters): FrontBranch = term match {
+    case VariableTerm(label) => FrontBranch(label.id)
+    case FunctionTerm(label, args) =>
+      label match {
+        case `emptySet` => args match {
+          case Seq() => positionedFunction(p.s.EmptySet, Seq.empty, dropParentheses = true)
+          case _ => throw new Error
+        }
+        case `unorderedPair` => args match {
+          case Seq(l, r) => FrontBranch(p.s.CurlyBracketOpen, positionedTermInternal(l), commaSeparator, positionedTermInternal(r), p.s.CurlyBracketClose)
+          case _ => throw new Error
+        }
+        case `orderedPair` => args match {
+          case Seq(l, r) => FrontBranch(p.s.ParenthesisOpen, positionedTermInternal(l), commaSeparator, positionedTermInternal(r), p.s.ParenthesisClose)
+          case _ => throw new Error
+        }
+        case `singleton` => args match {
+          case Seq(s) => FrontBranch(p.s.CurlyBracketOpen, positionedTermInternal(s), p.s.CurlyBracketClose)
+          case _ => throw new Error
+        }
+        case `powerSet` => args match {
+          case Seq(s) => positionedFunction("P", Seq(positionedTermInternal(s)))
+          case _ => throw new Error
+        }
+        case `unionSet` => args match {
+          case Seq(s) => positionedFunction("U", Seq(positionedTermInternal(s)))
+          case _ => throw new Error
+        }
+        case _ =>
+          positionedFunction(prettyLabel(label), args.map(positionedTermInternal(_)))
+      }
+  }
 
   /**
    * Returns a string representation of this term. See also [[positionedFormula]].
@@ -162,67 +256,60 @@ object FrontPositionedPrinter {
    * f({w, (x, y)}, z)
    * </pre>
    * @param term the term
+   * @param ascii whether it should be printed in ASCII or unicode
    * @param compact whether spaces should be omitted between tokens
    * @return the string representation of this term
    */
-  def positionedTerm(term: Term, compact: Boolean = false): FrontBranch = term match {
-    case VariableTerm(label) => FrontBranch(label.id)
-    case FunctionTerm(label, args) =>
-      label match {
-        case `emptySet` => args match {
-          case Seq() => positionedFunction("∅", Seq.empty, compact, dropParentheses = true)
-          case _ => throw new Exception
-        }
-        case `unorderedPair` => args match {
-          case Seq(l, r) => FrontBranch("{", positionedTerm(l, compact), commaSeparator(compact), positionedTerm(r, compact), "}")
-          case _ => throw new Exception
-        }
-        case `orderedPair` => args match {
-          case Seq(l, r) => FrontBranch("(", positionedTerm(l, compact), commaSeparator(compact), positionedTerm(r, compact), ")")
-          case _ => throw new Exception
-        }
-        case `singleton` => args match {
-          case Seq(s) => FrontBranch("{", positionedTerm(s, compact), "}")
-          case _ => throw new Exception
-        }
-        case `powerSet` => args match {
-          case Seq(s) => positionedFunction("P", Seq(positionedTerm(s, compact)), compact)
-          case _ => throw new Exception
-        }
-        case `unionSet` => args match {
-          case Seq(s) => positionedFunction("U", Seq(positionedTerm(s, compact)), compact)
-          case _ => throw new Exception
-        }
-        case _ =>
-          val labelString = label match {
-            case ConstantFunctionLabel(id, _) => id
-            case SchematicFunctionLabel(id, _) => s"?$id"
-          }
-          positionedFunction(labelString, args.map(positionedTerm(_, compact)), compact)
-      }
+  def positionedTerm(term: Term, ascii: Boolean = false, compact: Boolean = false): FrontBranch = {
+    require(isTermPrintable(term, Set.empty)) // Trivially true
+    positionedTermInternal(term)(using Parameters(ascii, compact))
   }
 
-  def prettyTerm(term: Term, compact: Boolean = false): String =
+  def prettyTerm(term: Term, ascii: Boolean = false, compact: Boolean = false): String =
     positionedTerm(term, compact).print
 
+  private def positionedSequentBase(sequent: SequentBase, ascii: Boolean = false, compact: Boolean = false): FrontBranch = {
+    given p: Parameters = Parameters(ascii, compact)
+    val (partialLeft, partialRight) = sequent match {
+      case _: Sequent => (false, false)
+      case PartialSequent(_, _, partialLeft, partialRight) => (partialLeft, partialRight)
+    }
+    def positionedEllipsis(display: Boolean): Seq[FrontPrintNode] = if(display) Seq(p.s.Ellipsis) else Seq.empty
+    def sortedFormulas(seq: IndexedSeq[Formula]): IndexedSeq[FrontPrintNode] =
+      seq.map(positionedFormulaInternal(_, true)).sortBy(_.print)
+    val (lhs, rhs) = (
+      mkSep((positionedEllipsis(partialLeft) ++ sortedFormulas(sequent.left)): _*)(commaSeparator(p.s.Semicolon)),
+      mkSep((sortedFormulas(sequent.right) ++ positionedEllipsis(partialRight)): _*)(commaSeparator(p.s.Semicolon))
+    )
+    def spaceFor(seq: IndexedSeq[FrontPrintNode]): Seq[FrontPrintNode] = if(seq.nonEmpty) Seq(spaceSeparator) else Seq.empty
+    val expression = FrontBranch((
+        lhs ++ spaceFor(lhs) ++ Seq(FrontLeaf(p.s.Turnstile)) ++ spaceFor(rhs) ++ rhs
+      ): _*)
+    val freeVariables = freeVariablesOfSequent(sequent)
+    require(sequent.formulas.forall(isFormulaPrintable(_, freeVariables)))
+    positionedExpression(freeVariables, expression)
+  }
 
-    /**
+  /**
    * Returns a string representation of this sequent.
    * Example output:
    * <pre>
    * ⊢ ∀x, y. (∀z. (z ∈ x) ↔ (z ∈ y)) ↔ (x = y)
    * </pre>
    * @param sequent the sequent
+   * @param ascii whether it should be printed in ASCII or unicode
    * @param compact whether spaces should be omitted between tokens
    * @return the string representation of this sequent
    */
-  def positionedSequent(sequent: Sequent, compact: Boolean = false): FrontBranch = {
-    def positionedFormulas(seq: IndexedSeq[Formula]): IndexedSeq[FrontPrintNode] =
-      mkSep(seq.map(positionedFormula(_, compact)).sortBy(_.print): _*)(commaSeparator(compact, ";"))
-    FrontBranch(mkSep((positionedFormulas(sequent.left) ++ Seq(FrontLeaf("⊢")) ++ positionedFormulas(sequent.right)): _*)(spaceSeparator(compact)))
-  }
+  def positionedSequent(sequent: Sequent, ascii: Boolean = false, compact: Boolean = false): FrontBranch =
+    positionedSequentBase(sequent, ascii, compact)
 
-  def prettySequent(sequent: Sequent, compact: Boolean = false): String =
-    positionedSequent(sequent, compact).print
+  def prettySequent(sequent: Sequent, ascii: Boolean = false, compact: Boolean = false): String =
+    positionedSequent(sequent, ascii, compact).print
 
+  def positionedPartialSequent(sequent: PartialSequent, ascii: Boolean = false, compact: Boolean = false): FrontBranch =
+    positionedSequentBase(sequent, ascii, compact)
+
+  def prettyPartialSequent(sequent: PartialSequent, ascii: Boolean = false, compact: Boolean = false): String =
+    positionedPartialSequent(sequent, ascii, compact).print
 }

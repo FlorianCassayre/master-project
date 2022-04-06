@@ -1,10 +1,10 @@
 Documentation: Parser
 ===
 
-The package `parser` contains all the logic responsible for parsing
-the LISA syntax, as produced by the printer (`lisa.kernel.Printer`).
+The packages `parser` and `printer` contain all the logic responsible for
+parsing and printing expression to/from the front.
 
-* `SCReader.readFormulaAscii` -- reads a formula in ASCII. Examples:
+* `FrontReader.readFormula` / `FrontPositionedPrinter.prettyFormula` -- read/parse a formula. Examples:
   ```
   c
   (a /\ b) => (c <=> d)
@@ -12,52 +12,24 @@ the LISA syntax, as produced by the printer (`lisa.kernel.Printer`).
   exists x. !(x in {})
   forall x, y. {x, y} = {y, x}
   ```
-* `SCReader.readSequentAscii` -- reads a sequent in ASCII. Examples:
+* `FrontReader.readSequent` / `FrontPositionedPrinter.prettySequent` -- read/parse a sequent. Examples:
   ```
   |-
   |- a
   a; b |- c; d
   exists x. g(x); a /\ b |- a; b
   ```
-* `SCReader.readProof` -- reads a proof in its standard format. Example:
-  ```
-  -1        Import 0    ⊢ ∀x, y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-   0        Rewrite -1  ⊢ ∀x, y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-   1        Subproof -1 ⊢ ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-     -1     Import 0    ⊢ ∀x, y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-      0     Subproof    ∀x, y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-        0   Subproof    ∀x, y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-          0 Hypo.       ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-          1 Left ∀ 0    ∀x, y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-      1     Cut -1, 0   ⊢ ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-   2        Hypo.       ∀z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ ∀z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-   3        Left ∀ 2    ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ ∀z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-   4        Cut 1, 3    ⊢ ∀z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-   5        Hypo.       (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-   6        Left ∀ 5    ∀z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-   7        Cut 4, 6    ⊢ (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
-  ```
+
+Additionally, it is possible to choose between ASCII and unicode.
 
 ### Pipeline
 
 The parsing works in three steps:
-* `SCLexer` transform a stream of characters into a stream of lexical tokens (`SCToken`)
-* `SCParser` parses the tokens into a tree (`SCParsed`)
-* `SCResolver` resolves a parsed tree into a kernel structure (`SCResolver`)
+* `FrontLexer` transform a stream of characters into a stream of lexical tokens (`FrontToken`)
+* `FrontParser` parses the tokens into a tree (`FrontParsed`)
+* `FrontResolver` resolves a parsed tree into trees of the front (`Term`, `Formula`, `Sequent`, ...)
 
-`SCReader` is the public interface and is responsible for calling the steps in sequence.
-
-### Caveats
-
-The "grammar" of LISA is not set in stone and may change in the future.
-
-The printer does not yet support the `\x1, ..., xn. ...` syntax.
-
-The string representation of proofs is ambiguous: by omitting the proof steps parameters, it is not
-always possible to reconstruct the exact same proof step, or to reconstruct it at all.
-
-These issues shall be addressed later when the parser is expected to play a more
-important role.
+`FrontReader` is the public interface and is responsible for calling the steps in sequence.
 
 ### Specification
 
@@ -68,8 +40,9 @@ string `<=>` but rather the token representing this symbol. The ASCII lexer will
 the string `"<=>"` as this token, while the unicode one will parse `↔`.
 
 ```
-id  ::= [a-zA-Z_][a-zA-Z0-9_]*
-sid ::= \?[a-zA-Z_][a-zA-Z0-9_]*
+id  ::= /[a-zA-Z_][a-zA-Z0-9_]*/
+sid ::= /\?[a-zA-Z_][a-zA-Z0-9_]*/
+cid ::= /\?\?[a-zA-Z_][a-zA-Z0-9_]*/
 ol2 ::= "<=>" | "=>" | "\/" | "/\" | "in" | "sub" | "~" | "="
 bl  ::= "forall" | "exists" | "existsone"
 
@@ -77,13 +50,15 @@ t   ::= t ol2 t
       | "!" t
       | bl id "." t
       | "{}" | "{" t "}" | "{" t "," t "}"
-      | (id | sid) ("(" t ("," t)* ")")?
+      | (id | sid | cid) ("(" t ("," t)* ")")?
       | "(" t ")"
 
-tt  ::= "\" id ("," id)* "." t
+fv  ::= "\" id ("," id)* "."
 
-tts ::= (tt (";" tt)*)?
-s   ::= tts "|-" tts
+ts  ::= (t (";" t)*)?
+
+s   ::= fv? ts "|-" ts
+ps  ::= fv? ((... (";" t)*) | ts) |- (((t ";")* ...) | ts)
 ```
 
 #### Associativity & precedence
@@ -111,7 +86,8 @@ The rules for resolution are given below. There are two types, terms (`T`) and f
 Knowing the type of the top-level term can allow us to resolve the full tree into terms
 and formulas. The last case (nullary function / variable) is resolved by looking in the
 environment: if there is a variable wih that name in the context, then this symbol should be
-a variable.
+a variable. The printer ensures that this convention is respected (and may throw an exception
+if an expression cannot be printed unambiguously).
 
 ```
 C, x1, ..., xn |- a: F
@@ -129,6 +105,13 @@ C |- !a: F
 C |- a: F    C |- b: F
 ---------------------- [Connector(op, (a, b))]
     C |- a op b: F     (op is one of: /\, \/, =>, <=>)
+
+C |- x1: F  ...  C |- xn: F
+--------------------------- [Connector(??c, (a, b))]
+ C |- ??c(x1, ..., xn): F
+
+----------- [Connector(??c, ())]
+C |- ??c: F
 
 C |- x1: T  ...  C |- xn: T
 --------------------------- [Function((?)f, (x1, ..., xn))]
@@ -159,7 +142,32 @@ Additional predefined constant operators have similar rules to the ones presente
 
 In the future we may allow type ascriptions, as displayed in these rules.
 
-#### Proofs
+### Legacy LISA parser
+
+The legacy parser was moved to `legacy.parser`. This tool can parse LISA proofs, with
+some caveats.
+Namely, the string representation of proofs is ambiguous: by omitting the proof steps
+parameters, it is not always possible to reconstruct the exact same proof step, or to
+reconstruct it at all.
+
+* `SCReader.readProof` -- reads a proof in its standard format. Example:
+  ```
+  -1        Import 0    ⊢ ∀x, y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+   0        Rewrite -1  ⊢ ∀x, y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+   1        Subproof -1 ⊢ ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+     -1     Import 0    ⊢ ∀x, y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+      0     Subproof    ∀x, y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+        0   Subproof    ∀x, y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+          0 Hypo.       ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+          1 Left ∀ 0    ∀x, y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+      1     Cut -1, 0   ⊢ ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+   2        Hypo.       ∀z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ ∀z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+   3        Left ∀ 2    ∀y, z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ ∀z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+   4        Cut 1, 3    ⊢ ∀z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+   5        Hypo.       (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+   6        Left ∀ 5    ∀z. (z ∈ {x, y}) ↔ (x = z) ∨ (y = z) ⊢ (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+   7        Cut 4, 6    ⊢ (z ∈ {x, y}) ↔ (x = z) ∨ (y = z)
+  ```
 
 A proof is internally represented as nested indexed sequences of steps.
 Each line starts with an integer, representing the step's index. These indices

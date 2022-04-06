@@ -6,6 +6,7 @@ private[parser] enum FrontToken extends Positional {
 
   case Identifier(identifier: String)
   case SchematicIdentifier(identifier: String)
+  case SchematicConnectorIdentifier(identifier: String)
 
   case IntegerLiteral(value: Int)
 
@@ -32,6 +33,8 @@ private[parser] enum FrontToken extends Positional {
   case Not()
   case EmptySet()
   case LocalBinder()
+
+  case Ellipsis()
 
   case CurlyBracketOpen()
   case CurlyBracketClose()

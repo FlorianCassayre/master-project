@@ -16,9 +16,11 @@ private[parser] object FrontParser extends Parsers {
     positioned(accept("identifier", { case id: Identifier => id }))
   private def schematicIdentifier: Parser[SchematicIdentifier] =
     positioned(accept("schematic identifier", { case id: SchematicIdentifier => id }))
+  private def schematicConnectorIdentifier: Parser[SchematicConnectorIdentifier] =
+    positioned(accept("schematic connector identifier", { case id: SchematicConnectorIdentifier => id }))
 
-  private def identifierOrSchematic: Parser[Identifier | SchematicIdentifier] =
-    positioned(identifier | schematicIdentifier)
+  private def identifierOrSchematic: Parser[Identifier | SchematicIdentifier | SchematicConnectorIdentifier] =
+    positioned((identifier: Parser[Identifier | SchematicIdentifier | SchematicConnectorIdentifier]) | schematicIdentifier | schematicConnectorIdentifier)
 
   private def integerLiteral: Parser[IntegerLiteral] =
     positioned(accept("integer literal", { case lit: IntegerLiteral => lit }))
@@ -69,7 +71,8 @@ private[parser] object FrontParser extends Parsers {
       case v ~ argsOpt =>
         val name = v match {
           case Identifier(identifier) => ParsedConstant(identifier)
-          case SchematicIdentifier(identifier) => ParsedSchema(identifier)
+          case SchematicIdentifier(identifier) => ParsedSchema(identifier, connector = false)
+          case SchematicConnectorIdentifier(identifier) => ParsedSchema(identifier, connector = true)
         }
         argsOpt.map(ParsedApplication(name, _)).getOrElse(name)
       }
@@ -90,26 +93,27 @@ private[parser] object FrontParser extends Parsers {
 
   private def localBinder: Parser[Seq[String]] =
     LocalBinder() ~> rep1sep(identifier, Comma()) <~ Dot() ^^ (fv => fv.map(_.identifier))
+  private def localBinderOptional: Parser[Seq[String]] = localBinder.? ^^ (fv => fv.getOrElse(Seq.empty))
 
   private def topTermOrFormula: Parser[ParsedTopTermOrFormula] =
-    localBinder.? ~ termOrFormula ^^ { case fv ~ t => ParsedTopTermOrFormula(fv.getOrElse(Seq.empty), t) }
+    localBinderOptional ~ termOrFormula ^^ { case fv ~ t => ParsedTopTermOrFormula(fv, t) }
 
-  private def termOrFormulaSequence: Parser[Seq[ParsedTopTermOrFormula]] =
-    repsep(topTermOrFormula, Semicolon())
+  private def termOrFormulaSequence: Parser[Seq[ParsedTermOrFormula]] =
+    repsep(termOrFormula, Semicolon())
 
   private def sequent: Parser[ParsedSequent] =
-    positioned(termOrFormulaSequence ~ Turnstile() ~ termOrFormulaSequence ^^ { case l ~ _ ~ r => ParsedSequent(l, r) })
+    positioned(localBinderOptional ~ termOrFormulaSequence ~ Turnstile() ~ termOrFormulaSequence ^^ { case fv ~ l ~ _ ~ r => ParsedSequent(fv, l, r) })
 
-  private def proofStep: Parser[ParsedProofStep] = positioned(
-    indentation ~ integerLiteral ~ ruleName ~ repsep(integerLiteral, Comma()) ~ sequent ^^ {
-      case i ~ l ~ r ~ p ~ s => ParsedProofStep(l.pos, i.spaces, l.value, r.name, p.map(_.value), s)
-    }
-  )
-
-  private def proof: Parser[ParsedProof] = positioned(
-    (indentation ~ newLine).* ~> rep1sep(proofStep, newLine) <~ (newLine ~ indentation).* ^^ (steps => ParsedProof(steps.toIndexedSeq))
-  )
-
+  private def partialSequent: Parser[ParsedPartialSequent] =
+    positioned(localBinderOptional ~ (
+      ((Ellipsis() ~> (Semicolon() ~> rep1sep(termOrFormula, Semicolon())).?) ^^ (opt => (opt.getOrElse(Seq.empty), true))) |
+        termOrFormulaSequence ^^ (seq => (seq, false))
+      ) ~ Turnstile() ~
+      ((Ellipsis() ^^^ Seq.empty | (rep1sep(termOrFormula, Semicolon()) <~ (Semicolon() ~ Ellipsis()))) ^^ (seq => (seq, true)) |
+        termOrFormulaSequence ^^ (seq => (seq, false))
+      ) ^^ {
+        case fv ~ (l, pl) ~ _ ~ (r, pr) => ParsedPartialSequent(fv, l, r, pl, pr)
+    })
 
   private def parse[T](parser: Parser[T])(tokens: Seq[FrontToken]): T = {
     val reader = new FrontTokensReader(tokens)
@@ -129,7 +133,6 @@ private[parser] object FrontParser extends Parsers {
   def parseSequent(tokens: Seq[FrontToken]): ParsedSequent =
     parse(positioned(sequent <~ End()))(tokens)
 
-  def parseProof(tokens: Seq[FrontToken]): ParsedProof =
-    parse(positioned(proof <~ End()))(tokens)
-
+  def parsePartialSequent(tokens: Seq[FrontToken]): ParsedPartialSequent =
+    parse(positioned(partialSequent <~ End()))(tokens)
 }

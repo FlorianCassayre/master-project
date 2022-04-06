@@ -3,6 +3,7 @@ package me.cassayre.florian.masterproject.front.parser
 import me.cassayre.florian.masterproject.front.parser.FrontReadingException.LexingException
 import me.cassayre.florian.masterproject.front.parser.FrontToken
 import me.cassayre.florian.masterproject.front.parser.FrontToken.*
+import me.cassayre.florian.masterproject.front.parser.FrontSymbols
 
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.RegexParsers
@@ -12,18 +13,7 @@ private[parser] trait FrontLexer extends RegexParsers {
   override def skipWhitespace: Boolean = true
   override protected val whiteSpace: Regex = "[ \t\f]+".r
 
-  protected val SymbolForall: String
-  protected val SymbolExists: String
-  protected val SymbolExistsOne: String
-  protected val SymbolIff: String
-  protected val SymbolImplies: String
-  protected val SymbolOr: String
-  protected val SymbolAnd: String
-  protected val SymbolNot: String
-  protected val SymbolTurnstile: String
-  protected val SymbolSubset: String
-  protected val SymbolMembership: String
-  protected val SymbolEmptySet: String
+  protected val S: FrontSymbols
 
   protected def initialIndentation: Parser[InitialIndentation] = positioned(
     " *".r ^^ (str => InitialIndentation(str.length))
@@ -38,36 +28,40 @@ private[parser] trait FrontLexer extends RegexParsers {
     identifierPattern.r ^^ (str => Identifier(str))
   )
   private def schematicIdentifier: Parser[SchematicIdentifier] = positioned(
-    (s"\\?$identifierPattern").r ^^ (str => SchematicIdentifier(str.tail))
+    (raw"\${S.QuestionMark}$identifierPattern").r ^^ (str => SchematicIdentifier(str.tail))
+  )
+  private def schematicConnectorIdentifier: Parser[SchematicConnectorIdentifier] = positioned(
+    (raw"\${S.QuestionMark}\${S.QuestionMark}$identifierPattern").r ^^ (str => SchematicConnectorIdentifier(str.tail.tail))
   )
 
   private def keywords: Parser[FrontToken] = positioned(
-    SymbolForall ^^^ Forall()
-      | SymbolExistsOne ^^^ ExistsOne()
-      | SymbolExists ^^^ Exists()
-      | SymbolIff ^^^ Iff()
-      | SymbolImplies ^^^ Implies()
-      | SymbolOr ^^^ Or()
-      | SymbolAnd ^^^ And()
-      | SymbolNot ^^^ Not()
-      | SymbolTurnstile ^^^ Turnstile()
-      | SymbolSubset ^^^ Subset()
-      | SymbolMembership ^^^ Membership()
-      | SymbolEmptySet ^^^ EmptySet()
-      | "=" ^^^ Equal()
-      | "~" ^^^ SameCardinality()
-      | "\\" ^^^ LocalBinder()
-      | "{" ^^^ CurlyBracketOpen()
-      | "}" ^^^ CurlyBracketClose()
-      | "(" ^^^ ParenthesisOpen()
-      | ")" ^^^ ParenthesisClose()
-      | "." ^^^ Dot()
-      | "," ^^^ Comma()
-      | ";" ^^^ Semicolon()
+    S.Forall ^^^ Forall()
+      | S.ExistsOne ^^^ ExistsOne()
+      | S.Exists ^^^ Exists()
+      | S.Iff ^^^ Iff()
+      | S.Implies ^^^ Implies()
+      | S.Or ^^^ Or()
+      | S.And ^^^ And()
+      | S.Exclamation ^^^ Not()
+      | S.Turnstile ^^^ Turnstile()
+      | S.Ellipsis ^^^ Ellipsis()
+      | S.Subset ^^^ Subset()
+      | S.Membership ^^^ Membership()
+      | S.EmptySet ^^^ EmptySet()
+      | S.Equal ^^^ Equal()
+      | S.Tilde ^^^ SameCardinality()
+      | S.Backslash ^^^ LocalBinder()
+      | S.CurlyBracketOpen ^^^ CurlyBracketOpen()
+      | S.CurlyBracketClose ^^^ CurlyBracketClose()
+      | S.ParenthesisOpen ^^^ ParenthesisOpen()
+      | S.ParenthesisClose ^^^ ParenthesisClose()
+      | S.Dot ^^^ Dot()
+      | S.Comma ^^^ Comma()
+      | S.Semicolon ^^^ Semicolon()
   )
 
   protected final def standardTokens: Parser[FrontToken] =
-    keywords | newLine | schematicIdentifier | identifier
+    keywords | newLine | schematicConnectorIdentifier | schematicIdentifier | identifier
 
   // Order matters! Special keywords should be matched before identifiers
   protected def tokens: Parser[Seq[FrontToken]] =
@@ -84,34 +78,12 @@ private[parser] trait FrontLexer extends RegexParsers {
 object FrontLexer {
 
   private trait FrontLexerAscii extends FrontLexer {
-    override protected val SymbolForall: String = "forall"
-    override protected val SymbolExists: String = "exists"
-    override protected val SymbolExistsOne: String = "existsone"
-    override protected val SymbolIff: String = "<=>"
-    override protected val SymbolImplies: String = "=>"
-    override protected val SymbolOr: String = """\/"""
-    override protected val SymbolAnd: String = """/\"""
-    override protected val SymbolNot: String = "!"
-    override protected val SymbolTurnstile: String = "|-"
-    override protected val SymbolMembership: String = "in"
-    override protected val SymbolSubset: String = "sub"
-    override protected val SymbolEmptySet: String = "empty"
+    override protected val S: FrontSymbols = FrontSymbols.FrontAsciiSymbols
   }
   private object FrontLexerStandardAscii extends FrontLexerAscii
 
   private trait FrontLexerUnicode extends FrontLexer {
-    override protected val SymbolForall: String = "∀"
-    override protected val SymbolExists: String = "∃"
-    override protected val SymbolExistsOne: String = "∃!"
-    override protected val SymbolIff: String = "↔"
-    override protected val SymbolImplies: String = "⇒"
-    override protected val SymbolOr: String = "∨"
-    override protected val SymbolAnd: String = "∧"
-    override protected val SymbolNot: String = "¬"
-    override protected val SymbolTurnstile: String = "⊢"
-    override protected val SymbolMembership: String = "∈"
-    override protected val SymbolSubset: String = "⊆"
-    override protected val SymbolEmptySet: String = "∅"
+    override protected val S: FrontSymbols = FrontSymbols.FrontUnicodeSymbols
   }
   private object FrontLexerStandardUnicode extends FrontLexerUnicode
 
