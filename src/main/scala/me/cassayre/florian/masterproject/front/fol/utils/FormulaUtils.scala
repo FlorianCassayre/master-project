@@ -15,6 +15,19 @@ trait FormulaUtils extends TermUtils {
     findFirst(0)
   }
 
+  def freshIds(taken: Set[String], n: Int, base: String = "x"): Seq[String] = {
+    require(n >= 0)
+    def findMany(i: Int, n: Int, taken: Set[String], acc: Seq[String]): Seq[String] = {
+      if(n > 0) {
+        val id = s"${base}_$i"
+        if(taken.contains(id)) findMany(i + 1, n, taken, acc) else findMany(i + 1, n - 1, taken + id, id +: acc)
+      } else {
+        acc
+      }
+    }
+    findMany(0, n, taken, Seq.empty).reverse
+  }
+
   def adaptConnectorSchemas(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] = {
     def recursive(formula: Formula, predicates: Set[SchematicPredicateLabel[?]], translation: Map[ConnectorFormula, SchematicPredicateLabel[?]]):
     (Formula, Set[SchematicPredicateLabel[?]], Map[ConnectorFormula, SchematicPredicateLabel[?]]) = formula match {

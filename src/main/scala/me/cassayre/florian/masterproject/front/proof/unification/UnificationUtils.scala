@@ -121,6 +121,19 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
         }
       }
 
+      def greedyFactoringPredicate(formula: Formula, args: IndexedSeq[(VariableLabel, Term)], assignment: Map[VariableLabel, Term]): (Formula, Map[VariableLabel, Term]) = {
+        formula match {
+          case PredicateFormula(label, fArgs) =>
+            val (finalAssignment, finalFArgs) = fArgs.foldLeft((assignment, Seq.empty[Term])) { case ((currentAssignment, currentFArgs), a) =>
+              val (newA, newAssignment) = greedyFactoringFunction(a, args, currentAssignment)
+              (newAssignment, currentFArgs :+ newA)
+            }
+            (PredicateFormula(label, finalFArgs), finalAssignment)
+          case ConnectorFormula(label, args) => (formula, assignment) // Identity
+          case BinderFormula(label, bound, inner) => ???
+        }
+      }
+
       def handler(constraint: Constraint): Option[Option[(Constraints, UnificationContext)]] = constraint match {
         case SchematicFunction(label, args, value, ctx) if args.forall(isSolvableTerm(_)(using ctx.map(_._1))) =>
           // TODO are all bound variables already instantiated?
@@ -135,11 +148,25 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
               }
             case None =>
               val valueArgs = args.map(renameSchemas(_, Map.empty, ctx.toMap))
-              val (fBody, fArgs) = greedyFactoringFunction(value, ???, ???)
-              Some(Some((IndexedSeq.empty, partialAssignment.withFunction(label, fBody, ???))))
+              val freshArguments = freshIds(freeVariablesOf(value).map(_.id), valueArgs.size).map(VariableLabel.apply)
+              val (fBody, fArgs) = greedyFactoringFunction(value, freshArguments.zip(valueArgs).toIndexedSeq, Map.empty)
+              Some(Some((IndexedSeq.empty, partialAssignment.withFunction(label, fBody, freshArguments))))
           }
         case SchematicPredicate(label, args, value, ctx) if args.forall(isSolvableTerm(_)(using ctx.map(_._1))) =>
-          ???
+          partialAssignment.predicates.get(label) match {
+            case Some((fBody, fArgs)) =>
+              val instantiatedExisting = substituteVariables(fBody, fArgs.zip(args).toMap)
+              if(isSame(value, instantiatedExisting)) {
+                Some(Some((IndexedSeq.empty, partialAssignment)))
+              } else { // Contradiction with the environment
+                Some(None)
+              }
+            case None =>
+              val valueArgs = args.map(renameSchemas(_, Map.empty, ctx.toMap))
+              val freshArguments = freshIds(freeVariablesOf(value).map(_.id), valueArgs.size).map(VariableLabel.apply)
+              val (fBody, fArgs) = greedyFactoringPredicate(value, freshArguments.zip(valueArgs).toIndexedSeq, Map.empty)
+              Some(Some((IndexedSeq.empty, partialAssignment.withPredicate(label, fBody, freshArguments))))
+          }
         case SchematicConnector(label, args, value, ctx) if args.forall(isSolvableFormula(_)(using ctx.map(_._1))) =>
           ???
         case Variable(pattern, value) =>
@@ -294,10 +321,10 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
       val unified = constraints
         .flatMap(unifyFromConstraints(_, renamedPartialAssignment, valuesFunctions, valuesPredicates, valuesConnectors, valuesVariables))
         .filter(assignment => // Check if the assignment is full
-          assignment.functions.keySet == allPatternsFunctions &&
-            assignment.predicates.keySet == allPatternsPredicates &&
-            assignment.connectors.keySet == allPatternsConnectors &&
-            assignment.variables.keySet == allPatternsVariables
+          assignment.functions.keySet.map(functionsInverseMapping) == allPatternsFunctions &&
+            assignment.predicates.keySet.map(predicatesInverseMapping) == allPatternsPredicates &&
+            assignment.connectors.keySet.map(connectorsInverseMapping) == allPatternsConnectors &&
+            assignment.variables.keySet.map(variablesInverseMapping) == allPatternsVariables
         )
 
       unified.map { renamedAssignment =>
