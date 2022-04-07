@@ -1,8 +1,12 @@
 package me.cassayre.florian.masterproject.front.fol.definitions
 
 trait FormulaDefinitions extends FormulaLabelDefinitions with TermDefinitions {
+  
+  protected def pretty(formula: Formula): String
 
-  sealed abstract class Formula extends LabeledTree[FormulaLabel]
+  sealed abstract class Formula extends LabeledTree[FormulaLabel] {
+    override def toString: String = pretty(this)
+  }
 
   final case class PredicateFormula protected(label: PredicateLabel[?], args: Seq[Term]) extends Formula
   object PredicateFormula {

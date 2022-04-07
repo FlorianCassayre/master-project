@@ -5,6 +5,9 @@ import me.cassayre.florian.masterproject.front.fol.FOL.*
 
 trait SequentDefinitions {
 
+  protected def pretty(sequent: Sequent): String
+  protected def pretty(sequent: PartialSequent): String
+
   sealed abstract class SequentBase {
     val left: IndexedSeq[Formula]
     val right: IndexedSeq[Formula]
@@ -12,24 +15,12 @@ trait SequentDefinitions {
     def formulas: IndexedSeq[Formula] = left ++ right
   }
 
-  // TODO this should be handled by its own printer
-  private def prettySequent(left: Seq[Formula], right: Seq[Formula], partialLeft: Boolean = false, partialRight: Boolean = false): String = {
-    def prettySequence(seq: Seq[Formula], leftSide: Boolean, partial: Boolean): String = {
-      val strs = seq.map(Printer.prettyFormula(_))
-      val rest = "..."
-      val strs1 = if (partial) if (leftSide) rest +: strs else strs :+ rest else strs
-      strs1.mkString("; ")
-    }
-
-    s"${prettySequence(left, true, partialLeft)} ⊢ ${prettySequence(right, false, partialRight)}"
-  }
-
   final case class Sequent(left: IndexedSeq[Formula], right: IndexedSeq[Formula]) extends SequentBase {
-    override def toString: String = prettySequent(left, right)
+    override def toString: String = pretty(this)
   }
 
   final case class PartialSequent(left: IndexedSeq[Formula], right: IndexedSeq[Formula], partialLeft: Boolean = true, partialRight: Boolean = true) extends SequentBase {
-    override def toString: String = prettySequent(left, right, partialLeft, partialRight)
+    override def toString: String = pretty(this)
   }
 
   def functionsOfSequent(sequent: SequentBase): Set[FunctionLabel[?]] = sequent.formulas.flatMap(functionsOf).toSet
@@ -44,7 +35,7 @@ trait SequentDefinitions {
 
   def schematicConnectorsOfSequent(sequent: SequentBase): Set[SchematicConnectorLabel[?]] =
     sequent.formulas.flatMap(schematicConnectorsOf).toSet
-    
+
   def freeVariablesOfSequent(sequent: SequentBase): Set[VariableLabel] = sequent.formulas.flatMap(freeVariablesOf).toSet
 
   def declaredBoundVariablesOfSequent(sequent: SequentBase): Set[VariableLabel] =

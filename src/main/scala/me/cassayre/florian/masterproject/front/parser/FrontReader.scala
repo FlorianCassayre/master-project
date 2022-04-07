@@ -33,17 +33,4 @@ object FrontReader {
   def readPartialSequent(str: String, ascii: Boolean = true, multiline: Boolean = false): PartialSequent =
     FrontResolver.resolvePartialSequent(FrontParser.parsePartialSequent(lexing(str, ascii, multiline)))
 
-
-
-  private def mkString(sc: StringContext, args: Seq[Any]): String = {
-    assert(sc.parts.size == args.size + 1)
-    sc.parts.zip(args.map(_.toString) :+ "").flatMap { case (p, a) => Seq(p, a) }.mkString
-  }
-
-  extension (sc: StringContext)
-    def term(args: Any*): Term = readTerm(mkString(sc, args))
-    def formula(args: Any*): Formula = readFormula(mkString(sc, args))
-    def sequent(args: Any*): Sequent = readSequent(mkString(sc, args))
-    def partial(args: Any*): PartialSequent = readPartialSequent(mkString(sc, args))
-
 }

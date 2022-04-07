@@ -1,11 +1,15 @@
 package me.cassayre.florian.masterproject.front.proof
 
+import me.cassayre.florian.masterproject.front.printer.FrontPositionedPrinter
 import me.cassayre.florian.masterproject.front.proof.state.*
 import me.cassayre.florian.masterproject.front.proof.predef.*
 
 object Proof
   extends ProofInterfaceDefinitions
   with PredefRulesDefinitions with PredefTacticsDefinitions {
+
+  override protected def pretty(sequent: Sequent): String = FrontPositionedPrinter.prettySequent(sequent)
+  override protected def pretty(sequent: PartialSequent): String = FrontPositionedPrinter.prettyPartialSequent(sequent)
 
   val introHypo: RuleHypothesis.type = RuleHypothesis
   val introLAnd: RuleIntroductionLeftAnd.type = RuleIntroductionLeftAnd

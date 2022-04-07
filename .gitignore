@@ -3,3 +3,6 @@
 target
 .bsp
 releases
+.vscode
+.metals
+.bloop

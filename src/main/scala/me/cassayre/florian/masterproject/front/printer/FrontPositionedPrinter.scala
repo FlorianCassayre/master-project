@@ -20,31 +20,35 @@ object FrontPositionedPrinter {
   }
 
 
+  private val rName = "[a-zA-Z_][a-zA-Z0-9_]*".r
+  private def isNamePrintable(name: String): Boolean = rName.matches(name)
+
   private def isTermPrintableInternal(term: Term, variables: Set[String]): Boolean = term match {
     case VariableTerm(label) =>
-      assert(variables.contains(label.id)) // By assumption
+      assert(variables.contains(label.id)) // By assumption, thus `isNamePrintable` is true
       true
     case FunctionTerm(label, args) =>
       val isLabelPrintable = label match {
         case SchematicFunctionLabel(id, _) => !variables.contains(id)
         case _ => true
       }
-      isLabelPrintable && args.forall(isTermPrintableInternal(_, variables))
+      isNamePrintable(label.id) && isLabelPrintable && args.forall(isTermPrintableInternal(_, variables))
   }
 
   private def isTermPrintable(term: Term, freeVariables: Set[VariableLabel]): Boolean =
-    isWellFormed(term) && isTermPrintableInternal(term, freeVariables.map(_.id))
+    freeVariables.map(_.id).forall(isNamePrintable) && isWellFormed(term) && isTermPrintableInternal(term, freeVariables.map(_.id))
 
   private def isFormulaPrintableInternal(formula: Formula, variables: Set[String]): Boolean = formula match {
-    case PredicateFormula(label, args) => args.forall(isTermPrintableInternal(_, variables))
-    case ConnectorFormula(label, args) => args.forall(isFormulaPrintableInternal(_, variables))
+    case PredicateFormula(label, args) =>
+      (!label.isInstanceOf[SchematicLabelType] || isNamePrintable(label.id)) && args.forall(isTermPrintableInternal(_, variables))
+    case ConnectorFormula(label, args) =>
+      (!label.isInstanceOf[SchematicLabelType] || isNamePrintable(label.id)) && args.forall(isFormulaPrintableInternal(_, variables))
     case BinderFormula(label, bound, inner) =>
-      assert(!variables.contains(bound.id)) // By assumption
-      isFormulaPrintableInternal(inner, variables + bound.id)
+      isNamePrintable(bound.id) && !variables.contains(bound.id) && isFormulaPrintableInternal(inner, variables + bound.id)
   }
 
   private def isFormulaPrintable(formula: Formula, freeVariables: Set[VariableLabel]): Boolean =
-    isWellFormed(formula) && isFormulaPrintableInternal(formula, freeVariables.map(_.id))
+    freeVariables.map(_.id).forall(isNamePrintable) && isWellFormed(formula) && isFormulaPrintableInternal(formula, freeVariables.map(_.id))
 
 
   private def mkSep(items: FrontPrintNode*)(separator: FrontLeaf): IndexedSeq[FrontPrintNode] = {
