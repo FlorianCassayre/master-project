@@ -9,7 +9,8 @@ import scala.collection.View
 
 trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils {
 
-  type ReconstructRule = PartialFunction[(lisa.kernel.proof.SequentCalculus.Sequent, Unifier.UnificationContext), IndexedSeq[SCProofStep]]
+  type ReconstructRule = PartialFunction[(Sequent, IndexedSeq[Sequent], Unifier.UnificationContext), IndexedSeq[SCProofStep]]
+  type ReconstructBaseRule = PartialFunction[(lisa.kernel.proof.SequentCalculus.Sequent, Unifier.UnificationContext), IndexedSeq[SCProofStep]]
 
   sealed abstract class CommonRuleParameters {
     protected type T <: CommonRuleParameters
@@ -166,11 +167,48 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     }
   }
 
+  protected def inflateValues(patternsTo: IndexedSeq[PartialSequent], valuesFrom: IndexedSeq[Sequent], ctx: Unifier.UnificationContext, indices: IndexedSeq[(IndexedSeq[Int], IndexedSeq[Int])]): IndexedSeq[Sequent] = {
+    def removeIndices[T](array: IndexedSeq[T], indices: Seq[Int]): IndexedSeq[T] = {
+      val set = indices.toSet
+      for {
+        (v, i) <- array.zipWithIndex
+          if !set.contains(i)
+      } yield v
+    }
+
+    def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
+      formulas.map(formula => instantiateSchemas(formula, ctx.functions, ctx.predicates, ctx.connectors))
+
+    def createValueTo(common: IndexedSeq[Formula], pattern: IndexedSeq[Formula], partial: Boolean): IndexedSeq[Formula] = {
+      val instantiated = instantiate(pattern)
+      if(partial) common ++ instantiated else instantiated
+    }
+
+    val (commonLeft, commonRight) = indices.zip(valuesFrom).map { case ((indicesLeft, indicesRight), Sequent(valueLeft, valueRight)) => // Union all
+      (removeIndices(valueLeft, indicesLeft), removeIndices(valueRight, indicesRight))
+    }.reduce { case ((l1, r1), (l2, r2)) =>
+      (l1 ++ l2.diff(l1), r1 ++ r2.diff(r1))
+    }
+
+    val newValues = patternsTo.map(patternTo =>
+      Sequent(
+        createValueTo(commonLeft, patternTo.left, patternTo.partialLeft),
+        createValueTo(commonRight, patternTo.right, patternTo.partialRight),
+      )
+    )
+
+    newValues
+  }
+
   protected def applyRuleInference(
     parameters: CommonRuleParameters,
     patternsFrom: IndexedSeq[PartialSequent],
     patternsTo: IndexedSeq[PartialSequent],
     valuesFrom: IndexedSeq[Sequent],
+    extraFunctions: Set[SchematicFunctionLabel[?]],
+    extraPredicate: Set[SchematicPredicateLabel[?]],
+    extraConnectors: Set[SchematicConnectorLabel[?]],
+    //extraVariables: Set[VariableLabel] = Set.empty,
   ): Option[(IndexedSeq[Sequent], Unifier.UnificationContext)] = {
     def parametersOption: View[IndexedSeq[SequentSelector]] =
       if(patternsFrom.size == valuesFrom.size) {
@@ -189,10 +227,10 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
       .diff(patternsFrom.flatMap(schematicPredicatesOfSequent).toSet)
 
     // We enumerate the schemas of arity > 0
-    val ruleFunctions = allPartialFormulas.flatMap(schematicFunctionsOfSequent).toSet
-    val rulePredicates = allPartialFormulas.flatMap(schematicPredicatesOfSequent).toSet
+    val ruleFunctions = allPartialFormulas.flatMap(schematicFunctionsOfSequent).toSet ++ extraFunctions
+    val rulePredicates = allPartialFormulas.flatMap(schematicPredicatesOfSequent).toSet ++ extraPredicate
     // By assumption connectors must be of arity > 0
-    val ruleConnectors = allPartialFormulas.flatMap(schematicConnectorsOfSequent).toSet
+    val ruleConnectors = allPartialFormulas.flatMap(schematicConnectorsOfSequent).toSet ++ extraConnectors
     assert(ruleConnectors.forall(_.arity > 0))
 
     val parametersFunctions = parameters.functions.keySet
@@ -297,34 +335,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
               ctxRenamed.variables,
             )
 
-            def removeIndices[T](array: IndexedSeq[T], indices: Seq[Int]): IndexedSeq[T] = {
-              val set = indices.toSet
-              for {
-                (v, i) <- array.zipWithIndex
-                  if !set.contains(i)
-              } yield v
-            }
-
-            def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
-              formulas.map(formula => instantiateSchemas(formula, ctxRenamed.functions, ctxRenamed.predicates, ctxRenamed.connectors))
-
-            def createValueTo(common: IndexedSeq[Formula], pattern: IndexedSeq[Formula], partial: Boolean): IndexedSeq[Formula] = {
-              val instantiated = instantiate(pattern)
-              if(partial) common ++ instantiated else instantiated
-            }
-
-            val (commonLeft, commonRight) = indices.zip(valuesFrom).map { case ((indicesLeft, indicesRight), Sequent(valueLeft, valueRight)) => // Union all
-              (removeIndices(valueLeft, indicesLeft), removeIndices(valueRight, indicesRight))
-            }.reduce { case ((l1, r1), (l2, r2)) =>
-              (l1 ++ l2.diff(l1), r1 ++ r2.diff(r1))
-            }
-
-            val newValues = patternToRenamedInstantiated.map(patternTo =>
-              Sequent(
-                createValueTo(commonLeft, patternTo.left, patternTo.partialLeft),
-                createValueTo(commonRight, patternTo.right, patternTo.partialRight),
-              )
-            )
+            val newValues = inflateValues(patternToRenamedInstantiated, valuesFrom, ctxRenamed, indices)
 
             Some((newValues, newCtx))
           case _ => None // Contradiction or unification failure
@@ -335,11 +346,11 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     }
   }
 
-  case class RuleTactic private[RuleDefinitions](rule: Rule, parameters: RuleBackwardParameters) extends GeneralTactic {
-    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
-      applyRuleInference(parameters, IndexedSeq(rule.conclusion), rule.hypotheses, IndexedSeq(proofGoal)).flatMap {
+  case class RuleTactic private[RuleDefinitions](rule: Rule, parameters: RuleBackwardParameters) extends TacticGoalFunctional {
+    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
+      applyRuleInference(parameters, IndexedSeq(rule.conclusion), rule.hypotheses, IndexedSeq(proofGoal), rule.extraFunctions, rule.extraPredicates, rule.extraConnectors).flatMap {
         case (newGoals, ctx) =>
-          val stepsOption = rule.reconstruct.andThen(Some.apply).applyOrElse((proofGoal, ctx), _ => None)
+          val stepsOption = rule.reconstruct.andThen(Some.apply).applyOrElse((proofGoal, newGoals, ctx), _ => None)
           stepsOption.map(steps => (newGoals, () => steps))
       }
     }
@@ -355,11 +366,15 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     }
   }
 
-  abstract class Rule {
+  sealed abstract class Rule {
     def hypotheses: IndexedSeq[PartialSequent]
     def conclusion: PartialSequent
 
     def reconstruct: ReconstructRule
+
+    def extraFunctions: Set[SchematicFunctionLabel[?]]
+    def extraPredicates: Set[SchematicPredicateLabel[?]]
+    def extraConnectors: Set[SchematicConnectorLabel[?]]
 
     private def partials: Seq[PartialSequent] = hypotheses :+ conclusion
 
@@ -380,9 +395,10 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
 
     final def apply(parameters: RuleForwardParameters)(justifications: Justified*)(using env: ProofEnvironment): Option[Theorem] = {
       val justificationsSeq = justifications.toIndexedSeq
-      applyRuleInference(parameters, hypotheses, IndexedSeq(conclusion), justificationsSeq.map(_.sequent)).flatMap {
+      val topSequents = justificationsSeq.map(_.sequent)
+      applyRuleInference(parameters, hypotheses, IndexedSeq(conclusion), topSequents, extraFunctions, extraPredicates, extraConnectors).flatMap {
         case (IndexedSeq(newSequent), ctx) =>
-          reconstruct.andThen(Some.apply).applyOrElse((newSequent, ctx), _ => None).map { scSteps =>
+          reconstruct.andThen(Some.apply).applyOrElse((newSequent, topSequents, ctx), _ => None).map { scSteps =>
             val scProof = lisa.kernel.proof.SCProof(scSteps, justificationsSeq.map(_.sequentAsKernel))
             env.mkTheorem(newSequent, scProof, justificationsSeq)
           }
@@ -415,8 +431,10 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
       val newHypotheses = hypotheses.zipWithIndex.flatMap { case (originalSequent, i) =>
         composed.get(i).map { case (_, sequent) => sequent }.getOrElse(IndexedSeq(originalSequent))
       }
-      val newReconstruct: ReconstructRule = (bot, ctx) => {
-        val thisSteps = reconstruct(bot, ctx)
+      val newReconstruct: ReconstructRule = (bottom, _, ctx) => {
+        //val thisSteps = reconstruct(sequentToKernel(bottom), ctx)
+        //val bots =
+        //inflateValues()
         val ttt = hypotheses.zipWithIndex.map { case (hypothesis, i) =>
           composed.get(i)
         }
@@ -425,15 +443,33 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
 
         ???
       }
-      CompoundRule(newHypotheses, conclusion, ???)
+      CompoundRule(newHypotheses, conclusion, newReconstruct, ???, ???, ???)
     }
   }
 
-  class RuleIntroduction(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
-  class RuleElimination(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
+  abstract class BaseRule extends Rule {
+    def reconstructBase: ReconstructBaseRule
+
+    override def reconstruct: ReconstructRule = (sequent, _, ctx) =>
+      reconstructBase(sequentToKernel(sequent), ctx)
+
+    override def extraFunctions: Set[SchematicFunctionLabel[?]] = Set.empty
+    override def extraPredicates: Set[SchematicPredicateLabel[?]] = Set.empty
+    override def extraConnectors: Set[SchematicConnectorLabel[?]] = Set.empty
+  }
+
+  class RuleIntroduction(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstructBase: ReconstructBaseRule) extends BaseRule
+  class RuleElimination(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstructBase: ReconstructBaseRule) extends BaseRule
 
   given Conversion[Rule, RuleTactic] = _()
 
-  case class CompoundRule private[RuleDefinitions](override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
+  case class CompoundRule private[RuleDefinitions](
+    override val hypotheses: IndexedSeq[PartialSequent],
+    override val conclusion: PartialSequent,
+    override val reconstruct: ReconstructRule,
+    override val extraFunctions: Set[SchematicFunctionLabel[?]],
+    override val extraPredicates: Set[SchematicPredicateLabel[?]],
+    override val extraConnectors: Set[SchematicConnectorLabel[?]],
+  ) extends Rule
 
 }

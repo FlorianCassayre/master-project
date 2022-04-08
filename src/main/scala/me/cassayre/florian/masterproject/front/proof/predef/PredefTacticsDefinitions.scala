@@ -9,17 +9,17 @@ import me.cassayre.florian.masterproject.front.proof.state.ProofEnvironmentDefin
 
 trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
 
-  case object TacticSolver extends GeneralTactic {
+  case object TacticSolver extends TacticGoalFunctional {
     import Notations.*
 
-    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
+    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
       val steps = SimplePropositionalSolver.solveSequent(proofGoal).steps
       Some((IndexedSeq.empty, () => steps))
     }
   }
 
-  case class TacticRewritePartial(left: Map[Int, Formula] = Map.empty, right: Map[Int, Formula] = Map.empty) extends GeneralTactic {
-    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
+  case class TacticRewritePartial(left: Map[Int, Formula] = Map.empty, right: Map[Int, Formula] = Map.empty) extends TacticGoalFunctional {
+    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
       if(left.keySet.forall(proofGoal.left.indices.contains) && right.keySet.forall(proofGoal.right.indices.contains)) {
         val rewritten = Sequent(
           proofGoal.left.indices.map(i => left.getOrElse(i, proofGoal.left(i))),
@@ -36,8 +36,8 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
     }
   }
 
-  case class TacticRewriteSequent(rewritten: Sequent) extends GeneralTactic {
-    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
+  case class TacticRewriteSequent(rewritten: Sequent) extends TacticGoalFunctional {
+    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
       if(isSameSequent(proofGoal, rewritten)) {
         Some((IndexedSeq(rewritten), () => IndexedSeq(Rewrite(proofGoal, -1))))
       } else {
@@ -52,8 +52,8 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
     def apply(rewritten: Sequent): TacticRewriteSequent = TacticRewriteSequent(rewritten)
   }
 
-  case class TacticInstantiateFunction(f: SchematicFunctionLabel[?], r: Term, args: Seq[VariableLabel]) extends GeneralTactic {
-    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructGeneral)] = {
+  case class TacticInstantiateFunction(f: SchematicFunctionLabel[?], r: Term, args: Seq[VariableLabel]) extends TacticGoalFunctional {
+    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
       ??? // TODO backwards
     }
   }

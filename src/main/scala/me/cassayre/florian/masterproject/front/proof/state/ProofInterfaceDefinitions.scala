@@ -15,9 +15,9 @@ trait ProofInterfaceDefinitions extends ProofEnvironmentDefinitions {
   case class ProofMode private(private var currentState: ProofModeState) {
     def state: ProofState = currentState.state
     def proving: ProofState = currentState.proving
-    def apply(tactic: Tactic): Boolean = {
-      print(s"Trying to apply '${tactic.getClass.getSimpleName}'...")
-      val result = applyTactic(currentState, tactic) match {
+    def apply(mutator: ProofModeStateMutator): Boolean = {
+      print(s"Trying to apply '${mutator.getClass.getSimpleName}'...")
+      val result = applyMutator(currentState, mutator) match {
         case Some(newState) =>
           println(" [ok]")
           currentState = newState
@@ -32,7 +32,9 @@ trait ProofInterfaceDefinitions extends ProofEnvironmentDefinitions {
       result
     }
     def focus(goal: Int): Boolean = apply(TacticFocusGoal(goal))
-    def back(): Boolean = apply(TacticCancelPrevious)
+    def back(): Boolean = apply(CancelPreviousTactic)
+    def repeat(tactic: Tactic): Unit = apply(TacticRepeat(tactic))
+    def reset(): Unit = apply(CancelPreviousTactic)
     def asTheorem(): Theorem = {
       require(state.goals.isEmpty, "The proof is incomplete and thus cannot be converted into a theorem")
       val env = currentState.environment

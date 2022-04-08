@@ -26,11 +26,15 @@ Parentheses for default arguments can be dropped.
 ```
 Theorem <: Justified
 
+BaseRule <: Rule
+CompoundRule <: Rule
+
 Rule
   apply(BParameters = empty): Tactic
   apply(FParameters = empty)(Justified*): Option[Theorem]
+  compose(map: RCParameters): CompoundRule
 
-(introHypo, introLAnd, introRAnd, introLOr, introROr, introLImp, ...): Rule
+(introHypo, introLAnd, introRAnd, introLOr, introROr, introLImp, ...): BaseRule
 
 TacticalRewrite
   apply(Sequent): Tactic
@@ -49,9 +53,11 @@ Justified
 Proof mode specific syntax:
 
 ```
-ProofMode:
+ProofMode
   apply(Tactic): Boolean
+  repeat(Tactic): Unit
   focus(Int): Boolean
   back(): Boolean
+  reset(): Unit
   asTheorem(): Theorem
 ```
