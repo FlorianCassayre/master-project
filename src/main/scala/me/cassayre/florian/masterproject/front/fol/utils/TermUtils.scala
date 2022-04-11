@@ -62,7 +62,7 @@ trait TermUtils {
 
   def renameSchemas(
     term: Term,
-    functionsMap: Map[SchematicFunctionLabel[?], SchematicFunctionLabel[?]],
+    functionsMap: Map[SchematicFunctionLabel[?], FunctionLabel[?]],
     variablesMap: Map[VariableLabel, VariableLabel],
   ): Term = term match {
     case VariableTerm(label) =>

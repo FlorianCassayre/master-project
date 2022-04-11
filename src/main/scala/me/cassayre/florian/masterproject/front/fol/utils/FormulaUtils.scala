@@ -262,9 +262,9 @@ trait FormulaUtils extends TermUtils {
 
   def renameSchemas(
     formula: Formula,
-    functionsMap: Map[SchematicFunctionLabel[?], SchematicFunctionLabel[?]],
-    predicatesMap: Map[SchematicPredicateLabel[?], SchematicPredicateLabel[?]],
-    connectorsMap: Map[SchematicConnectorLabel[?], SchematicConnectorLabel[?]],
+    functionsMap: Map[SchematicFunctionLabel[?], FunctionLabel[?]],
+    predicatesMap: Map[SchematicPredicateLabel[?], PredicateLabel[?]],
+    connectorsMap: Map[SchematicConnectorLabel[?], ConnectorLabel[?]],
     variablesMap: Map[VariableLabel, VariableLabel],
   ): Formula = formula match {
     case PredicateFormula(label, args) =>
