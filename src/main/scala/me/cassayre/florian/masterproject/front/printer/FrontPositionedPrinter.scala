@@ -193,7 +193,7 @@ object FrontPositionedPrinter {
 
   private def positionedExpression(freeVariables: Set[VariableLabel], expression: FrontBranch)(using p: Parameters): FrontBranch = {
     if(freeVariables.nonEmpty)
-      FrontBranch(mkSep((s"${p.s.Backslash}${freeVariables.map(_.id).mkString(commaSeparator)}${p.s.Dot}" +: expression.children): _*)(spaceSeparator))
+      FrontBranch(FrontLeaf(s"${p.s.Backslash}${freeVariables.map(_.id).mkString(commaSeparator)}${p.s.Dot}") +: FrontLeaf(spaceSeparator) +: expression.children)
     else
       FrontBranch(expression.children)
   }

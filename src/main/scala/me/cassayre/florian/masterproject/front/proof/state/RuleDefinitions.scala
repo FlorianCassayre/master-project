@@ -298,8 +298,8 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
       def instantiatePatternsMappings(patterns: IndexedSeq[PartialSequent]): IndexedSeq[PartialSequent] =
         patterns.map(partial =>
           partial.copy(
-            left = partial.left.map(renameSchemas(_, functionsMapping, predicatesMapping, Map.empty, Map.empty)),
-            right = partial.right.map(renameSchemas(_, functionsMapping, predicatesMapping, Map.empty, Map.empty)),
+            left = partial.left.map(renameSchemas(_, functionsMapping, predicatesMapping, Map.empty, Map.empty, Map.empty, Map.empty)),
+            right = partial.right.map(renameSchemas(_, functionsMapping, predicatesMapping, Map.empty, Map.empty, Map.empty, Map.empty)),
           )
         )
           .map { partial =>
@@ -417,7 +417,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
         require(formulaMappingLeft.values.forall(rule.conclusion.left.indices.contains) &&
           formulaMappingRight.values.forall(rule.conclusion.right.indices.contains))
         def rename(f: Formula): Formula =
-          renameSchemas(f, renamingContext.functions, renamingContext.predicates, renamingContext.connectors, renamingContext.variables)
+          renameSchemas(f, renamingContext.functions, renamingContext.predicates, renamingContext.connectors, renamingContext.variables, Map.empty, Map.empty)
         def renameSequent(s: PartialSequent): PartialSequent =
           s.copy(left = s.left.map(rename), right = s.right.map(rename))
         val renamedConclusion = renameSequent(rule.conclusion)

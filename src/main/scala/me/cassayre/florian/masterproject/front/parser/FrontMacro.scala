@@ -106,11 +106,11 @@ object FrontMacro {
         case _ => report.errorAndAbort(s"loosely typed label variable, the arity must be known at compile time: ${Type.show[N]}", expr)
       }
 
-    val idsAndVariables: Seq[(String, Variable)] = argsSeq.zipWithIndex.foldLeft((Seq.empty[(String, Variable)], takenNames)) { case ((acc, taken), (expr, i)) =>
-      val id = {
+    val idsAndVariables: Seq[(String, Variable)] = argsSeq.zipWithIndex.foldLeft((Seq.empty[(String, Variable)], Map.empty[Any, String], takenNames)) { case ((acc, hashmap, taken), (expr, i)) =>
+      val id = hashmap.getOrElse(expr.asTerm.toString, { // FIXME: `asTerm.toString` is not a safe way to check whether two expressions are `=:=`
         val base = s"x$i"
         if(taken.contains(base)) freshId(taken, base) else base
-      }
+      })
       val variable = expr match {
         case '{ $label: FunctionLabel[n] } => FunctionLabelVariable(label, SchematicFunctionLabel.unsafe(id, resolveArity(label)))
         case '{ $label: PredicateLabel[n] } => PredicateLabelVariable(label, SchematicPredicateLabel.unsafe(id, resolveArity(label)))
@@ -120,7 +120,7 @@ object FrontMacro {
         case '{ $formula: Formula } => FormulaVariable(formula, SchematicPredicateLabel[0](id))
         case '{ $t: q } => report.errorAndAbort(s"unsupported variable type: ${Type.show[q]}", expr)
       }
-      ((id, variable) +: acc, taken + id)
+      ((id, variable) +: acc, hashmap + (expr.asTerm.toString -> id), taken + id)
     }._1.reverse
 
     val variables = idsAndVariables.map { case (_, variable) => variable }
@@ -144,7 +144,9 @@ object FrontMacro {
     Map[SchematicFunctionLabel[?], FunctionLabel[?]],
       Map[SchematicPredicateLabel[?], PredicateLabel[?]],
       Map[SchematicConnectorLabel[?], ConnectorLabel[?]],
-      Map[VariableLabel, VariableLabel]
+      Map[VariableLabel, VariableLabel],
+      Map[SchematicFunctionLabel[0], FOLTerm],
+      Map[SchematicPredicateLabel[0], Formula],
     )] = {
     import LiftFOL.{*, given}
 
@@ -172,13 +174,22 @@ object FrontMacro {
         Expr(placeholder) -> label
     })
 
-    '{ ($functionsMap, $predicatesMap, $connectorsMap, $variablesMap) }
+    val termsMap: Expr[Map[SchematicFunctionLabel[0], FOLTerm]] = substMap(variables.collect {
+      case TermVariable(term, placeholder) =>
+        Expr(placeholder)(using toExprFunction0) -> term
+    })
+    val formulasMap: Expr[Map[SchematicPredicateLabel[0], Formula]] = substMap(variables.collect {
+      case FormulaVariable(formula, placeholder) =>
+        Expr(placeholder)(using toExprPredicate0) -> formula
+    })
+
+    '{ ($functionsMap, $predicatesMap, $connectorsMap, $variablesMap, $termsMap, $formulasMap) }
   }
 
   private def typeCheck(
     interpolator: Interpolator,
-    functions: Set[SchematicFunctionLabel[?]],
-    predicates: Set[SchematicPredicateLabel[?]],
+    functions: Set[FunctionLabel[?]],
+    predicates: Set[PredicateLabel[?]],
     connectors: Set[SchematicConnectorLabel[?]],
     variables: Set[VariableLabel],
   )(using Quotes): Unit = {
@@ -196,66 +207,113 @@ object FrontMacro {
           }
         case TermVariable(label, placeholder) =>
           if(f.arity != placeholder.arity) {
-            report.errorAndAbort(s"variable term does not expect any arguments", label)
+            report.errorAndAbort("variable term does not expect any arguments", label)
           }
-        case other => report.errorAndAbort(s"expected term, got formula", other.expr)
+        case VariableLabelVariable(label, _) => report.errorAndAbort("undeclared free variable", label)
+        case other => report.errorAndAbort("expected term, got formula", other.expr)
+      }
+    }
+    // Ditto
+    predicates.flatMap(f => interpolator.map.get(f.id).map(f -> _)).foreach { case (f, variable) =>
+      variable match {
+        case PredicateLabelVariable(label, placeholder) =>
+          if(f.arity != placeholder.arity) {
+            reportArityMismatch(label, placeholder.arity, f.arity)
+          }
+        case FormulaVariable(label, placeholder) =>
+          if(f.arity != placeholder.arity) {
+            report.errorAndAbort("variable formula does not expect any arguments", label)
+          }
+        case VariableLabelVariable(label, _) => report.errorAndAbort("undeclared free variable", label)
+        case other => report.errorAndAbort("expected formula, got term", other.expr)
+      }
+    }
+    // Connectors are disjoint from anything else
+    connectors.flatMap(f => interpolator.map.get(f.id).map(f -> _)).foreach { case (f, variable) =>
+      variable match {
+        case ConnectorLabelVariable(label, placeholder) =>
+          if(f.arity != placeholder.arity) {
+            reportArityMismatch(label, placeholder.arity, f.arity)
+          }
+        case other => throw new Error // Shouldn't happen
+      }
+    }
+    // Variable are also apart
+    variables.flatMap(f => interpolator.map.get(f.id).map(f -> _)).foreach { case (f, variable) =>
+      variable match {
+        case VariableLabelVariable(_, _) => ()
+        case other => report.errorAndAbort("expected term, got formula", other.expr)
       }
     }
   }
 
-
   private def termApplyMacro[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Expr[FOLTerm] = {
     import quotes.reflect.*
-
-    val interpolator = toTokens(parts, args)
-
-    val resolved = FrontResolver.resolveTerm(FrontParser.parseTermOrFormula(interpolator.tokens))
-
-    typeCheck(interpolator, schematicFunctionsOf(resolved), Set.empty, Set.empty, Set.empty)
-
     import LiftFOL.{*, given}
 
-    val resolvedExpr = Expr(resolved)
+    val interpolator = toTokens(parts, args)
+    val resolved = FrontResolver.resolveTerm(FrontParser.parseTopTermOrFormula(interpolator.tokens))
+
+    typeCheck(interpolator, functionsOf(resolved), Set.empty, Set.empty, freeVariablesOf(resolved))
 
     '{
-      val (functionsMap, predicatesMap, connectorsMap, variablesMap) = ${getRenaming(interpolator.variables)}
-      renameSchemas($resolvedExpr, functionsMap, variablesMap)
+      val (functionsMap, _, _, variablesMap, termsMap, _) = ${getRenaming(interpolator.variables)}
+      renameSchemas(${Expr(resolved)}, functionsMap, variablesMap, termsMap)
     }
   }
-  private def formulaApplyMacro[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Expr[Formula] =
-    '{ FrontReader.readFormula(${rawStringMacro(parts, args)}) }
-  private def sequentApplyMacro[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Expr[Sequent] =
-    '{ FrontReader.readSequent(${rawStringMacro(parts, args)}) }
-  private def partialSequentApplyMacro[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Expr[PartialSequent] =
-    '{ FrontReader.readPartialSequent(${rawStringMacro(parts, args)}) }
+  private def formulaApplyMacro[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Expr[Formula] = {
+    import quotes.reflect.*
+    import LiftFOL.{*, given}
 
-  private def partsAsRawStringsMacro[P <: Tuple](parts: Expr[P])(using Quotes, Type[P]): Expr[Seq[String]] = {
-    '{ ${parts}.productIterator.toSeq.map(_.asInstanceOf[String]) }
+    val interpolator = toTokens(parts, args)
+    val resolved = FrontResolver.resolveFormula(FrontParser.parseTopTermOrFormula(interpolator.tokens))
+
+    typeCheck(interpolator, functionsOf(resolved), predicatesOf(resolved), schematicConnectorsOf(resolved), freeVariablesOf(resolved))
+
+    '{
+      val (functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap) = ${getRenaming(interpolator.variables)}
+      renameSchemas(${Expr(resolved)}, functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap)
+    }
+  }
+  private def sequentApplyMacro[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Expr[Sequent] = {
+    import quotes.reflect.*
+    import LiftFOL.{*, given}
+
+    val interpolator = toTokens(parts, args)
+    val resolved = FrontResolver.resolveSequent(FrontParser.parseSequent(interpolator.tokens))
+
+    typeCheck(interpolator, functionsOfSequent(resolved), predicatesOfSequent(resolved), schematicConnectorsOfSequent(resolved), freeVariablesOfSequent(resolved))
+
+    '{
+      val (functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap) = ${getRenaming(interpolator.variables)}
+      def rename(formula: Formula): Formula =
+        renameSchemas(formula, functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap)
+      Sequent(${liftSeq(resolved.left.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename), ${liftSeq(resolved.right.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename))
+    }
+  }
+  private def partialSequentApplyMacro[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Expr[PartialSequent] = {
+    import quotes.reflect.*
+    import LiftFOL.{*, given}
+
+    val interpolator = toTokens(parts, args)
+    val resolved = FrontResolver.resolvePartialSequent(FrontParser.parsePartialSequent(interpolator.tokens))
+
+    typeCheck(interpolator, functionsOfSequent(resolved), predicatesOfSequent(resolved), schematicConnectorsOfSequent(resolved), freeVariablesOfSequent(resolved))
+
+    '{
+    val (functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap) = ${getRenaming(interpolator.variables)}
+    def rename(formula: Formula): Formula =
+      renameSchemas(formula, functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap)
+    PartialSequent(${liftSeq(resolved.left.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename), ${liftSeq(resolved.right.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename), ${Expr(resolved.partialLeft)}, ${Expr(resolved.partialRight)})
+    }
   }
 
-  private def rawStringMacro[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using q: Quotes, tpe: Type[P]): Expr[String] = {
-    import q.reflect._
-
-    val argsSeq: Seq[Expr[Any]] = args match {
-      case Varargs(es) => es
-    }
-    val argsSeqString: Seq[Expr[String]] = argsSeq.map {
-      case '{ $s: String } => s
-      case '{ $f: SchematicConnectorLabel[?] } => '{ s"??${${f}.id}" }
-      case '{ $f: SchematicFunctionLabel[?] | SchematicPredicateLabel[?] } => '{ s"?${${f}.id}" }
-      case '{ $f: ConstantFunctionLabel[?] | ConstantPredicateLabel[?] | ConstantConnectorLabel[?] } => '{ s"${${f}.id}" }
-      case '{ $other } => '{ ${other}.toString }
-    }
-    val partsSeq: Expr[Seq[String]] = '{ ${parts}.productIterator.toSeq.map(_.asInstanceOf[String]) }
-    val argsSeqWithEmpty: Expr[Seq[String]] = argsSeqString.foldRight('{Seq("")})((e, acc) => '{ $e +: $acc })
-    val exprString: Expr[String] = '{ ${partsSeq}.zip(${argsSeqWithEmpty}).flatMap { case (p, a) => Seq(p, a) }.reduce { case (l, r) => l + r } }
-
-    exprString
-  }
 
   private object LiftFOL {
     def liftSeq[T](seq: Seq[Expr[T]])(using Quotes, Type[T]): Expr[Seq[T]] =
       seq.foldRight('{ Seq.empty[T] })((e, acc) => '{ $e +: $acc })
+
+    // TODO support the generic type conversion (it's harder than it looks)
 
     given ToExpr[SchematicFunctionLabel[?]] with
       def apply(f: SchematicFunctionLabel[?])(using Quotes): Expr[SchematicFunctionLabel[?]] =
@@ -283,6 +341,16 @@ object FrontMacro {
           case `existsOne` => '{ existsOne }
         }
 
+    // FIXME "hack" otherwise the two givens would clash
+    val toExprFunction0: ToExpr[SchematicFunctionLabel[0]] = new {
+      def apply(f: SchematicFunctionLabel[0])(using Quotes): Expr[SchematicFunctionLabel[0]] =
+        '{ SchematicFunctionLabel[0](${Expr(f.id)}) }
+    }
+    val toExprPredicate0: ToExpr[SchematicPredicateLabel[0]] = new {
+      def apply(f: SchematicPredicateLabel[0])(using Quotes): Expr[SchematicPredicateLabel[0]] =
+        '{ SchematicPredicateLabel[0](${Expr(f.id)}) }
+    }
+
     given ToExpr[FunctionLabel[?]] with
       def apply(f: FunctionLabel[?])(using Quotes): Expr[FunctionLabel[?]] = f match {
         case constant: ConstantFunctionLabel[?] => Expr(constant)(using summon[ToExpr[ConstantFunctionLabel[?]]])
@@ -295,7 +363,13 @@ object FrontMacro {
       }
     given ToExpr[ConnectorLabel[?]] with
       def apply(f: ConnectorLabel[?])(using Quotes): Expr[ConnectorLabel[?]] = f match {
-        case constant: ConstantConnectorLabel[?] => ??? // Expr(constant)(using summon[ToExpr[ConstantConnectorLabel[?]]])
+        case constant: ConstantConnectorLabel[?] => constant match {
+          case `neg` => '{ neg }
+          case `implies` => '{ implies }
+          case `iff` => '{ iff }
+          case `and` => '{ and }
+          case `or` => '{ or }
+        }
         case schematic: SchematicConnectorLabel[?] => Expr(schematic)(using summon[ToExpr[SchematicConnectorLabel[?]]])
       }
 

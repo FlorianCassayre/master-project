@@ -64,16 +64,26 @@ trait TermUtils {
     term: Term,
     functionsMap: Map[SchematicFunctionLabel[?], FunctionLabel[?]],
     variablesMap: Map[VariableLabel, VariableLabel],
+    termsMap: Map[SchematicFunctionLabel[0], Term],
   ): Term = term match {
     case VariableTerm(label) =>
       val newLabel = variablesMap.getOrElse(label, label)
       VariableTerm(newLabel)
     case FunctionTerm(label, args) =>
-      val newLabel = label match {
-        case schema: SchematicFunctionLabel[?] if functionsMap.contains(schema) => functionsMap(schema)
-        case _ => label
+      val result = label match {
+        case schema: SchematicFunctionLabel[?] =>
+          if(schema.arity == 0) {
+            val schema0 = schema.asInstanceOf[SchematicFunctionLabel[0]]
+            termsMap.get(schema0).map(Right.apply).getOrElse(Left(functionsMap.getOrElse(schema, label)))
+          } else {
+            Left(functionsMap.getOrElse(schema, label))
+          }
+        case _ => Left(label)
       }
-      FunctionTerm.unsafe(newLabel, args.map(renameSchemas(_, functionsMap, variablesMap)))
+      result match {
+        case Left(newLabel) => FunctionTerm.unsafe(newLabel, args.map(renameSchemas(_, functionsMap, variablesMap, termsMap)))
+        case Right(newTerm) => newTerm
+      }
   }
 
   def fillTupleParametersFunction[N <: Arity](n: N, f: FillArgs[VariableLabel, N] => Term): (FillArgs[VariableLabel, N], Term) = {

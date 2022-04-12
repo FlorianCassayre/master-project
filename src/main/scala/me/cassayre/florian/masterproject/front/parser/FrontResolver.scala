@@ -124,6 +124,9 @@ private[parser] object FrontResolver {
   def resolveTerm(tree: ParsedTermOrFormula): Term =
     resolveTermContext(tree)(emptyScopedContext)
 
+  def resolveTerm(tree: ParsedTopTermOrFormula): Term =
+    resolveTermContext(tree.termOrFormula)(freeVariablesToContext(tree.freeVariables, tree.pos))
+
   def resolveFormula(tree: ParsedTermOrFormula): Formula =
     resolveFormulaContext(tree)(emptyScopedContext)
 

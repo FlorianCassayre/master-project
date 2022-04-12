@@ -1,7 +1,7 @@
 package me.cassayre.florian.masterproject.front.fol.definitions
 
 trait FormulaDefinitions extends FormulaLabelDefinitions with TermDefinitions {
-  
+
   protected def pretty(formula: Formula): String
 
   sealed abstract class Formula extends LabeledTree[FormulaLabel] {
