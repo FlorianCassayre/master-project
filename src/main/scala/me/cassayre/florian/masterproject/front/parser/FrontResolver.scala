@@ -22,21 +22,21 @@ private[parser] object FrontResolver {
   private def emptyScopedContext: ScopedContext = ScopedContext(Set.empty, Set.empty)
 
   private def resolveFunctionTermLabel(name: ParsedName, arity: Int): FunctionLabel[?] = name match {
-    case ParsedConstant(identifier) => ConstantFunctionLabel(identifier, arity)
+    case ParsedConstant(identifier) => ConstantFunctionLabel.unsafe(identifier, arity)
     case ParsedSchema(identifier, connector) =>
       if(!connector)
-        SchematicFunctionLabel(identifier, arity)
+        SchematicFunctionLabel.unsafe(identifier, arity)
       else
         throw ResolutionException("Type error: expected term, got schematic connector formula", name.pos)
   }
 
   private def resolvePredicateOrConnectorFormulaLabel(name: ParsedName, arity: Int): PredicateLabel[?] | SchematicConnectorLabel[?] = name match {
-    case ParsedConstant(identifier) => ConstantPredicateLabel(identifier, arity)
+    case ParsedConstant(identifier) => ConstantPredicateLabel.unsafe(identifier, arity)
     case ParsedSchema(identifier, connector) =>
       if(connector)
-        SchematicConnectorLabel(identifier, arity)
+        SchematicConnectorLabel.unsafe(identifier, arity)
       else
-        SchematicPredicateLabel(identifier, arity)
+        SchematicPredicateLabel.unsafe(identifier, arity)
   }
 
   private def resolveTermContext(tree: ParsedTermOrFormula)(implicit ctx: ScopedContext): Term = tree match {
@@ -47,11 +47,11 @@ private[parser] object FrontResolver {
           if(ctx.variables.contains(name.identifier)) {
             VariableTerm(VariableLabel(name.identifier))
           } else {
-            FunctionTerm(ConstantFunctionLabel(name.identifier, 0), Seq.empty)
+            ConstantFunctionLabel[0](name.identifier)
           }
         case ParsedSchema(identifier, connector) =>
           if(!connector) {
-            FunctionTerm(SchematicFunctionLabel(name.identifier, 0), Seq.empty)
+            SchematicFunctionLabel[0](name.identifier)
           } else {
             throw ResolutionException("Type error: expected term, got schematic connector formula", tree.pos)
           }
@@ -59,9 +59,9 @@ private[parser] object FrontResolver {
       // If the name is in the context, we decide that it is a variable
 
     case ParsedApplication(name, args) =>
-      FunctionTerm(resolveFunctionTermLabel(name, args.size), args.map(resolveTermContext(_)))
+      FunctionTerm.unsafe(resolveFunctionTermLabel(name, args.size), args.map(resolveTermContext(_)))
     case ParsedOrderedPair(left, right) =>
-      ConstantFunctionLabel("ordered_pair", 2)(resolveTermContext(left), resolveTermContext(right))
+      ConstantFunctionLabel[2]("ordered_pair")(resolveTermContext(left), resolveTermContext(right))
     case ParsedSet2(left, right) =>
       SetTheory.unorderedPairSet(resolveTermContext(left), resolveTermContext(right))
     case ParsedSet1(subtree) =>

@@ -11,11 +11,11 @@ trait FormulaLabelDefinitions extends CommonDefinitions {
   final case class SchematicPredicateLabel[N <: Arity] protected(id: String, arity: N) extends PredicateLabel[N] with SchematicLabel
 
   object ConstantPredicateLabel {
-    inline def apply[N <: Arity](id: String): ConstantPredicateLabel[N] = ConstantPredicateLabel(id, constValue[N])
+    def apply[N <: Arity](id: String)(using v: ValueOf[N]): ConstantPredicateLabel[N] = ConstantPredicateLabel(id, v.value)
     def unsafe(id: String, arity: Int): ConstantPredicateLabel[?] = ConstantPredicateLabel(id, arity)
   }
   object SchematicPredicateLabel {
-    inline def apply[N <: Arity](id: String): SchematicPredicateLabel[N] = SchematicPredicateLabel(id, constValue[N])
+    def apply[N <: Arity](id: String)(using v: ValueOf[N]): SchematicPredicateLabel[N] = SchematicPredicateLabel(id, v.value)
     def unsafe(id: String, arity: Int): SchematicPredicateLabel[?] = SchematicPredicateLabel(id, arity)
   }
 
@@ -29,7 +29,7 @@ trait FormulaLabelDefinitions extends CommonDefinitions {
     private[FormulaLabelDefinitions] inline def apply[N <: Arity](id: String): ConstantConnectorLabel[N] = ConstantConnectorLabel(id, constValue[N])
   }
   object SchematicConnectorLabel {
-    inline def apply[N <: Arity](id: String): SchematicConnectorLabel[N] = SchematicConnectorLabel(id, constValue[N])
+    def apply[N <: Arity](id: String)(using v: ValueOf[N]): SchematicConnectorLabel[N] = SchematicConnectorLabel(id, v.value)
     def unsafe(id: String, arity: Int): SchematicConnectorLabel[?] = SchematicConnectorLabel(id, arity)
   }
 
@@ -39,7 +39,7 @@ trait FormulaLabelDefinitions extends CommonDefinitions {
   val and: ConstantConnectorLabel[2] = ConstantConnectorLabel("∧")
   val or: ConstantConnectorLabel[2] = ConstantConnectorLabel("∨")
 
-  final case class BinderLabel protected(id: String) extends FormulaLabel
+  final case class BinderLabel private[FormulaLabelDefinitions](id: String) extends FormulaLabel
 
   val forall: BinderLabel = BinderLabel("∀")
   val exists: BinderLabel = BinderLabel("∃")

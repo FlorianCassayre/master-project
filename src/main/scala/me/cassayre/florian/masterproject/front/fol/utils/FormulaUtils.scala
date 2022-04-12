@@ -36,11 +36,11 @@ trait FormulaUtils extends TermUtils {
         label match {
           case schematic: SchematicConnectorLabel[?] =>
             translation.get(connector) match {
-              case Some(predicate) => (PredicateFormula(predicate, Seq.empty), predicates, translation)
+              case Some(predicate) => (PredicateFormula.unsafe(predicate, Seq.empty), predicates, translation)
               case None =>
                 val newId = freshId(predicates.map(_.id), schematic.id)
-                val newLabel = SchematicPredicateLabel(newId, 0)
-                (PredicateFormula(newLabel, Seq.empty), predicates + newLabel, translation + (connector -> newLabel))
+                val newLabel = SchematicPredicateLabel[0](newId)
+                (PredicateFormula.unsafe(newLabel, Seq.empty), predicates + newLabel, translation + (connector -> newLabel))
             }
           case _ =>
             val (newFormulas, newAllPredicates, newAllTranslation) = args.foldLeft((Seq.empty[Formula], predicates, translation)) {
@@ -48,7 +48,7 @@ trait FormulaUtils extends TermUtils {
                 val (newFormula, np, nt) = recursive(arg, accPredicates, accTranslation)
                 (acc :+ newFormula, np, nt)
             }
-            (ConnectorFormula(label, newFormulas), newAllPredicates, newAllTranslation)
+            (ConnectorFormula.unsafe(label, newFormulas), newAllPredicates, newAllTranslation)
         }
       case BinderFormula(label, bound, inner) =>
         val (newInner, newPredicates, newTranslation) = recursive(inner, predicates, translation)
@@ -126,8 +126,8 @@ trait FormulaUtils extends TermUtils {
 
 
   def substituteVariables(formula: Formula, map: Map[VariableLabel, Term]): Formula = formula match {
-    case PredicateFormula(label, args) => PredicateFormula(label, args.map(substituteVariables(_, map)))
-    case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(substituteVariables(_, map)))
+    case PredicateFormula(label, args) => PredicateFormula.unsafe(label, args.map(substituteVariables(_, map)))
+    case ConnectorFormula(label, args) => ConnectorFormula.unsafe(label, args.map(substituteVariables(_, map)))
     case BinderFormula(label, bound, inner) =>
       val newSubst = map - bound
       val fv = map.values.flatMap(freeVariablesOf).toSet
@@ -142,8 +142,8 @@ trait FormulaUtils extends TermUtils {
 
   protected def instantiateFunctionSchemasInternal(formula: Formula, map: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])]): Formula = {
     formula match {
-      case PredicateFormula(label, args) => PredicateFormula(label, args.map(instantiateFunctionSchemasInternal(_, map)))
-      case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(instantiateFunctionSchemasInternal(_, map)))
+      case PredicateFormula(label, args) => PredicateFormula.unsafe(label, args.map(instantiateFunctionSchemasInternal(_, map)))
+      case ConnectorFormula(label, args) => ConnectorFormula.unsafe(label, args.map(instantiateFunctionSchemasInternal(_, map)))
       case BinderFormula(label, bound, inner) =>
         val fv = map.flatMap { case (f, (r, args)) => freeVariablesOf(r) -- args.toSet }.toSet
         if (fv.contains(bound)) {
@@ -172,7 +172,7 @@ trait FormulaUtils extends TermUtils {
           case Some((r, a)) => substituteVariables(r, a.zip(args).toMap)
           case None => formula
         }
-      case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(instantiatePredicateSchemasInternal(_, map)))
+      case ConnectorFormula(label, args) => ConnectorFormula.unsafe(label, args.map(instantiatePredicateSchemasInternal(_, map)))
       case BinderFormula(label, bound, inner) =>
         val fv = freeVariablesOf(formula) -- map.flatMap { case (_, (_, a)) => a }
         if (fv.contains(bound)) {
@@ -202,7 +202,7 @@ trait FormulaUtils extends TermUtils {
           assert(a.size == args.size)
           instantiatePredicateSchemas(f, a.zip(args).map { case (k, v) => k -> (v, Seq.empty) }.toMap)
         case None =>
-          ConnectorFormula(label, args.map(instantiateConnectorSchemasInternal(_, map)))
+          ConnectorFormula.unsafe(label, args.map(instantiateConnectorSchemasInternal(_, map)))
       }
     case BinderFormula(label, bound, inner) => BinderFormula(label, bound, instantiateConnectorSchemasInternal(inner, map))
   }
@@ -225,7 +225,7 @@ trait FormulaUtils extends TermUtils {
           val (r, a) = predicates(schematic)
           substituteVariables(r, a.zip(args).toMap)
         case _ =>
-          PredicateFormula(label, args.map(instantiateFunctionSchemasInternal(_, functions)))
+          PredicateFormula.unsafe(label, args.map(instantiateFunctionSchemasInternal(_, functions)))
       }
     case ConnectorFormula(label, args) =>
       label match {
@@ -233,7 +233,7 @@ trait FormulaUtils extends TermUtils {
           val (r, a) = connectors(schematic)
           instantiatePredicateSchemas(r, a.zip(args).map { case (k, v) => k -> (v, Seq.empty) }.toMap)
         case _ =>
-          ConnectorFormula(label, args.map(instantiateSchemasInternal(_, functions, predicates, connectors)))
+          ConnectorFormula.unsafe(label, args.map(instantiateSchemasInternal(_, functions, predicates, connectors)))
       }
     case BinderFormula(label, bound, inner) =>
       val fv = functions.values.map(_._1).flatMap(freeVariablesOf).toSet ++
@@ -272,13 +272,13 @@ trait FormulaUtils extends TermUtils {
         case schema: SchematicPredicateLabel[?] if predicatesMap.contains(schema) => predicatesMap(schema)
         case _ => label
       }
-      PredicateFormula(newLabel, args.map(renameSchemas(_, functionsMap, variablesMap)))
+      PredicateFormula.unsafe(newLabel, args.map(renameSchemas(_, functionsMap, variablesMap)))
     case ConnectorFormula(label, args) =>
       val newLabel = label match {
         case schema: SchematicConnectorLabel[?] if connectorsMap.contains(schema) => connectorsMap(schema)
         case _ => label
       }
-      ConnectorFormula(label, args.map(renameSchemas(_, functionsMap, predicatesMap, connectorsMap, variablesMap)))
+      ConnectorFormula.unsafe(label, args.map(renameSchemas(_, functionsMap, predicatesMap, connectorsMap, variablesMap)))
     case BinderFormula(label, bound, inner) =>
       val newBound = variablesMap.getOrElse(bound, bound)
       BinderFormula(label, newBound, renameSchemas(inner, functionsMap, predicatesMap, connectorsMap, variablesMap))

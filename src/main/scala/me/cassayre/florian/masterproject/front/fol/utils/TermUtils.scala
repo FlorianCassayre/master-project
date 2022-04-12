@@ -34,7 +34,7 @@ trait TermUtils {
 
   def substituteVariables(term: Term, map: Map[VariableLabel, Term]): Term = term match {
     case VariableTerm(label) => map.getOrElse(label, term)
-    case FunctionTerm(label, args) => FunctionTerm(label, args.map(substituteVariables(_, map)))
+    case FunctionTerm(label, args) => FunctionTerm.unsafe(label, args.map(substituteVariables(_, map)))
   }
 
   protected def instantiateFunctionSchemasInternal(term: Term, map: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])]): Term = {
@@ -50,7 +50,7 @@ trait TermUtils {
           case Some((r, args)) =>
             substituteVariables(r, args.zip(newArgs).toMap)
           case None =>
-            FunctionTerm(label, newArgs)
+            FunctionTerm.unsafe(label, newArgs)
         }
     }
   }
@@ -73,7 +73,7 @@ trait TermUtils {
         case schema: SchematicFunctionLabel[?] if functionsMap.contains(schema) => functionsMap(schema)
         case _ => label
       }
-      FunctionTerm(newLabel, args.map(renameSchemas(_, functionsMap, variablesMap)))
+      FunctionTerm.unsafe(newLabel, args.map(renameSchemas(_, functionsMap, variablesMap)))
   }
 
   def fillTupleParametersFunction[N <: Arity](n: N, f: FillArgs[VariableLabel, N] => Term): (FillArgs[VariableLabel, N], Term) = {

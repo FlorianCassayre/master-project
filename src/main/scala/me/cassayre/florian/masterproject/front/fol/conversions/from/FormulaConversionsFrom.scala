@@ -7,9 +7,9 @@ trait FormulaConversionsFrom extends TermConversionsFrom with FrontKernelMapping
   this: FormulaDefinitions =>
 
   def fromKernel(label: lisa.kernel.fol.FOL.ConstantPredicateLabel): ConstantPredicateLabel[?] =
-    predicatesFrom.getOrElse(label, ConstantPredicateLabel(label.id, label.arity))
+    predicatesFrom.getOrElse(label, ConstantPredicateLabel.unsafe(label.id, label.arity))
   def fromKernel(label: lisa.kernel.fol.FOL.SchematicPredicateLabel): SchematicPredicateLabel[?] =
-    SchematicPredicateLabel(label.id, label.arity)
+    SchematicPredicateLabel.unsafe(label.id, label.arity)
   def fromKernel(label: lisa.kernel.fol.FOL.PredicateLabel): PredicateLabel[?] = label match {
     case constant: lisa.kernel.fol.FOL.ConstantPredicateLabel => fromKernel(constant)
     case schematic: lisa.kernel.fol.FOL.SchematicPredicateLabel => fromKernel(schematic)
@@ -18,8 +18,8 @@ trait FormulaConversionsFrom extends TermConversionsFrom with FrontKernelMapping
   def fromKernel(label: lisa.kernel.fol.FOL.ConnectorLabel): ConstantConnectorLabel[?] = connectorsFrom(label)
 
   def fromKernel(formula: lisa.kernel.fol.FOL.Formula): Formula = formula match {
-    case lisa.kernel.fol.FOL.PredicateFormula(label, args) => PredicateFormula(fromKernel(label), args.map(fromKernel))
-    case lisa.kernel.fol.FOL.ConnectorFormula(label, args) => ConnectorFormula(fromKernel(label), args.map(fromKernel))
+    case lisa.kernel.fol.FOL.PredicateFormula(label, args) => PredicateFormula.unsafe(fromKernel(label), args.map(fromKernel))
+    case lisa.kernel.fol.FOL.ConnectorFormula(label, args) => ConnectorFormula.unsafe(fromKernel(label), args.map(fromKernel))
     case lisa.kernel.fol.FOL.BinderFormula(label, bound, inner) => BinderFormula(bindersFrom(label), VariableLabel(bound.id), fromKernel(inner))
   }
 }

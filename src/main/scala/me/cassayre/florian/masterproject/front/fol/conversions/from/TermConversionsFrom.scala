@@ -6,9 +6,9 @@ trait TermConversionsFrom {
   this: TermDefinitions =>
 
   def fromKernel(label: lisa.kernel.fol.FOL.ConstantFunctionLabel): ConstantFunctionLabel[?] =
-    ConstantFunctionLabel(label.id, label.arity)
+    ConstantFunctionLabel.unsafe(label.id, label.arity)
   def fromKernel(label: lisa.kernel.fol.FOL.SchematicFunctionLabel): SchematicFunctionLabel[?] =
-    SchematicFunctionLabel(label.id, label.arity)
+    SchematicFunctionLabel.unsafe(label.id, label.arity)
   def fromKernel(label: lisa.kernel.fol.FOL.FunctionLabel): FunctionLabel[?] = label match {
     case constant: lisa.kernel.fol.FOL.ConstantFunctionLabel => fromKernel(constant)
     case schematic: lisa.kernel.fol.FOL.SchematicFunctionLabel => fromKernel(schematic)
@@ -16,6 +16,6 @@ trait TermConversionsFrom {
 
   def fromKernel(term: lisa.kernel.fol.FOL.Term): Term = term match {
     case lisa.kernel.fol.FOL.VariableTerm(label) => VariableTerm(VariableLabel(label.id))
-    case lisa.kernel.fol.FOL.FunctionTerm(label, args) => FunctionTerm(fromKernel(label), args.map(fromKernel))
+    case lisa.kernel.fol.FOL.FunctionTerm(label, args) => FunctionTerm.unsafe(fromKernel(label), args.map(fromKernel))
   }
 }

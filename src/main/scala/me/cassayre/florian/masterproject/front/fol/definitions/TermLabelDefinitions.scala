@@ -13,12 +13,12 @@ trait TermLabelDefinitions extends CommonDefinitions {
   final case class SchematicFunctionLabel[N <: Arity] protected(id: String, arity: N) extends FunctionLabel[N] with SchematicLabel
 
   object ConstantFunctionLabel {
-    inline def apply[N <: Arity](id: String): ConstantFunctionLabel[N] = ConstantFunctionLabel(id, constValue[N])
+    def apply[N <: Arity](id: String)(using v: ValueOf[N]): ConstantFunctionLabel[N] = ConstantFunctionLabel(id, v.value)
     def unsafe(id: String, arity: Int): ConstantFunctionLabel[?] = ConstantFunctionLabel(id, arity)
   }
 
   object SchematicFunctionLabel {
-    inline def apply[N <: Arity](id: String): SchematicFunctionLabel[N] = SchematicFunctionLabel(id, constValue[N])
+    def apply[N <: Arity](id: String)(using v: ValueOf[N]): SchematicFunctionLabel[N] = SchematicFunctionLabel(id, v.value)
     def unsafe(id: String, arity: Int): SchematicFunctionLabel[?] = SchematicFunctionLabel(id, arity)
   }
 
