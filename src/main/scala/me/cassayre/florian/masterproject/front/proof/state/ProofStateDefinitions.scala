@@ -31,6 +31,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
   sealed abstract class Tactic extends ProofModeStateMutator
   case class TacticFocusGoal(goal: Int) extends Tactic
   case class TacticRepeat(tactic: Tactic) extends Tactic
+  case class TacticFallback(tactics: Seq[Tactic]) extends Tactic
   sealed abstract class TacticGoal extends Tactic
   case object TacticApplyJustification extends TacticGoal
 
@@ -119,14 +120,23 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
             case _ => None
           }
         case TacticRepeat(tactic) =>
-          // Never fails
-          def repeat(currentState: ProofModeState): ProofModeState = {
+          def repeat(currentState: ProofModeState, executed: Boolean): Option[ProofModeState] = {
             applyMutator(currentState, tactic) match {
-              case Some(newProofModeState) => repeat(newProofModeState)
-              case None => currentState
+              case Some(newProofModeState) => repeat(newProofModeState, true)
+              case None => if(executed) Some(currentState) else None
             }
           }
-          Some(repeat(proofModeState))
+          repeat(proofModeState, false)
+        case TacticFallback(tactics) =>
+          def iteratedTry(remaining: Seq[Tactic]): Option[ProofModeState] = remaining match {
+            case tactic +: tail =>
+              applyMutator(proofModeState, tactic) match {
+                case Some(newProofModeState) => Some(newProofModeState)
+                case None => iteratedTry(tail)
+              }
+            case _ => None
+          }
+          iteratedTry(tactics)
         case TacticFocusGoal(goal) =>
           if(proofState.goals.indices.contains(goal)) {
             // This function moves the element of index `goal` to the front

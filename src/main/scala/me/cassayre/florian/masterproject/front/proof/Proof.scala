@@ -6,7 +6,7 @@ import me.cassayre.florian.masterproject.front.proof.predef.*
 
 object Proof
   extends ProofInterfaceDefinitions
-  with PredefRulesDefinitions with PredefTacticsDefinitions {
+  with PredefRulesDefinitions with PredefTacticsDefinitions with PredefCombinedDefinitions {
 
   override protected def pretty(sequent: Sequent): String = FrontPositionedPrinter.prettySequent(sequent)
   override protected def pretty(sequent: PartialSequent): String = FrontPositionedPrinter.prettyPartialSequent(sequent)
@@ -44,7 +44,12 @@ object Proof
 
   val solveProp: TacticSolver.type = TacticSolver
   val rewrite: TacticalRewrite.type = TacticalRewrite
+  val fallback: TacticFallback.type = TacticFallback
 
   val justification: TacticApplyJustification.type = TacticApplyJustification
+  
+  extension (tactic: Tactic)
+    def + : TacticRepeat = TacticRepeat(tactic)
+    def |(other: Tactic): TacticFallback = TacticFallback(Seq(tactic, other))
 
 }

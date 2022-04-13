@@ -1,7 +1,5 @@
 package me.cassayre.florian.masterproject.front.fol.definitions
 
-import scala.compiletime.constValue
-
 trait FormulaLabelDefinitions extends CommonDefinitions {
 
   sealed abstract class FormulaLabel extends Label
@@ -26,7 +24,7 @@ trait FormulaLabelDefinitions extends CommonDefinitions {
   final case class SchematicConnectorLabel[N <: Arity] protected(id: String, arity: N) extends ConnectorLabel[N] with SchematicLabel
 
   object ConstantConnectorLabel {
-    private[FormulaLabelDefinitions] inline def apply[N <: Arity](id: String): ConstantConnectorLabel[N] = ConstantConnectorLabel(id, constValue[N])
+    private[FormulaLabelDefinitions] def apply[N <: Arity](id: String)(using v: ValueOf[N]): ConstantConnectorLabel[N] = ConstantConnectorLabel(id, v.value)
   }
   object SchematicConnectorLabel {
     def apply[N <: Arity](id: String)(using v: ValueOf[N]): SchematicConnectorLabel[N] = SchematicConnectorLabel(id, v.value)

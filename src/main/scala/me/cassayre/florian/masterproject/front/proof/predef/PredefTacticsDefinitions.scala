@@ -9,6 +9,7 @@ import me.cassayre.florian.masterproject.front.proof.state.ProofEnvironmentDefin
 
 trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
 
+  @deprecated
   case object TacticSolver extends TacticGoalFunctional {
     import Notations.*
 

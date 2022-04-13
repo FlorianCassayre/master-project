@@ -1,7 +1,5 @@
 package me.cassayre.florian.masterproject.front.fol.definitions
 
-import scala.compiletime.constValue
-
 trait TermLabelDefinitions extends CommonDefinitions {
 
   sealed abstract class TermLabel extends Label

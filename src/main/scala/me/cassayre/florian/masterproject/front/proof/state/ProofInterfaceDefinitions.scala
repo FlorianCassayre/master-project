@@ -34,6 +34,7 @@ trait ProofInterfaceDefinitions extends ProofEnvironmentDefinitions {
     def focus(goal: Int): Boolean = apply(TacticFocusGoal(goal))
     def back(): Boolean = apply(CancelPreviousTactic)
     def repeat(tactic: Tactic): Unit = apply(TacticRepeat(tactic))
+    def applyOne(tactics: Tactic*): Boolean = apply(TacticFallback(tactics))
     def reset(): Unit = apply(CancelPreviousTactic)
     def asTheorem(): Theorem = {
       require(state.goals.isEmpty, "The proof is incomplete and thus cannot be converted into a theorem")
