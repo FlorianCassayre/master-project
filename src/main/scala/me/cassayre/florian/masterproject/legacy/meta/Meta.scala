@@ -461,8 +461,8 @@ object Meta {
     def removeSchematicConnectors(formula: Formula): Formula = formula match {
       case _: PredicateFormula => formula
       case ConnectorFormula(label: SchematicConnectorLabel[?], _) =>
-        ConnectorFormula(ConstantConnectorLabel("?", 0), Seq.empty)
-      case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(removeSchematicConnectors))
+        ConnectorFormula.unsafe(SchematicConnectorLabel[0]("?"), Seq.empty)
+      case ConnectorFormula(label, args) => ConnectorFormula.unsafe(label, args.map(removeSchematicConnectors))
       case BinderFormula(label, bound, inner) => BinderFormula(label, bound, removeSchematicConnectors(inner))
     }
     def removeSchematicConnectorsSequent(sequent: Sequent): Sequent =
@@ -480,10 +480,10 @@ object Meta {
 
   @main def testMeta(): Unit = {
     val (a, b, c, d) = (
-      PredicateFormula(ConstantPredicateLabel[0]("a"), Seq.empty),
-      PredicateFormula(ConstantPredicateLabel[0]("b"), Seq.empty),
-      PredicateFormula(ConstantPredicateLabel[0]("c"), Seq.empty),
-      PredicateFormula(ConstantPredicateLabel[0]("d"), Seq.empty)
+      PredicateFormula.unsafe(ConstantPredicateLabel[0]("a"), Seq.empty),
+      PredicateFormula.unsafe(ConstantPredicateLabel[0]("b"), Seq.empty),
+      PredicateFormula.unsafe(ConstantPredicateLabel[0]("c"), Seq.empty),
+      PredicateFormula.unsafe(ConstantPredicateLabel[0]("d"), Seq.empty)
     )
 
     val (initial, steps) = {

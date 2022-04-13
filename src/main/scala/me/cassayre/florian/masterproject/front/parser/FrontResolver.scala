@@ -78,21 +78,21 @@ private[parser] object FrontResolver {
   private def resolveFormulaContext(tree: ParsedTermOrFormula)(implicit ctx: ScopedContext): Formula = tree match {
     case name: ParsedName =>
       resolvePredicateOrConnectorFormulaLabel(name, 0) match {
-        case predicate: PredicateLabel[?] => PredicateFormula(predicate, Seq.empty)
+        case predicate: PredicateLabel[?] => PredicateFormula.unsafe(predicate, Seq.empty)
         case connector: SchematicConnectorLabel[?] =>
           throw ResolutionException("Illegal: the arity of schematic connectors must be strictly positive", tree.pos)
       }
     case ParsedApplication(name, args) =>
       resolvePredicateOrConnectorFormulaLabel(name, args.size) match {
-        case predicate: PredicateLabel[?] => PredicateFormula(predicate, args.map(resolveTermContext(_)))
-        case connector: SchematicConnectorLabel[?] => ConnectorFormula(connector, args.map(resolveFormulaContext(_)))
+        case predicate: PredicateLabel[?] => PredicateFormula.unsafe(predicate, args.map(resolveTermContext(_)))
+        case connector: SchematicConnectorLabel[?] => ConnectorFormula.unsafe(connector, args.map(resolveFormulaContext(_)))
       }
     case operator: ParsedBinaryOperator =>
       val label: Either[PredicateLabel[?], ConnectorLabel[?]] = operator match {
         case _: ParsedEqual => Left(equality)
-        case _: ParsedMembership => Left(ConstantPredicateLabel("set_membership", 2))
-        case _: ParsedSubset => Left(ConstantPredicateLabel("subset_of", 2))
-        case _: ParsedSameCardinality => Left(ConstantPredicateLabel("same_cardinality", 2))
+        case _: ParsedMembership => Left(ConstantPredicateLabel[2]("set_membership"))
+        case _: ParsedSubset => Left(ConstantPredicateLabel[2]("subset_of"))
+        case _: ParsedSameCardinality => Left(ConstantPredicateLabel[2]("same_cardinality"))
         case _: ParsedAnd => Right(and)
         case _: ParsedOr => Right(or)
         case _: ParsedImplies => Right(implies)
@@ -100,11 +100,11 @@ private[parser] object FrontResolver {
       }
       val args = Seq(operator.left, operator.right)
       label match {
-        case Left(label) => PredicateFormula(label, args.map(resolveTermContext(_)))
-        case Right(label) => ConnectorFormula(label, args.map(resolveFormulaContext(_)))
+        case Left(label) => PredicateFormula.unsafe(label, args.map(resolveTermContext(_)))
+        case Right(label) => ConnectorFormula.unsafe(label, args.map(resolveFormulaContext(_)))
       }
     case ParsedNot(termOrFormula) =>
-      ConnectorFormula(neg, Seq(resolveFormulaContext(termOrFormula)))
+      ConnectorFormula.unsafe(neg, Seq(resolveFormulaContext(termOrFormula)))
     case binder: ParsedBinder =>
       binder.bound.find(ctx.variables.contains).orElse(binder.bound.diff(binder.bound.distinct).headOption) match {
         case Some(bound) => throw ResolutionException(s"Name conflict: ${binder.bound}", binder.pos)

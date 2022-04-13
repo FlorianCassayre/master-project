@@ -93,7 +93,7 @@ object FrontPositionedPrinter {
   private val (emptySet, unorderedPair, orderedPair, singleton, powerSet, unionSet) = (
     SetTheory.emptySet,
     SetTheory.unorderedPairSet,
-    ConstantFunctionLabel("ordered_pair", 2),
+    ConstantFunctionLabel[2]("ordered_pair"),
     SetTheory.singletonSet,
     SetTheory.powerSet,
     SetTheory.unionSet,
@@ -168,7 +168,7 @@ object FrontPositionedPrinter {
           if(args.sizeIs == 1) {
             positionedFormulaInternal(args.head, isRightMost)
           } else {
-            positionedFormulaInternal(ConnectorFormula(nary, Seq(args.head, ConnectorFormula(nary, args.tail))), isRightMost)
+            positionedFormulaInternal(ConnectorFormula.unsafe(nary, Seq(args.head, ConnectorFormula.unsafe(nary, args.tail))), isRightMost)
           }
         case _ => positionedFunction(prettyLabel(label, double = true), args.map(a => positionedFormulaInternal(a, isRightMost)))
       }

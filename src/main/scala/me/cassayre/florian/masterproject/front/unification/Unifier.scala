@@ -196,12 +196,12 @@ object Unifier {
       case Seq() =>
         target match {
           case _: PredicateFormula => target
-          case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(reverseUnificationFormulas(substitutionMap, _)))
+          case ConnectorFormula(label, args) => ConnectorFormula.unsafe(label, args.map(reverseUnificationFormulas(substitutionMap, _)))
           case BinderFormula(label, bound, inner) => BinderFormula(label, bound, reverseUnificationFormulas(substitutionMap, inner))
         }
       case Seq((label, _)) =>
         assert(label.arity == 0)
-        PredicateFormula(label, Seq.empty)
+        PredicateFormula.unsafe(label, Seq.empty)
       case _ => // Multiple
         throw new Exception
     }

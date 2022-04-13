@@ -116,7 +116,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
                   val (newTerm, newAssignment) = greedyFactoringFunction(arg, args, currentAssignment)
                   (argsAcc :+ newTerm, newAssignment)
                 }
-                (FunctionTerm(label, finalArgs), finalAssignment)
+                (FunctionTerm.unsafe(label, finalArgs), finalAssignment)
             }
         }
       }
@@ -128,7 +128,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
               val (newA, newAssignment) = greedyFactoringFunction(a, args, currentAssignment)
               (newAssignment, currentFArgs :+ newA)
             }
-            (PredicateFormula(label, finalFArgs), finalAssignment)
+            (PredicateFormula.unsafe(label, finalFArgs), finalAssignment)
           case ConnectorFormula(label, args) => (formula, assignment) // Identity
           case BinderFormula(label, bound, inner) => ???
         }
