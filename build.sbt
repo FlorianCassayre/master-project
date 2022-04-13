@@ -5,7 +5,7 @@ lazy val root = (project in file("."))
     organization := "me.cassayre.florian",
     version := "0.1.0",
     versionScheme := Some("semver-spec"),
-    scalaVersion := "3.1.1",
+    scalaVersion := "3.1.3-RC1-bin-20220410-220b753-NIGHTLY",
     scalacOptions ++= Seq(
       "-feature",
       "-language:implicitConversions"

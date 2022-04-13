@@ -5,13 +5,23 @@ import me.cassayre.florian.masterproject.front.fol.definitions.FormulaDefinition
 trait FormulaOps extends CommonOps {
   this: FormulaDefinitions =>
 
-  extension[N <: Arity] (label: PredicateLabel[N])
-    def apply: FillArgs[Term, N] => PredicateFormula = args => PredicateFormula.unsafe(label, tuple2seq(args))
+  // lampepfl/dotty#14907
+
+  //extension[N <: Arity] (label: PredicateLabel[N])
+  //  def apply(args: FillArgs[Term, N]): PredicateFormula = PredicateFormula.unsafe(label, tuple2seq(args))
+  extension (label: PredicateLabel[2])
+    def apply(a: Term, b: Term): PredicateFormula = PredicateFormula.unsafe(label, Seq(a, b))
+  extension (label: PredicateLabel[1])
+    def apply(a: Term): PredicateFormula = PredicateFormula.unsafe(label, Seq(a))
   extension (label: PredicateLabel[0])
     def apply(): PredicateFormula = PredicateFormula.unsafe(label, Seq.empty)
 
-  extension[N <: Arity] (label: ConnectorLabel[N])
-    def apply: FillArgs[Formula, N] => ConnectorFormula = args => ConnectorFormula.unsafe(label, tuple2seq(args))
+  //extension[N <: Arity] (label: ConnectorLabel[N])
+  //  def apply(args: FillArgs[Formula, N]): ConnectorFormula = ConnectorFormula.unsafe(label, tuple2seq(args))
+  extension (label: ConnectorLabel[2])
+    def apply(a: Formula, b: Formula): ConnectorFormula = ConnectorFormula.unsafe(label, Seq(a, b))
+  extension (label: ConnectorLabel[1])
+    def apply(a: Formula): ConnectorFormula = ConnectorFormula.unsafe(label, Seq(a))
   extension (label: ConnectorLabel[0])
     def apply(): ConnectorFormula = ConnectorFormula.unsafe(label, Seq.empty)
 
