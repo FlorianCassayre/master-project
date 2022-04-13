@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.front
 
-import me.cassayre.florian.masterproject.front.*
+import me.cassayre.florian.masterproject.front.{*, given}
 import org.scalatest.funsuite.AnyFunSuite
 
 class Unification2Tests extends AnyFunSuite {

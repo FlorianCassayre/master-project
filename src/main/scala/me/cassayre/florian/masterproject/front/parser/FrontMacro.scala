@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.front.parser
 
-import me.cassayre.florian.masterproject.front.fol.FOL.{Term as FOLTerm, *}
+import me.cassayre.florian.masterproject.front.fol.FOL.*
 import me.cassayre.florian.masterproject.front.proof.Proof.*
 import me.cassayre.florian.masterproject.front.printer.FrontPositionedPrinter
 
@@ -19,7 +19,7 @@ object FrontMacro {
     transparent inline def partial: Any = ${ SIParts.scMacro[PartialSequentParts]('sc) }
 
   class TermParts[P <: Tuple](parts: P) {
-    transparent inline def apply(inline args: Any*): FOLTerm = ${ termApplyMacro('parts, 'args) }
+    transparent inline def apply(inline args: Any*): Term = ${ termApplyMacro('parts, 'args) }
     //transparent inline def unapplySeq(inline arg: Any): Option[Seq[Any]] = ${ termUnapplyMacro('parts, 'arg) }
   }
   class FormulaParts[P <: Tuple](parts: P) {
@@ -61,7 +61,7 @@ object FrontMacro {
     case PredicateLabelVariable(expr: Expr[PredicateLabel[?]], placeholder: SchematicPredicateLabel[?])
     case ConnectorLabelVariable(expr: Expr[ConnectorLabel[?]], placeholder: SchematicConnectorLabel[?])
     case VariableLabelVariable(expr: Expr[VariableLabel], placeholder: VariableLabel)
-    case TermVariable(expr: Expr[FOLTerm], placeholder: SchematicFunctionLabel[0])
+    case TermVariable(expr: Expr[Term], placeholder: SchematicFunctionLabel[0])
     case FormulaVariable(expr: Expr[Formula], placeholder: SchematicPredicateLabel[0])
   }
   import Variable.*
@@ -72,7 +72,7 @@ object FrontMacro {
   }
 
   private def toTokens[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Interpolator = {
-    import quotes.reflect.*
+    import quotes.reflect.{Term => _, *}
 
     // throw new Error(s"illegal interpolation variable: ${TypeTree.of[other]}")
     // TypeTree[ConstantType(Constant({))]
@@ -116,7 +116,7 @@ object FrontMacro {
         case '{ $label: PredicateLabel[n] } => PredicateLabelVariable(label, SchematicPredicateLabel.unsafe(id, resolveArity(label)))
         case '{ $label: ConnectorLabel[n] } => ConnectorLabelVariable(label, SchematicConnectorLabel.unsafe(id, resolveArity(label)))
         case '{ $label: VariableLabel } => VariableLabelVariable(label, VariableLabel(id))
-        case '{ $term: FOLTerm } => TermVariable(term, SchematicFunctionLabel[0](id))
+        case '{ $term: Term } => TermVariable(term, SchematicFunctionLabel[0](id))
         case '{ $formula: Formula } => FormulaVariable(formula, SchematicPredicateLabel[0](id))
         case '{ $t: q } => report.errorAndAbort(s"unsupported variable type: ${Type.show[q]}", expr)
       }
@@ -145,7 +145,7 @@ object FrontMacro {
       Map[SchematicPredicateLabel[?], PredicateLabel[?]],
       Map[SchematicConnectorLabel[?], ConnectorLabel[?]],
       Map[VariableLabel, VariableLabel],
-      Map[SchematicFunctionLabel[0], FOLTerm],
+      Map[SchematicFunctionLabel[0], Term],
       Map[SchematicPredicateLabel[0], Formula],
     )] = {
     import LiftFOL.{*, given}
@@ -174,7 +174,7 @@ object FrontMacro {
         Expr(placeholder) -> label
     })
 
-    val termsMap: Expr[Map[SchematicFunctionLabel[0], FOLTerm]] = substMap(variables.collect {
+    val termsMap: Expr[Map[SchematicFunctionLabel[0], Term]] = substMap(variables.collect {
       case TermVariable(term, placeholder) =>
         Expr(placeholder)(using toExprFunction0) -> term
     })
@@ -247,7 +247,7 @@ object FrontMacro {
     }
   }
 
-  private def termApplyMacro[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Expr[FOLTerm] = {
+  private def termApplyMacro[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Expr[Term] = {
     import quotes.reflect.*
     import LiftFOL.{*, given}
 
@@ -373,8 +373,8 @@ object FrontMacro {
         case schematic: SchematicConnectorLabel[?] => Expr(schematic)(using summon[ToExpr[SchematicConnectorLabel[?]]])
       }
 
-    given ToExpr[FOLTerm] with
-      def apply(t: FOLTerm)(using Quotes): Expr[FOLTerm] = t match {
+    given ToExpr[Term] with
+      def apply(t: Term)(using Quotes): Expr[Term] = t match {
         case VariableTerm(label) => '{ VariableTerm(${Expr(label)}) }
         case FunctionTerm(label, args) => '{ FunctionTerm.unsafe(${Expr(label)}, ${liftSeq(args.map(Expr.apply(_)))}) }
       }

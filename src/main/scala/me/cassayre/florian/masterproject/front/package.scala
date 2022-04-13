@@ -6,9 +6,9 @@ import me.cassayre.florian.masterproject.front.unification
 import me.cassayre.florian.masterproject.front.parser
 import me.cassayre.florian.masterproject.front.printer
 
-export FOL.*
-export Proof.*
+export FOL.{*, given}
+export Proof.{*, given}
 export unification.Unifier
-export parser.FrontReader
-export parser.FrontMacro.*
-export printer.FrontPositionedPrinter
+export parser.FrontReader.*
+export parser.FrontMacro.{*, given}
+export printer.FrontPositionedPrinter.*

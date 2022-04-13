@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.test.front
 
-import me.cassayre.florian.masterproject.front.*
+import me.cassayre.florian.masterproject.front.{*, given}
 import lisa.kernel.Printer
 import lisa.kernel.proof.SCProofChecker
 

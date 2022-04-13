@@ -1,7 +1,7 @@
 package me.cassayre.florian.masterproject.front
 
 import org.scalatest.funsuite.AnyFunSuite
-import me.cassayre.florian.masterproject.front.*
+import me.cassayre.florian.masterproject.front.{*, given}
 
 class FrontMacroTests extends AnyFunSuite {
 

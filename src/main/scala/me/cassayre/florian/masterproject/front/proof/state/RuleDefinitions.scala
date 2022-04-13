@@ -9,8 +9,7 @@ import scala.collection.View
 
 trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils {
 
-  type ReconstructRule = PartialFunction[(Sequent, IndexedSeq[Sequent], Unifier.UnificationContext), IndexedSeq[SCProofStep]]
-  type ReconstructBaseRule = PartialFunction[(lisa.kernel.proof.SequentCalculus.Sequent, Unifier.UnificationContext), IndexedSeq[SCProofStep]]
+  type ReconstructRule = PartialFunction[(lisa.kernel.proof.SequentCalculus.Sequent, Unifier.UnificationContext), IndexedSeq[SCProofStep]]
 
   sealed abstract class CommonRuleParameters {
     protected type T <: CommonRuleParameters
@@ -348,9 +347,9 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
 
   case class RuleTactic private[RuleDefinitions](rule: Rule, parameters: RuleBackwardParameters) extends TacticGoalFunctional {
     override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
-      applyRuleInference(parameters, IndexedSeq(rule.conclusion), rule.hypotheses, IndexedSeq(proofGoal), rule.extraFunctions, rule.extraPredicates, rule.extraConnectors).flatMap {
+      applyRuleInference(parameters, IndexedSeq(rule.conclusion), rule.hypotheses, IndexedSeq(proofGoal), Set.empty, Set.empty, Set.empty).flatMap {
         case (newGoals, ctx) =>
-          val stepsOption = rule.reconstruct.andThen(Some.apply).applyOrElse((proofGoal, newGoals, ctx), _ => None)
+          val stepsOption = rule.reconstruct.andThen(Some.apply).applyOrElse((proofGoal, ctx), _ => None)
           stepsOption.map(steps => (newGoals, () => steps))
       }
     }
@@ -372,10 +371,6 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
 
     def reconstruct: ReconstructRule
 
-    def extraFunctions: Set[SchematicFunctionLabel[?]]
-    def extraPredicates: Set[SchematicPredicateLabel[?]]
-    def extraConnectors: Set[SchematicConnectorLabel[?]]
-
     private def partials: Seq[PartialSequent] = hypotheses :+ conclusion
 
     require(isLegalPatterns(hypotheses) && isLegalPatterns(IndexedSeq(conclusion)))
@@ -396,80 +391,20 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     final def apply(parameters: RuleForwardParameters)(justifications: Justified*)(using env: ProofEnvironment): Option[Theorem] = {
       val justificationsSeq = justifications.toIndexedSeq
       val topSequents = justificationsSeq.map(_.sequent)
-      applyRuleInference(parameters, hypotheses, IndexedSeq(conclusion), topSequents, extraFunctions, extraPredicates, extraConnectors).flatMap {
+      applyRuleInference(parameters, hypotheses, IndexedSeq(conclusion), topSequents, Set.empty, Set.empty, Set.empty).flatMap {
         case (IndexedSeq(newSequent), ctx) =>
-          reconstruct.andThen(Some.apply).applyOrElse((newSequent, topSequents, ctx), _ => None).map { scSteps =>
+          reconstruct.andThen(Some.apply).applyOrElse((newSequent, ctx), _ => None).map { scSteps =>
             val scProof = lisa.kernel.proof.SCProof(scSteps, justificationsSeq.map(_.sequentAsKernel))
             env.mkTheorem(newSequent, scProof, justificationsSeq)
           }
         case _ => throw new Error
       }
     }
-
-    // Map[this_hypothesis_formula_index, that_conclusion_formula_index] (left and right)
-    // RenamingContext(that_symbol -> this_symbol)
-    final def compose(map: Map[Int, (Rule, Map[Int, Int], Map[Int, Int], RenamingContext)]): CompoundRule = {
-      val composed = map.map { case (hypothesisIndex, (rule, formulaMappingLeft, formulaMappingRight, renamingContext)) =>
-        require(hypotheses.indices.contains(hypothesisIndex))
-        val hypothesis = hypotheses(hypothesisIndex)
-        // `rule` is allowed to produce unused formulas
-        require(formulaMappingLeft.size == hypothesis.left.size && formulaMappingRight.size == hypothesis.right.size)
-        require(formulaMappingLeft.values.forall(rule.conclusion.left.indices.contains) &&
-          formulaMappingRight.values.forall(rule.conclusion.right.indices.contains))
-        def rename(f: Formula): Formula =
-          renameSchemas(f, renamingContext.functions, renamingContext.predicates, renamingContext.connectors, renamingContext.variables, Map.empty, Map.empty)
-        def renameSequent(s: PartialSequent): PartialSequent =
-          s.copy(left = s.left.map(rename), right = s.right.map(rename))
-        val renamedConclusion = renameSequent(rule.conclusion)
-        // TODO would it be safe to call isSame here? Probably not it seems
-        require(formulaMappingLeft.forall { case (i, j) => hypothesis.left(i) == renamedConclusion.left(j) } &&
-          formulaMappingRight.forall { case (i, j) => hypothesis.right(i) == renamedConclusion.right(j) })
-        val renamedHypotheses = rule.hypotheses.map(renameSequent)
-
-        hypothesisIndex -> (???, renamedHypotheses)
-      }
-      val newHypotheses = hypotheses.zipWithIndex.flatMap { case (originalSequent, i) =>
-        composed.get(i).map { case (_, sequent) => sequent }.getOrElse(IndexedSeq(originalSequent))
-      }
-      val newReconstruct: ReconstructRule = (bottom, _, ctx) => {
-        //val thisSteps = reconstruct(sequentToKernel(bottom), ctx)
-        //val bots =
-        //inflateValues()
-        val ttt = hypotheses.zipWithIndex.map { case (hypothesis, i) =>
-          composed.get(i)
-        }
-        //SCSubproof()
-        // TODO extract unifyAllFormulas into a separate function
-
-        ???
-      }
-      CompoundRule(newHypotheses, conclusion, newReconstruct, ???, ???, ???)
-    }
   }
 
-  abstract class BaseRule extends Rule {
-    def reconstructBase: ReconstructBaseRule
-
-    override def reconstruct: ReconstructRule = (sequent, _, ctx) =>
-      reconstructBase(sequentToKernel(sequent), ctx)
-
-    override def extraFunctions: Set[SchematicFunctionLabel[?]] = Set.empty
-    override def extraPredicates: Set[SchematicPredicateLabel[?]] = Set.empty
-    override def extraConnectors: Set[SchematicConnectorLabel[?]] = Set.empty
-  }
-
-  class RuleIntroduction(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstructBase: ReconstructBaseRule) extends BaseRule
-  class RuleElimination(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstructBase: ReconstructBaseRule) extends BaseRule
+  class RuleIntroduction(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
+  class RuleElimination(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
 
   given Conversion[Rule, RuleTactic] = _()
-
-  case class CompoundRule private[RuleDefinitions](
-    override val hypotheses: IndexedSeq[PartialSequent],
-    override val conclusion: PartialSequent,
-    override val reconstruct: ReconstructRule,
-    override val extraFunctions: Set[SchematicFunctionLabel[?]],
-    override val extraPredicates: Set[SchematicPredicateLabel[?]],
-    override val extraConnectors: Set[SchematicConnectorLabel[?]],
-  ) extends Rule
 
 }

@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.test.front
 
-import me.cassayre.florian.masterproject.front.*
+import me.cassayre.florian.masterproject.front.{*, given}
 
 @main def tests3(): Unit = {
   val (a, b, c) = (ConstantPredicateLabel[0]("a"), ConstantPredicateLabel[0]("b"), ConstantPredicateLabel[0]("c"))

@@ -1,7 +1,7 @@
 package me.cassayre.florian.masterproject.test.front
 
 import lisa.kernel.Printer
-import me.cassayre.florian.masterproject.front.*
+import me.cassayre.florian.masterproject.front.{*, given}
 import me.cassayre.florian.masterproject.front.theory.SetTheory.*
 
 @main def tests5(): Unit = {

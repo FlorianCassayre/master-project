@@ -1,5 +1,10 @@
 # Florian Cassayre's Master Project
 
+![CI](https://img.shields.io/github/workflow/status/FlorianCassayre/master-project/CI)
+![Version](https://img.shields.io/github/v/release/FlorianCassayre/master-project)
+![Last commit](https://img.shields.io/github/last-commit/FlorianCassayre/master-project)
+![License](https://img.shields.io/github/license/FlorianCassayre/master-project)
+
 This repository hosts the work related to my Master Project (PDM) at [LARA](https://lara.epfl.ch/w/).
 This includes source code, writeup and any other significant resource related to the project.
 
@@ -55,6 +60,7 @@ The table below indicates the version compatibility (= value of `$COMMIT`):
 
 | `master-project` |                   `lisa`                   |
 |:----------------:|:------------------------------------------:|
+|     `0.2.0`      | `eacb9c06aa2975b9ae2bc993847c597eb3c54995` | 
 |     `0.1.0`      | `eacb9c06aa2975b9ae2bc993847c597eb3c54995` |
 
 </details>
@@ -80,8 +86,7 @@ lazy val root = (project in file(".")).dependsOn(lisa, masterproject)
 ## Structure
 
 * [Source code](src/main/scala/me/cassayre/florian/masterproject)
-  * [`front`](src/main/scala/me/cassayre/florian/masterproject/front): the complete implementation of the front
-  * [`parser`](src/main/scala/me/cassayre/florian/masterproject/parser): a parser for LISA
+  * [`front`](src/main/scala/me/cassayre/florian/masterproject/front): the implementation of the front
   * [`util`](src/main/scala/me/cassayre/florian/masterproject/util): some utilities for LISA
   * [`legacy`](src/main/scala/me/cassayre/florian/masterproject/legacy): old proof-of-concept implementations that are kept for reference
   * [`test`](src/main/scala/me/cassayre/florian/masterproject/test): main methods that serve as examples or test files
