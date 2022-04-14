@@ -9,16 +9,34 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
 
   import scala.collection.mutable
 
-  final class ProofEnvironment private[front] (
-    private[ProofEnvironmentDefinitions] val runningTheory: RunningTheory,
-    private[ProofEnvironmentDefinitions] val proven: mutable.Map[Sequent, (IndexedSeq[Sequent], SCProof)] = mutable.Map.empty,
+  final class ProofEnvironment private[front](
+    private[ProofEnvironmentDefinitions] val runningTheory: RunningTheory, // For now, doesn't need to be generically typed
   ) extends ReadableProofEnvironment {
+    private[ProofEnvironmentDefinitions] val proven: mutable.Map[Sequent, (Justified, runningTheory.Justification)] = mutable.Map.empty
+
+    // Lift the initial axioms
+    runningTheory.getAxioms.foreach { kernelAxiom =>
+      val frontAxiom = Axiom(this, fromKernel(kernelAxiom.ax))
+      proven.addOne((frontAxiom.sequent, (frontAxiom, kernelAxiom)))
+    }
+
     override def contains(sequent: Sequent): Boolean = proven.contains(sequent)
+
+    def belongsToTheory(label: ConstantFunctionLabel[?]): Boolean = runningTheory.isAcceptedFunctionLabel(toKernel(label))
+    def belongsToTheory(label: ConstantPredicateLabel[?]): Boolean = runningTheory.isAcceptedPredicateLabel(toKernel(label))
+    def belongsToTheory(term: Term): Boolean =
+      functionsOf(term).collect { case f: ConstantFunctionLabel[?] => f }.forall(belongsToTheory)
+    def belongsToTheory(formula: Formula): Boolean =
+      functionsOf(formula).collect { case f: ConstantFunctionLabel[?] => f }.forall(belongsToTheory) &&
+        predicatesOf(formula).collect { case p: ConstantPredicateLabel[?] => p }.forall(belongsToTheory)
+    def belongsToTheory(sequent: SequentBase): Boolean =
+      sequent.left.forall(belongsToTheory) && sequent.right.forall(belongsToTheory)
+
     private def addSequentToEnvironment(sequent: Sequent, scProof: SCProof, justifiedImports: Map[Int, Sequent]): Theorem = {
       require(scProof.imports.size == justifiedImports.size && scProof.imports.indices.forall(justifiedImports.contains),
         "All imports must be justified")
-      require(!proven.contains(sequent), "This sequent already has a proof") // Should we disallow that?
-      assert(lisa.kernel.proof.SequentCalculus.isSameSequent(sequentToKernel(sequent), scProof.conclusion),
+      require(isAcceptedSequent(sequent)(this), "Invalid conclusion")
+      require(lisa.kernel.proof.SequentCalculus.isSameSequent(sequentToKernel(sequent), scProof.conclusion),
         "Error: the proof conclusion does not match the provided sequent")
       val judgement = SCProofChecker.checkSCProof(scProof)
       if(!judgement.isValid) {
@@ -30,8 +48,20 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
           ).mkString("\n")
         )
       }
-      proven.addOne((sequent, (scProof.imports.indices.map(justifiedImports), scProof)))
-      Theorem(this, sequent)
+
+      val justificationPairs = scProof.imports.indices.map(justifiedImports).map(proven)
+      val justifications = justificationPairs.map { case (justification, _) => justification }
+      val theorem = Theorem(this, sequent, scProof, justifications)
+
+      val kernelJustifications = justificationPairs.map { case (_, kernelJustification) => kernelJustification }
+      val kernelTheorem = runningTheory.proofToTheorem(scProof, kernelJustifications) match {
+        case Some(result) => result
+        case None => throw new Error // Should have been caught before
+      }
+
+      proven.addOne((sequent, (theorem, kernelTheorem)))
+
+      theorem
     }
     def mkTheorem(proof: Proof): Theorem = {
       require(proof.initialState.goals.sizeIs == 1, "The proof must start with exactly one goal")
@@ -64,7 +94,11 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
     override def toString: String = s"Axiom: $sequent"
   }
 
-  case class Theorem private[ProofEnvironmentDefinitions](private[proof] val environment: ProofEnvironment, sequent: Sequent) extends Justified {
+  case class Theorem private[ProofEnvironmentDefinitions](
+    private[proof] val environment: ProofEnvironment,
+    sequent: Sequent,
+    private[proof] val proof: SCProof,
+    private[proof] val justifications: IndexedSeq[Justified]) extends Justified {
     override def toString: String = s"Theorem: $sequent"
   }
 
@@ -99,14 +133,31 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
 
   def reconstructSCProofForTheorem(theorem: Theorem): SCProof = {
     // Inefficient, no need to traverse/reconstruct the whole graph
-    val context = theorem.environment
-    val sorted = topologicalSort(theorem.environment.proven.view.mapValues(_._1.toSet).toMap.withDefaultValue(Set.empty)).reverse
-    val sequentToIndex = sorted.zipWithIndex.toMap
+    val environment = theorem.environment
+    val theorems = environment.proven.values.collect {
+      case (theorem: Theorem, _) => theorem
+    }.toSeq
+    val axioms = environment.proven.values.collect {
+      case (axiom: Axiom, _) => axiom
+    }.toSet
+    val sortedAxioms = axioms.map(_.sequent).toIndexedSeq
+    val sequentToImport = sortedAxioms.zipWithIndex.toMap.view.mapValues(i => -(i + 1)).toMap
+    val sorted = topologicalSort(theorems.map(theorem =>
+      (theorem, theorem.justifications.collect { case other: Theorem => other }.toSet)
+    ).toMap.withDefaultValue(Set.empty)).reverse
+    val index = sorted.indexOf(theorem)
+    assert(index >= 0)
+    val sortedUpTo = sorted.take(index + 1)
+    val sequentToIndex = sortedUpTo.map(_.sequent).zipWithIndex.toMap ++ sequentToImport
 
-    SCProof(sorted.map { sequent =>
-      val (imports, proof) = context.proven(sequent)
-      SCSubproof(proof, imports.map(sequentToIndex))
-    }.toIndexedSeq)
+    val scProof = SCProof(sortedUpTo.map(theorem =>
+      SCSubproof(theorem.proof, theorem.justifications.map(_.sequent).map(sequentToIndex))
+    ).toIndexedSeq, sortedAxioms.map(sequentToKernel))
+
+    assert(SCProofChecker.checkSCProof(scProof).isValid)
+    assert(scProof.conclusion == sequentToKernel(theorem.sequent))
+
+    scProof
   }
 
 }

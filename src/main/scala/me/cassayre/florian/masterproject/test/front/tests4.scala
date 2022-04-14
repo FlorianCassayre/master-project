@@ -1,5 +1,7 @@
 package me.cassayre.florian.masterproject.test.front
 
+import lisa.kernel.Printer
+import lisa.kernel.proof.SCProofChecker
 import me.cassayre.florian.masterproject.front.{*, given}
 import me.cassayre.florian.masterproject.front.theory.SetTheory.*
 
@@ -30,6 +32,9 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     t1.display()
   }
 
+  println(Printer.prettySCProof(reconstructSCProofForTheorem(axExtS)))
+  println()
+
   // The following proofs are done in backward mode
 
   val thmEqSym: Theorem = {
@@ -41,6 +46,9 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
 
     asTheorem()
   }
+
+  println(Printer.prettySCProof(reconstructSCProofForTheorem(thmEqSym)))
+  println()
 
   val thmEqTrans: Theorem = {
     val proofMode = ProofMode((s === t, t === u) |- (s === u))
@@ -58,6 +66,9 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
 
     asTheorem()
   }
+
+  println(Printer.prettySCProof(reconstructSCProofForTheorem(thmEqTrans)))
+  println()
 
   /*
       apply(elimCut(

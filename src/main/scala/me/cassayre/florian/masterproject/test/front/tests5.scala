@@ -6,7 +6,7 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
 
 @main def tests5(): Unit = {
   // This is the environment that will hold all the theorems we have proved so far
-  given ProofEnvironment = newEmptyEnvironment()
+  given ProofEnvironment = newSetTheoryEnvironment()
 
   // Symbols
   val (a: SchematicPredicateLabel[0], b: SchematicPredicateLabel[0], c: SchematicPredicateLabel[0]) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"))
@@ -31,7 +31,7 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
   // Note that this very tactic is already defined and available as `TacticPropositionalSolver`
 
   val theorem1 = {
-    val proofMode = ProofMode(sequent"$f /\ ($p({}, $x) \/ !c) |- ($f /\ ${p(emptySet, x)}) \/ ((?a <=> ?b) /\ !c)")
+    val proofMode = ProofMode(sequent"$f /\ ($p({}, $x) \/ !?c) |- ($f /\ ${p(emptySet, x)}) \/ ((?a <=> ?b) /\ !?c)")
     import proofMode.*
 
     apply(autoProp)

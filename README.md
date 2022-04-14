@@ -69,7 +69,7 @@ Then, add these two lines to your `build.sbt`:
 ```sbt
 resolvers += "Florian Cassayre" at "https://maven.cassayre.me"
 
-libraryDependencies += "me.cassayre.florian" %% "master-project" % "0.1.0"
+libraryDependencies += "me.cassayre.florian" %% "master-project" % "0.2.0"
 ```
 
 Or alternatively, if you would like to include it from the sources:

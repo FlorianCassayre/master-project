@@ -47,6 +47,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
 
   trait ReadableProofEnvironment {
     def contains(sequent: Sequent): Boolean
+    def belongsToTheory(sequent: SequentBase): Boolean
   }
 
   type ProofEnvironment <: ReadableProofEnvironment
@@ -228,8 +229,14 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
   }
 
   // The final conclusion is given the id 0, although it will never be referenced as a premise
-  def initialProofModeState(goals: Sequent*)(environment: ProofEnvironment): ProofModeState =
+  def initialProofModeState(goals: Sequent*)(environment: ProofEnvironment): ProofModeState = {
+    require(goals.forall(isAcceptedSequent(_)(environment)))
     ProofModeState(ProofStateSnapshot(ProofState(goals: _*), 0 until goals.size, goals.size), Seq.empty, environment)
+  }
+
+  def isAcceptedSequent(sequent: Sequent)(environment: ProofEnvironment): Boolean = {
+    isSequentWellFormed(sequent) && schematicConnectorsOfSequent(sequent).isEmpty && environment.belongsToTheory(sequent) // TODO is printable
+  }
 
   object Notations {
     val (a, b, c, d, e) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"), SchematicPredicateLabel[0]("d"), SchematicPredicateLabel[0]("e"))

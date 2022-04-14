@@ -8,8 +8,8 @@ import lisa.kernel.Printer
 
 class ProofTests extends AnyFunSuite {
 
-  val (a, b, c) = (ConstantPredicateLabel[0]("a"), ConstantPredicateLabel[0]("b"), ConstantPredicateLabel[0]("c"))
-  val (s, t, u) = (ConstantFunctionLabel[0]("s"), ConstantFunctionLabel[0]("t"), ConstantFunctionLabel[0]("u"))
+  val (a, b, c) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"))
+  val (s, t, u) = (SchematicFunctionLabel[0]("s"), SchematicFunctionLabel[0]("t"), SchematicFunctionLabel[0]("u"))
   val (x, y) = (VariableLabel("x"), VariableLabel("y"))
 
   private def checkProofs(proofs: Proof*): Unit = {
