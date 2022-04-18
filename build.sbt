@@ -8,7 +8,8 @@ lazy val root = (project in file("."))
     scalaVersion := "3.1.3-RC1-bin-20220410-220b753-NIGHTLY",
     scalacOptions ++= Seq(
       "-feature",
-      "-language:implicitConversions"
+      "-language:implicitConversions",
+      "-Xcheck-macros",
     ),
     libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1",
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.10" % "test",
@@ -19,6 +20,7 @@ lazy val root = (project in file("."))
 lazy val lisa = (project in file("lisa")).settings(commonSettings)
 
 lazy val commonSettings = Seq(
+  //scalaOutputVersion := "3.0.2", // Future 1.7.0
   publishTo := Some(MavenCache("local-maven", file("releases"))),
   Compile / packageDoc / publishArtifact := false,
   //packageDoc / publishArtifact := false,

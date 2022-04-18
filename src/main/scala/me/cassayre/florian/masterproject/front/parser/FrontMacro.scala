@@ -158,29 +158,23 @@ object FrontMacro {
     }
 
     val functionsMap: Expr[Map[SchematicFunctionLabel[?], FunctionLabel[?]]] = substMap(variables.collect {
-      case FunctionLabelVariable(label, placeholder) =>
-        Expr(placeholder) -> label
+      case FunctionLabelVariable(label, placeholder) => Expr(placeholder) -> label
     })
     val predicatesMap: Expr[Map[SchematicPredicateLabel[?], PredicateLabel[?]]] = substMap(variables.collect {
-      case PredicateLabelVariable(label, placeholder) =>
-        Expr(placeholder) -> label
+      case PredicateLabelVariable(label, placeholder) => Expr(placeholder) -> label
     })
     val connectorsMap: Expr[Map[SchematicConnectorLabel[?], ConnectorLabel[?]]] = substMap(variables.collect {
-      case ConnectorLabelVariable(label, placeholder) =>
-        Expr(placeholder) -> label
+      case ConnectorLabelVariable(label, placeholder) => Expr(placeholder) -> label
     })
     val variablesMap: Expr[Map[VariableLabel, VariableLabel]] = substMap(variables.collect {
-      case VariableLabelVariable(label, placeholder) =>
-        Expr(placeholder) -> label
+      case VariableLabelVariable(label, placeholder) => Expr(placeholder) -> label
     })
 
     val termsMap: Expr[Map[SchematicFunctionLabel[0], Term]] = substMap(variables.collect {
-      case TermVariable(term, placeholder) =>
-        Expr(placeholder)(using toExprFunction0) -> term
+      case TermVariable(term, placeholder) => Expr(placeholder) -> term
     })
     val formulasMap: Expr[Map[SchematicPredicateLabel[0], Formula]] = substMap(variables.collect {
-      case FormulaVariable(formula, placeholder) =>
-        Expr(placeholder)(using toExprPredicate0) -> formula
+      case FormulaVariable(formula, placeholder) => Expr(placeholder) -> formula
     })
 
     '{ ($functionsMap, $predicatesMap, $connectorsMap, $variablesMap, $termsMap, $formulasMap) }
@@ -301,10 +295,10 @@ object FrontMacro {
     typeCheck(interpolator, functionsOfSequent(resolved), predicatesOfSequent(resolved), schematicConnectorsOfSequent(resolved), freeVariablesOfSequent(resolved))
 
     '{
-    val (functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap) = ${getRenaming(interpolator.variables)}
-    def rename(formula: Formula): Formula =
-      renameSchemas(formula, functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap)
-    PartialSequent(${liftSeq(resolved.left.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename), ${liftSeq(resolved.right.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename), ${Expr(resolved.partialLeft)}, ${Expr(resolved.partialRight)})
+      val (functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap) = ${getRenaming(interpolator.variables)}
+      def rename(formula: Formula): Formula =
+        renameSchemas(formula, functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap)
+      PartialSequent(${liftSeq(resolved.left.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename), ${liftSeq(resolved.right.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename), ${Expr(resolved.partialLeft)}, ${Expr(resolved.partialRight)})
     }
   }
 
@@ -318,12 +312,18 @@ object FrontMacro {
     given ToExpr[SchematicFunctionLabel[?]] with
       def apply(f: SchematicFunctionLabel[?])(using Quotes): Expr[SchematicFunctionLabel[?]] =
         '{ SchematicFunctionLabel.unsafe(${Expr(f.id)}, ${Expr(f.arity.asInstanceOf[Int])}) }
+    given [N <: Arity](using Type[N], ValueOf[N]): ToExpr[SchematicFunctionLabel[N]] with
+      def apply(f: SchematicFunctionLabel[N])(using Quotes): Expr[SchematicFunctionLabel[N]] =
+        '{ SchematicFunctionLabel[N](${Expr(f.id)})(using ${Expr.summon[ValueOf[N]].get}) }
     given ToExpr[ConstantFunctionLabel[?]] with
       def apply(f: ConstantFunctionLabel[?])(using Quotes): Expr[ConstantFunctionLabel[?]] =
         '{ ConstantFunctionLabel.unsafe(${Expr(f.id)}, ${Expr(f.arity.asInstanceOf[Int])}) }
     given ToExpr[SchematicPredicateLabel[?]] with
       def apply(f: SchematicPredicateLabel[?])(using Quotes) =
         '{ SchematicPredicateLabel.unsafe(${Expr(f.id)}, ${Expr(f.arity.asInstanceOf[Int])}) }
+    given [N <: Arity](using Type[N], ValueOf[N]): ToExpr[SchematicPredicateLabel[N]] with
+      def apply(f: SchematicPredicateLabel[N])(using Quotes): Expr[SchematicPredicateLabel[N]] =
+        '{ SchematicPredicateLabel[N](${Expr(f.id)})(using ${Expr.summon[ValueOf[N]].get}) }
     given ToExpr[ConstantPredicateLabel[?]] with
       def apply(f: ConstantPredicateLabel[?])(using Quotes): Expr[ConstantPredicateLabel[?]] =
         '{ ConstantPredicateLabel.unsafe(${Expr(f.id)}, ${Expr(f.arity.asInstanceOf[Int])}) }
@@ -340,16 +340,6 @@ object FrontMacro {
           case `exists` => '{ exists }
           case `existsOne` => '{ existsOne }
         }
-
-    // FIXME "hack" otherwise the two givens would clash
-    val toExprFunction0: ToExpr[SchematicFunctionLabel[0]] = new {
-      def apply(f: SchematicFunctionLabel[0])(using Quotes): Expr[SchematicFunctionLabel[0]] =
-        '{ SchematicFunctionLabel[0](${Expr(f.id)}) }
-    }
-    val toExprPredicate0: ToExpr[SchematicPredicateLabel[0]] = new {
-      def apply(f: SchematicPredicateLabel[0])(using Quotes): Expr[SchematicPredicateLabel[0]] =
-        '{ SchematicPredicateLabel[0](${Expr(f.id)}) }
-    }
 
     given ToExpr[FunctionLabel[?]] with
       def apply(f: FunctionLabel[?])(using Quotes): Expr[FunctionLabel[?]] = f match {

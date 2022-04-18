@@ -1,5 +1,7 @@
 package me.cassayre.florian.masterproject.front.fol.definitions
 
+import scala.reflect.TypeTest
+
 trait TermLabelDefinitions extends CommonDefinitions {
 
   sealed abstract class TermLabel extends Label
@@ -19,5 +21,12 @@ trait TermLabelDefinitions extends CommonDefinitions {
     def apply[N <: Arity](id: String)(using v: ValueOf[N]): SchematicFunctionLabel[N] = SchematicFunctionLabel(id, v.value)
     def unsafe(id: String, arity: Int): SchematicFunctionLabel[?] = SchematicFunctionLabel(id, arity)
   }
+  object SchematicFunctionLabel2 {
+    def unapply[N <: Arity](f: SchematicFunctionLabel[N]): Option[(String, N)] = Some((f.id, f.arity))
+  }
+
+  given [N <: Arity](using v: ValueOf[N]): TypeTest[SchematicFunctionLabel[?], SchematicFunctionLabel[N]] with
+    def unapply(f: SchematicFunctionLabel[?]): Option[f.type & SchematicFunctionLabel[N]] =
+      if(f.arity == v.value) Some(f.asInstanceOf[f.type & SchematicFunctionLabel[N]]) else None
 
 }
