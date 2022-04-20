@@ -4,10 +4,7 @@
 <head>
     <meta charset="utf-8">
 
-    <title>reveal.js – The HTML Presentation Framework</title>
-
-    <meta name="description" content="A framework for easily creating beautiful presentations using HTML">
-    <meta name="author" content="Hakim El Hattab">
+    <title>19.04.2022</title>
 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -19,7 +16,14 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/dist/theme/white.css" id="theme">
 
     <!-- Theme used for syntax highlighting of code -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/plugin/highlight/monokai.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js/styles/atom-one-light.css">
+
+    <style>
+        /* Increase highlight contrast (especially since we are using a light theme) */
+        .reveal .hljs.has-highlights tr:not(.highlight-line) {
+            opacity: .15;
+        }
+    </style>
 </head>
 
 <body>
@@ -29,10 +33,425 @@
 
     <div class="slides">
         <section>
-            Hello world
+            <h2>A front-end for LISA</h2>
+            <p>
+                Florian Cassayre Master Project
+            </p>
+            <small>
+                Mid-term presentation (19.04.2022, 16:00)
+            </small>
         </section>
         <section>
-            The end
+            <h3>Timeline</h3>
+            <div class="mermaid">gantt
+                axisFormat %d/%m
+                Thesis start :milestone, 2022-02-21, 0d
+                Experimental work :active, 2022-02-21, 112d
+                Holiday :active, 2022-05-23, 1w
+                Thesis writeup :active, 2022-06-13, 11d
+                Thesis report submission :milestone, 2022-06-24, 0d
+                Oral presentation (TBD) :done, 2022-07-11, 11d
+            </div>
+        </section>
+        <section data-auto-animate>
+            <h2>LISA</h2>
+            <div data-id="lisa-subtitle">
+                <small>"<strong>L</strong>ISA <strong>I</strong>s <strong>S</strong>ets <strong>A</strong>utomated"</small>
+            </div>
+        </section>
+        <section data-auto-animate>
+            <h2>LISA</h2>
+            <div data-id="lisa-subtitle">
+                <small>"<strong>L</strong>ISA <strong>I</strong>s <strong>S</strong>ets <strong>A</strong>utomated"</small>
+            </div>
+            <p>
+                A proof framework written in Scala.
+                <br />
+                Featuring:
+            </p>
+            <ul>
+                <li class="fragment">Sequent calculus</li>
+                <li class="fragment">Proof checker</li>
+                <li class="fragment">Theories (axioms, theorems, definitions)</li>
+            </ul>
+        </section>
+        <section data-auto-animate>
+            <h2>LISA</h2>
+            <ul>
+                <li>
+                    Base logical statement: <strong>sequent</strong>
+                    <ul class="fragment">
+                        <li>
+                            Made from two sets of <strong>formulas</strong>; formulas can:
+                            <ul class="fragment">
+                                <li>Connect with other formulas (<strong>connectors</strong>)</li>
+                                <li>
+                                    Connect terms (<strong>predicates</strong>)
+                                    <ul class="fragment">
+                                        <li>And every term can also connect with other terms (<strong>functions</strong>)</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </section>
+        <section data-auto-animate>
+            <h2>LISA</h2>
+            <small>Example of a proof:</small>
+            <div>
+                \[
+                \dfrac{
+                \dfrac{
+                \dfrac{\dfrac{}{a \vdash a}\ (\text{H})}{a; b \vdash a}\ (\text{LW})
+                \ \ \ \
+                \dfrac{\dfrac{}{b \vdash b}\ (\text{H})}{a; b \vdash b}\ (\text{RW})
+                }{
+                a; b \vdash a \land b
+                }
+                \ (\text{R}\land)
+                }{
+                a \vdash b \Rightarrow (a \land b)
+                }
+                \ (\text{R}\mathord{\Rightarrow})
+                \]
+            </div>
+        </section>
+        <section data-auto-animate>
+            <h2>LISA</h2>
+            <small>Example of a proof:</small>
+            <pre><code data-line-numbers="" class="scala"><script type="text/template">val scProof = SCProof(
+  Hypothesis(a |- a, a),
+  Weakening((a, b) |- a, 0),
+  Hypothesis(b |- b, b),
+  Weakening((a, b) |- b, 2),
+  RightAnd((a, b) |- (a /\ b), Seq(1, 3), Seq(a, b)),
+  RightImplies(a |- (b ==> (a /\ b)), 4, b, a /\ b)
+)
+
+assert(SCProofChecker.checkSCProof(scProof).isValid)</script></code></pre>
+            <div class="fragment">
+                Forward only, verbose and tedious!
+            </div>
+        </section>
+        <section data-auto-animate data-auto-animate-id="front">
+            <h2>Front</h2>
+            Aims to bring a higher level interface to write proofs
+            <br /><br />
+            Inspired by existing frameworks: Coq, Isabelle
+        </section>
+        <section data-auto-animate data-auto-animate-id="front">
+            <h2 style="margin-bottom: 0">Front</h2>
+            <div>
+                <small>Example: backward-style proof</small>
+                <pre style="margin-top: 0"><code data-line-numbers="|1|3-6|8|" class="scala">val p = ProofMode(a |- b ==> (a /\ b))
+
+p.apply(introRImp)
+p.apply(introRAnd)
+p.apply(introHypo)
+p.apply(introHypo)
+
+val thm: Theorem = p.asTheorem()</code></pre>
+            </div>
+            <div class="fragment">
+                <small>Example: forward-style proof</small>
+                <pre style="margin-top: 0"><code data-line-numbers="|1-2|3-4|1-5|5-6|" class="scala">val t1: Theorem = introHypo(ParamsBuilder
+                    .withPredicate(Notations.a, a)).get
+val t2: Theorem = introHypo(ParamsBuilder
+                    .withPredicate(Notations.a, b)).get
+val t3: Theorem = introRAnd(t1, t2).get
+val thm: Theorem = introRImp(t3).get</code></pre>
+            </div>
+        </section>
+        <section>
+            Combines LCF with backward-style proof mode
+            <br/><br />
+            <strong>Justified statements can be obtained:</strong>
+            <ul>
+                <li class="fragment">In proof mode, by successfully proving all goals</li>
+                <li class="fragment">By instantiating schemas in a justified statement</li>
+                <li class="fragment">By applying a rule forward</li>
+                <li class="fragment">From a sequent, if recognized by the environment</li>
+            </ul>
+        </section>
+        <section>
+            <h3 data-id="tactics-title">Tactics</h3>
+            <ul>
+                <li><strong>Backward</strong>: in proof mode, replace a proof goal by zero or more new goals</li>
+                <li><strong>Forward</strong>: justified statements can be passed as arguments to obtain a new theorem (LCF)</li>
+            </ul>
+        </section>
+        <section>
+            <div>
+                <h3>Simple tactics</h3>
+                Rules are a special kind of tactics (more on that)
+            </div>
+            <div style="margin-top: 64px" class="fragment">
+                <h3>Compound tactics</h3>
+                <ul>
+                    <li><strong>Repeat</strong>: apply a tactic until it fails</li>
+                    <li><strong>Fallback</strong>: apply the first tactic that succeeds</li>
+                </ul>
+            </div>
+            <div style="margin-top: 64px" class="fragment">
+                <h3>Proof mode mutators</h3>
+                <ul>
+                    <li><strong>Focus</strong>: focus another goal</li>
+                    <li><strong>Back</strong>: cancel previous tactic</li>
+                </ul>
+            </div>
+        </section>
+        <section data-auto-animate>
+            <h3 data-id="rules-title">Rules: examples</h3>
+            <div data-id="rules">
+                \[
+                \dfrac{
+                \ldots \vdash ?a \Rightarrow ?b; \ldots,\ \ \ \ \ \
+                \ldots \vdash ?b \Rightarrow ?a; \ldots
+                }{
+                \ldots \vdash ?a \Leftrightarrow ?b; \ldots
+                }
+                \ (\text{IR}\land)
+                \]
+                <br />
+                \[
+                \dfrac{
+                \ldots \vdash ?p(?s); \ldots,\ \ \ \ \ \
+                \ldots \vdash ?s = ?t; \ldots
+                }{
+                \ldots \vdash ?p(?t); \ldots
+                }
+                \ (\text{ER}/)
+                \]
+            </div>
+        </section>
+        <section data-auto-animate>
+            <h3 data-id="rules-title">Rules: examples</h3>
+            <div data-id="rules" style="color: lightgrey">
+                \[
+                \dfrac{
+                \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: red}{?a} \Rightarrow \htmlStyle{color: blue}{?b}}; \ldots,\ \ \ \ \ \
+                \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: blue}{?b} \Rightarrow \htmlStyle{color: red}{?a}}; \ldots
+                }{
+                \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: red}{?a} \Leftrightarrow \htmlStyle{color: blue}{?b}}; \ldots
+                }
+                \ \htmlStyle{color: black}{(\text{IR}\land)}
+                \]
+                <br />
+                \[
+                \dfrac{
+                \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: purple}{?p}(\htmlStyle{color: green}{?s})}; \ldots,\ \ \ \ \ \
+                \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: green}{?s} = \htmlStyle{color: orange}{?t}}; \ldots
+                }{
+                \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: purple}{?p}(\htmlStyle{color: orange}{?t})}; \ldots
+                }
+                \ \htmlStyle{color: black}{(\text{ER}/)}
+                \]
+            </div>
+        </section>
+        <section data-auto-animate>
+            <h3 data-id="rules-title">Rules: requirements</h3>
+            <ul>
+                <li class="fragment">
+                    A rule must define a reconstruction function
+                    <ul>
+                        <li>Should be "trusted"</li>
+                        <li>Alternative: composition <span style="color: lightgray">(not implemented)</span></li>
+                    </ul>
+                </li>
+                <li class="fragment">
+                    To be instantiated, all schemas must be known
+                </li>
+            </ul>
+        </section>
+        <section data-auto-animate>
+            <h3 data-id="rules-title">Rules: advantages</h3>
+            <ul>
+                <li class="fragment">
+                    Simplifies definition and usage:
+                    <ul>
+                        <li><strong>Definition</strong>: fully described by top and bottom sequents</li>
+                        <li><strong>Usage</strong>: arguments can be inferred automatically</li>
+                    </ul>
+                </li>
+                <li class="fragment">
+                    Can be applied both <strong>backward</strong> and <strong>forward</strong>
+                </li>
+            </ul>
+        </section>
+        <section>
+            <h3>Structure</h3>
+            <div class="mermaid">
+                flowchart LR
+                subgraph LISA Kernel
+                lisafol[LISA FOL]
+                lisaproof[LISA Proof]
+                lisajustification[LISA Justification]
+                end
+                subgraph Front
+                ffol[Front FOL]
+                fproofmode[Front Proof Mode]
+                fjustified[Front Justified]
+                end
+                ffol -. "toKernel" .-> lisafol
+                lisafol -- "fromKernel" --> ffol
+                fproofmode --> fjustified
+                fjustified -- "(1)" --> lisajustification
+                fjustified -- "(2)" --> lisaproof
+                lisajustification -- "(3)" --> fjustified
+                lisaproof --> lisajustification
+            </div>
+            <div style="font-size: 30px">
+                <ol>
+                    <li>Correspondance of proven statements</li>
+                    <li>Proof inlining</li>
+                    <li>Lifting trusted justifications</li>
+                </ol>
+            </div>
+        </section>
+        <section>
+            <h3>Interaction with the kernel</h3>
+            <div class="mermaid">
+                sequenceDiagram
+                actor User
+                User ->> Front: Enter proof mode
+                Front -->> User: "2 goals"
+                User ->> Front: Apply rule1
+                Front -->> User: OK, "1 goal remaining"
+                User ->> Front: Apply rule2
+                Front -->> User: OK, "no goals remaining"
+                Front ->> Kernel: [Kernel Proof]
+                Kernel -->> Front: [Kernel Theorem]
+                Front -->> User: [Front Theorem]
+            </div>
+        </section>
+        <section>
+            <h3>(One-sided) Unification</h3>
+            Automatically infer arguments in patterns
+            <table style="font-size: 0.75em;" class="fragment">
+                <thead>
+                <tr>
+                    <th>Pattern</th>
+                    <th>Value</th>
+                    <th>Result</th>
+                </tr>
+                <tr>
+                    <td>$?a \land ?b$</td>
+                    <td>$c \land d$</td>
+                    <td>$\{ ?a \rightarrow c, ?b \rightarrow d \}$</td>
+                </tr>
+                <tr class="fragment">
+                    <td>$?a \land ?a$</td>
+                    <td>$(c \lor d) \land (d \lor c)$</td>
+                    <td>$\{ ?a \rightarrow (c \lor d) \}$</td>
+                </tr>
+                <tr class="fragment">
+                    <td>$?p(t)$</td>
+                    <td>$t = s$</td>
+                    <td>$\{ ?p \rightarrow (\lambda x.\ x = s) \}$</td>
+                </tr>
+                <tr class="fragment">
+                    <td>$?p(?t)$</td>
+                    <td>$t = s$</td>
+                    <td><em>Too few constraints</em></td>
+                </tr>
+                </thead>
+            </table>
+        </section>
+
+        <section>
+            <h3>Other features</h3>
+        </section>
+        <section>
+            <h3>Grammar</h3>
+            <!--  style="height: 50vh" -->
+            <pre><code class="text">id  ::= /[a-zA-Z_][a-zA-Z0-9_]*/
+sid ::= /\?[a-zA-Z_][a-zA-Z0-9_]*/
+cid ::= /\?\?[a-zA-Z_][a-zA-Z0-9_]*/
+ol2 ::= "<=>" | "=>" | "\/" | "/\" | "in" | "sub" | "~" | "="
+bl  ::= "forall" | "exists" | "existsone"
+
+t   ::= t ol2 t
+      | "!" t
+      | bl id "." t
+      | "{}" | "{" t "}" | "{" t "," t "}"
+      | (id | sid | cid) ("(" t ("," t)* ")")?
+      | "(" t ")"
+
+fv  ::= "\" id ("," id)* "."
+
+ts  ::= (t (";" t)*)?
+
+s   ::= fv? ts "|-" ts
+ps  ::= fv? ((... (";" t)*) | ts) |- (((t ";")* ...) | ts)</code></pre>
+            <small>Parser & printer for ASCII & unicode</small>
+        </section>
+        <section data-auto-animate>
+            <h3>Compile-time string interpolation</h3>
+            <pre><code data-line-numbers="|4|5|1,7|2,9-10|" class="scala">val f: Formula = ???
+val p: PredicateLabel[2] = ???
+
+val s: Sequent = sequent"a; b |- c \/ d"
+sequent"|- c \/" // compilation error: token expected
+
+formula"|- $f \/ b"
+
+formula"|- $p(a, b)"
+formula"$p(a)" // compilation error: missing one argument</code></pre>
+        </section>
+        <section data-auto-animate>
+            <h3>Compile-time string interpolation</h3>
+            <div class="mermaid">
+                flowchart LR
+
+                classDef white fill:white;
+
+                runtime>Java Runtime]:::white
+                compiler>Scala Compiler]:::white
+                lexer2[Lexer]
+                parser2[Parser]
+                typechecker2[Type Checker]
+                tree([T]):::white
+
+                runtime --> lexer2
+                lexer2 --> parser2
+                parser2 --> typechecker2
+                typechecker2 --> tree
+
+                lexer[Lexer]
+                parser[Parser]
+                typechecker[Type Checker]
+                typecheckerphase2["Type Checker (phase 2)"]
+                scalacode(["Expr[T]"]):::white
+
+                compiler --> lexer
+                compiler --> parser
+                lexer --> parser
+                parser --> typechecker
+                typechecker --> typecheckerphase2
+                compiler --> typecheckerphase2
+                typecheckerphase2 --> scalacode
+            </div>
+            <small>
+                (this is known as <a href="https://en.wikipedia.org/wiki/Multi-stage_programming">multi-stage programming</a>)
+            </small>
+        </section>
+        <section>
+            <strong>Thank you!</strong>
+            <br /><br />
+            <a href="http://github.com/FlorianCassayre/master-project">
+                <svg style="margin-right: 8px" width="32" height="32" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8C0 11.54 2.29 14.53 5.47 15.59C5.87 15.66 6.02 15.42 6.02 15.21C6.02 15.02 6.01 14.39 6.01 13.72C4 14.09 3.48 13.23 3.32 12.78C3.23 12.55 2.84 11.84 2.5 11.65C2.22 11.5 1.82 11.13 2.49 11.12C3.12 11.11 3.57 11.7 3.72 11.94C4.44 13.15 5.59 12.81 6.05 12.6C6.12 12.08 6.33 11.73 6.56 11.53C4.78 11.33 2.92 10.64 2.92 7.58C2.92 6.71 3.23 5.99 3.74 5.43C3.66 5.23 3.38 4.41 3.82 3.31C3.82 3.31 4.49 3.1 6.02 4.13C6.66 3.95 7.34 3.86 8.02 3.86C8.7 3.86 9.38 3.95 10.02 4.13C11.55 3.09 12.22 3.31 12.22 3.31C12.66 4.41 12.38 5.23 12.3 5.43C12.81 5.99 13.12 6.7 13.12 7.58C13.12 10.65 11.25 11.33 9.47 11.53C9.76 11.78 10.01 12.26 10.01 13.01C10.01 14.08 10 14.94 10 15.21C10 15.42 10.15 15.67 10.55 15.59C13.71 14.53 16 11.53 16 8C16 3.58 12.42 0 8 0Z" transform="scale(64)" fill="#1B1F23"/>
+                </svg>
+                FlorianCassayre/master-project
+            </a>
+            <br />
+            <small style="color: lightgray">(including this presentation)</small>
+            <br /><br />
+            <small style="opacity: 0.5">
+                <a href="?print-pdf">Click to download slides</a>
+            </small>
         </section>
     </div>
 </div>
@@ -43,21 +462,31 @@
 <script src="https://cdn.jsdelivr.net/npm/reveal.js/plugin/search/search.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js/plugin/markdown/markdown.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/reveal.js/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js/plugin/math/math.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script>
+  document.querySelectorAll('.mermaid').forEach(function (mermaidDiv, i) {
+    let insertSvg = function(svgCode, bindFunctions){
+      mermaidDiv.innerHTML = svgCode;
+      mermaidDiv.classList.remove('mermaid');
+    };
+    let graphDefinition = mermaidDiv.textContent;
+    mermaid.mermaidAPI.render(`mermaid-${i}`, graphDefinition, insertSvg);
+  });
 
-  // Also available as an ES module, see:
-  // https://revealjs.com/initialization/
   Reveal.initialize({
-    controls: true,
+    controls: false,
     progress: true,
     center: true,
     hash: true,
+    slideNumber: true,
 
-    // Learn about plugins: https://revealjs.com/plugins/
-    plugins: [ RevealZoom, RevealNotes, RevealSearch, RevealMarkdown, RevealHighlight ]
+    katex: {
+      trust: true, // Needed for \htmlStyle
+    },
+
+    plugins: [ RevealZoom, RevealNotes, RevealSearch, RevealMarkdown, RevealHighlight, RevealMath.KaTeX ]
   });
-
 </script>
 
 </body>
