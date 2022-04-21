@@ -183,10 +183,12 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
       if(partial) common ++ instantiated else instantiated
     }
 
-    val (commonLeft, commonRight) = indices.zip(valuesFrom).map { case ((indicesLeft, indicesRight), Sequent(valueLeft, valueRight)) => // Union all
-      (removeIndices(valueLeft, indicesLeft), removeIndices(valueRight, indicesRight))
-    }.reduce { case ((l1, r1), (l2, r2)) =>
-      (l1 ++ l2.diff(l1), r1 ++ r2.diff(r1))
+    val (commonLeft, commonRight) = {
+      indices.zip(valuesFrom).map { case ((indicesLeft, indicesRight), Sequent(valueLeft, valueRight)) => // Union all
+        (removeIndices(valueLeft, indicesLeft), removeIndices(valueRight, indicesRight))
+      }.foldLeft((IndexedSeq.empty[Formula], IndexedSeq.empty[Formula])) { case ((accL, accR), ((ls, rs))) =>
+        (accL ++ ls.diff(accL), accR ++ rs.diff(accR))
+      }
     }
 
     val newValues = patternsTo.map(patternTo =>
