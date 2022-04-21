@@ -56,11 +56,11 @@ trait ProofInterfaceDefinitions extends ProofEnvironmentDefinitions {
     }
   }
 
-  extension (theorem: Theorem) {
-    def display(): Theorem = {
-      println(theorem)
+  extension [T <: Justified](justified: T) {
+    def display(): T = {
+      println(justified)
       println()
-      theorem
+      justified
     }
   }
 

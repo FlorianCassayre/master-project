@@ -47,7 +47,7 @@ object Proof
   val fallback: TacticFallback.type = TacticFallback
 
   val justification: TacticApplyJustification.type = TacticApplyJustification
-  
+
   extension (tactic: Tactic)
     def + : TacticRepeat = TacticRepeat(tactic)
     def |(other: Tactic): TacticFallback = TacticFallback(Seq(tactic, other))

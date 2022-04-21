@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
 
-    <title>19.04.2022</title>
+    <title>21.04.2022</title>
 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -38,7 +38,7 @@
                 Florian Cassayre Master Project
             </p>
             <small>
-                Mid-term presentation (19.04.2022, 16:00)
+                Mid-term presentation (21.04.2022, 16:00)
             </small>
         </section>
         <section>
@@ -137,7 +137,13 @@ assert(SCProofChecker.checkSCProof(scProof).isValid)</script></code></pre>
         </section>
         <section data-auto-animate data-auto-animate-id="front">
             <h2>Front</h2>
-            Aims to bring a higher level interface to write proofs
+            Provide a higher level interface to the proof system
+            <br />
+            <ul style="font-size: 32px">
+                <li>More expressive proof language</li>
+                <li>Type safety guarantees</li>
+                <li>Rely on the kernel for soundness</li>
+            </ul>
             <br /><br />
             Inspired by existing frameworks: Coq, Isabelle
         </section>
@@ -165,96 +171,160 @@ val thm: Theorem = introRImp(t3).get</code></pre>
             </div>
         </section>
         <section>
-            Combines LCF with backward-style proof mode
-            <br/><br />
-            <strong>Justified statements can be obtained:</strong>
+            Combines LCF with backward-style proofs
+            <br/>
+            Concept of <strong>justified statements</strong>
+            <br />
+            <div class="mermaid">
+                flowchart BT
+                justified[Justified]
+                axiom[Axiom]
+                theorem[Theorem]
+                definition[Definition]
+
+                axiom --> justified
+                theorem --> justified
+                definition --> justified
+            </div>
+            e.g. theorems can be obtained:
             <ul>
                 <li class="fragment">In proof mode, by successfully proving all goals</li>
-                <li class="fragment">By instantiating schemas in a justified statement</li>
                 <li class="fragment">By applying a rule forward</li>
+                <li class="fragment">By instantiating schemas in a justified statement</li>
                 <li class="fragment">From a sequent, if recognized by the environment</li>
             </ul>
         </section>
-        <section>
-            <h3 data-id="tactics-title">Tactics</h3>
-            <ul>
-                <li><strong>Backward</strong>: in proof mode, replace a proof goal by zero or more new goals</li>
-                <li><strong>Forward</strong>: justified statements can be passed as arguments to obtain a new theorem (LCF)</li>
-            </ul>
-        </section>
-        <section>
+        <section data-auto-animate>
+            <h3 data-id="rules-title">Rules: examples</h3>
             <div>
-                <h3>Simple tactics</h3>
-                Rules are a special kind of tactics (more on that)
-            </div>
-            <div style="margin-top: 64px" class="fragment">
-                <h3>Compound tactics</h3>
-                <ul>
-                    <li><strong>Repeat</strong>: apply a tactic until it fails</li>
-                    <li><strong>Fallback</strong>: apply the first tactic that succeeds</li>
-                </ul>
-            </div>
-            <div style="margin-top: 64px" class="fragment">
-                <h3>Proof mode mutators</h3>
-                <ul>
-                    <li><strong>Focus</strong>: focus another goal</li>
-                    <li><strong>Back</strong>: cancel previous tactic</li>
-                </ul>
+                <div data-id="rule1">
+                    \[
+                    \dfrac{
+                    \ldots \vdash ?a \Rightarrow ?b; \ldots\ \ \ \ \ \
+                    \ldots \vdash ?b \Rightarrow ?a; \ldots
+                    }{
+                    \ldots \vdash ?a \Leftrightarrow ?b; \ldots
+                    }
+                    \ (\text{IR}\land)
+                    \]
+                </div>
+                <br />
+                <div data-id="rule2">
+                    \[
+                    \dfrac{
+                    \ldots \vdash ?p(?s); \ldots\ \ \ \ \ \
+                    \ldots \vdash ?s = ?t; \ldots
+                    }{
+                    \ldots \vdash ?p(?t); \ldots
+                    }
+                    \ (\text{ER}/)
+                    \]
+                </div>
             </div>
         </section>
         <section data-auto-animate>
             <h3 data-id="rules-title">Rules: examples</h3>
-            <div data-id="rules">
-                \[
-                \dfrac{
-                \ldots \vdash ?a \Rightarrow ?b; \ldots,\ \ \ \ \ \
-                \ldots \vdash ?b \Rightarrow ?a; \ldots
-                }{
-                \ldots \vdash ?a \Leftrightarrow ?b; \ldots
-                }
-                \ (\text{IR}\land)
-                \]
+            <div style="color: lightgrey">
+                <div data-id="rule1">
+                    \[
+                    \dfrac{
+                    \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: red}{?a} \Rightarrow \htmlStyle{color: blue}{?b}}; \ldots\ \ \ \ \ \
+                    \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: blue}{?b} \Rightarrow \htmlStyle{color: red}{?a}}; \ldots
+                    }{
+                    \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: red}{?a} \Leftrightarrow \htmlStyle{color: blue}{?b}}; \ldots
+                    }
+                    \ \htmlStyle{color: black}{(\text{IR}\land)}
+                    \]
+                </div>
                 <br />
-                \[
-                \dfrac{
-                \ldots \vdash ?p(?s); \ldots,\ \ \ \ \ \
-                \ldots \vdash ?s = ?t; \ldots
-                }{
-                \ldots \vdash ?p(?t); \ldots
-                }
-                \ (\text{ER}/)
-                \]
+                <div data-id="rule2">
+                    \[
+                    \dfrac{
+                    \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: purple}{?p}(\htmlStyle{color: green}{?s})}; \ldots\ \ \ \ \ \
+                    \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: green}{?s} = \htmlStyle{color: orange}{?t}}; \ldots
+                    }{
+                    \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: purple}{?p}(\htmlStyle{color: orange}{?t})}; \ldots
+                    }
+                    \ \htmlStyle{color: black}{(\text{ER}/)}
+                    \]
+                </div>
             </div>
         </section>
         <section data-auto-animate>
             <h3 data-id="rules-title">Rules: examples</h3>
-            <div data-id="rules" style="color: lightgrey">
-                \[
-                \dfrac{
-                \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: red}{?a} \Rightarrow \htmlStyle{color: blue}{?b}}; \ldots,\ \ \ \ \ \
-                \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: blue}{?b} \Rightarrow \htmlStyle{color: red}{?a}}; \ldots
-                }{
-                \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: red}{?a} \Leftrightarrow \htmlStyle{color: blue}{?b}}; \ldots
-                }
-                \ \htmlStyle{color: black}{(\text{IR}\land)}
-                \]
+            <div>
+                <div data-id="rule1">
+                    \[
+                    \dfrac{
+                    \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: red}{?a} \Rightarrow \htmlStyle{color: blue}{?b}}; \ldots\ \ \ \ \ \
+                    \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: blue}{?b} \Rightarrow \htmlStyle{color: red}{?a}}; \ldots
+                    }{
+                    \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: red}{?a} \Leftrightarrow \htmlStyle{color: blue}{?b}}; \ldots
+                    }
+                    \ \htmlStyle{color: black}{(\text{IR}\land)}
+                    \]
+                </div>
+
                 <br />
-                \[
-                \dfrac{
-                \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: purple}{?p}(\htmlStyle{color: green}{?s})}; \ldots,\ \ \ \ \ \
-                \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: green}{?s} = \htmlStyle{color: orange}{?t}}; \ldots
-                }{
-                \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: purple}{?p}(\htmlStyle{color: orange}{?t})}; \ldots
-                }
-                \ \htmlStyle{color: black}{(\text{ER}/)}
-                \]
+
+                <div>
+                    <div class="fragment" data-fragment-index="2">
+                        \[
+                        [\Gamma \vdash \htmlStyle{color: red}{x} \Rightarrow \htmlStyle{color: blue}{y}; \Delta \ \ \ \ \ \Gamma \vdash \htmlStyle{color: blue}{y} \Rightarrow \htmlStyle{color: red}{x}; \Delta]
+                        \]
+
+                        \[
+                        \htmlStyle{color: white}{(\text{backward})}\ \ \ \uparrow \ \ \ \htmlStyle{color: lightgray}{(\text{backward})}
+                        \]
+                    </div>
+                    <div class="fragment" data-fragment-index="1">
+                        \[
+                        [\Gamma \vdash \htmlStyle{color: red}{x} \Leftrightarrow \htmlStyle{color: blue}{y}; \Delta]
+                        \]
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section data-auto-animate>
+            <h3 data-id="rules-title">Rules: examples</h3>
+            <div>
+                <div data-id="rule1">
+                    \[
+                    \dfrac{
+                    \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: red}{?a} \Rightarrow \htmlStyle{color: blue}{?b}}; \ldots\ \ \ \ \ \
+                    \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: blue}{?b} \Rightarrow \htmlStyle{color: red}{?a}}; \ldots
+                    }{
+                    \ldots \vdash \htmlStyle{color: black}{\htmlStyle{color: red}{?a} \Leftrightarrow \htmlStyle{color: blue}{?b}}; \ldots
+                    }
+                    \ \htmlStyle{color: black}{(\text{IR}\land)}
+                    \]
+                </div>
+
+                <br />
+
+                <div>
+                    <div class="fragment">
+                        \[
+                        [\Gamma_1 \vdash \htmlStyle{color: red}{x} \Rightarrow \htmlStyle{color: blue}{y}; \Delta_1 \ \ \ \ \ \Gamma_2 \vdash \htmlStyle{color: blue}{y} \Rightarrow \htmlStyle{color: red}{x}; \Delta_2]
+                        \]
+                    </div>
+                    <div class="fragment">
+                        \[
+                        \htmlStyle{color: white}{(\text{forward})}\ \ \ \downarrow \ \ \ \htmlStyle{color: lightgray}{(\text{forward})}
+                        \]
+
+                        \[
+                        [\Gamma_1 \cup \Gamma_2 \vdash \htmlStyle{color: red}{x} \Leftrightarrow \htmlStyle{color: blue}{y}; \Delta_1 \cup \Delta_2]
+                        \]
+                    </div>
+                </div>
             </div>
         </section>
         <section data-auto-animate>
             <h3 data-id="rules-title">Rules: requirements</h3>
             <ul>
                 <li class="fragment">
-                    A rule must define a reconstruction function
+                    A rule must define a kernel reconstruction function
                     <ul>
                         <li>Should be "trusted"</li>
                         <li>Alternative: composition <span style="color: lightgray">(not implemented)</span></li>
@@ -268,17 +338,36 @@ val thm: Theorem = introRImp(t3).get</code></pre>
         <section data-auto-animate>
             <h3 data-id="rules-title">Rules: advantages</h3>
             <ul>
-                <li class="fragment">
-                    Simplifies definition and usage:
-                    <ul>
-                        <li><strong>Definition</strong>: fully described by top and bottom sequents</li>
-                        <li><strong>Usage</strong>: arguments can be inferred automatically</li>
-                    </ul>
-                </li>
-                <li class="fragment">
-                    Can be applied both <strong>backward</strong> and <strong>forward</strong>
-                </li>
+                <li><strong>Definition</strong>: fully described by top and bottom sequents</li>
+                <li><strong>Usage</strong>: arguments can be inferred automatically</li>
+                <li><strong>Automation</strong>: used by dynamic procedures</li>
+                <li>Can be applied both <strong>backward</strong> and <strong>forward</strong></li>
             </ul>
+        </section>
+        <section>
+            <h3 data-id="tactics-title">Tactics</h3>
+            <ul>
+                <li><strong>Backward</strong>: in proof mode, replace a proof goal by zero or more new goals</li>
+                <li><strong>Forward</strong>: justified statements can be passed as arguments to obtain a new theorem (LCF)</li>
+            </ul>
+            <br /><br />
+            Rules are a special case of backward $\cap$ forward tactics
+        </section>
+        <section>
+            <div>
+                <h3>Compound tactics</h3>
+                <ul>
+                    <li><strong>Repeat</strong>: apply a tactic until it fails</li>
+                    <li><strong>Fallback</strong>: apply the first tactic that succeeds</li>
+                </ul>
+            </div>
+            <div style="margin-top: 64px" class="fragment">
+                <h3>Proof mode mutators</h3>
+                <ul>
+                    <li><strong>Focus</strong>: focus another goal</li>
+                    <li><strong>Back</strong>: cancel previous tactic</li>
+                </ul>
+            </div>
         </section>
         <section>
             <h3>Structure</h3>
@@ -385,7 +474,7 @@ ts  ::= (t (";" t)*)?
 
 s   ::= fv? ts "|-" ts
 ps  ::= fv? ((... (";" t)*) | ts) |- (((t ";")* ...) | ts)</code></pre>
-            <small>Parser & printer for ASCII & unicode</small>
+            <small>Parser & printer for ASCII & unicode grammars</small>
         </section>
         <section data-auto-animate>
             <h3>Compile-time string interpolation</h3>
@@ -409,9 +498,10 @@ formula"$p(a)" // compilation error: missing one argument</code></pre>
 
                 runtime>Java Runtime]:::white
                 compiler>Scala Compiler]:::white
-                lexer2[Lexer]
-                parser2[Parser]
-                typechecker2[Type Checker]
+                lexer2[Front Lexer]
+                lexer[Front Lexer]
+                parser2[Front Parser]
+                typechecker2[Front Type Checker]
                 tree([T]):::white
 
                 runtime --> lexer2
@@ -419,10 +509,9 @@ formula"$p(a)" // compilation error: missing one argument</code></pre>
                 parser2 --> typechecker2
                 typechecker2 --> tree
 
-                lexer[Lexer]
-                parser[Parser]
-                typechecker[Type Checker]
-                typecheckerphase2["Type Checker (phase 2)"]
+                parser[Front Parser]
+                typechecker[Front Type Checker]
+                typecheckerphase2["Front Type Checker (phase 2)"]
                 scalacode(["Expr[T]"]):::white
 
                 compiler --> lexer
@@ -438,8 +527,6 @@ formula"$p(a)" // compilation error: missing one argument</code></pre>
             </small>
         </section>
         <section>
-            <strong>Thank you!</strong>
-            <br /><br />
             <a href="http://github.com/FlorianCassayre/master-project">
                 <svg style="margin-right: 8px" width="32" height="32" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8C0 11.54 2.29 14.53 5.47 15.59C5.87 15.66 6.02 15.42 6.02 15.21C6.02 15.02 6.01 14.39 6.01 13.72C4 14.09 3.48 13.23 3.32 12.78C3.23 12.55 2.84 11.84 2.5 11.65C2.22 11.5 1.82 11.13 2.49 11.12C3.12 11.11 3.57 11.7 3.72 11.94C4.44 13.15 5.59 12.81 6.05 12.6C6.12 12.08 6.33 11.73 6.56 11.53C4.78 11.33 2.92 10.64 2.92 7.58C2.92 6.71 3.23 5.99 3.74 5.43C3.66 5.23 3.38 4.41 3.82 3.31C3.82 3.31 4.49 3.1 6.02 4.13C6.66 3.95 7.34 3.86 8.02 3.86C8.7 3.86 9.38 3.95 10.02 4.13C11.55 3.09 12.22 3.31 12.22 3.31C12.66 4.41 12.38 5.23 12.3 5.43C12.81 5.99 13.12 6.7 13.12 7.58C13.12 10.65 11.25 11.33 9.47 11.53C9.76 11.78 10.01 12.26 10.01 13.01C10.01 14.08 10 14.94 10 15.21C10 15.42 10.15 15.67 10.55 15.59C13.71 14.53 16 11.53 16 8C16 3.58 12.42 0 8 0Z" transform="scale(64)" fill="#1B1F23"/>
