@@ -7,6 +7,43 @@ import me.cassayre.florian.masterproject.front.fol.ops.CommonOps
 trait TermUtils {
   this: TermDefinitions & TermConversionsTo & CommonOps =>
 
+  protected abstract class LambdaDefinition[N <: Arity, A <: SchematicLabel & WithArity[?], T <: LabeledTree[?]] {
+    val parameters: Seq[A]
+    val body: T
+
+    val arity: N = parameters.size.asInstanceOf[N]
+
+    require(parameters.forall(_.arity == 0))
+    require(parameters.distinct.size == parameters.size)
+  }
+  protected abstract class InstantiatedSchema[S <: SchematicLabel & WithArity[?], T <: LabeledTree[_ >: S], A <: SchematicLabel & WithArity[?]] {
+    val schema: S
+    val lambda: LambdaDefinition[?, A, T]
+
+    require(schema.arity == lambda.arity)
+  }
+
+
+  case class LambdaFunction[N <: Arity] private(parameters: Seq[SchematicFunctionLabel[0]], body: Term) extends LambdaDefinition[N, SchematicFunctionLabel[0], Term]
+  object LambdaFunction {
+    def apply[N <: Arity](f: FillArgs[SchematicFunctionLabel[0], N] => Term)(using v: ValueOf[N]): LambdaFunction[N] = {
+      val n = v.value
+      val dummyVariable = SchematicFunctionLabel[0]("") // Used to identify the existing free variables, doesn't matter if this name collides
+      val taken = schematicFunctionsOf(fillTupleParameters(_ => dummyVariable, n, f)._2).map(_.id)
+      val (params, body) = fillTupleParameters(SchematicFunctionLabel.apply[0](_), n, f, taken)
+      new LambdaFunction(params.toSeq, body)
+    }
+    def unsafe(parameters: Seq[SchematicFunctionLabel[0]], body: Term): LambdaFunction[?] = new LambdaFunction(parameters, body)
+  }
+
+  case class InstantiatedFunction private(schema: SchematicFunctionLabel[?], lambda: LambdaFunction[?])
+    extends InstantiatedSchema[SchematicFunctionLabel[?], Term, SchematicFunctionLabel[0]]
+  object InstantiatedFunction {
+    def apply[N <: Arity](schema: SchematicFunctionLabel[N], lambda: LambdaFunction[N])(using v: ValueOf[N]): InstantiatedFunction = new InstantiatedFunction(schema, lambda)
+    def unsafe(schema: SchematicFunctionLabel[?], lambda: LambdaFunction[?]): InstantiatedFunction = new InstantiatedFunction(schema, lambda)
+  }
+
+
   def isSame(t1: Term, t2: Term): Boolean =
     lisa.kernel.fol.FOL.isSame(t1, t2)
 

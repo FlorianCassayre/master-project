@@ -7,6 +7,45 @@ import me.cassayre.florian.masterproject.front.fol.ops.CommonOps
 trait FormulaUtils extends TermUtils {
   this: FormulaDefinitions & FormulaConversionsTo & CommonOps =>
 
+  case class LambdaPredicate[N <: Arity] private(parameters: Seq[SchematicFunctionLabel[0]], body: Formula) extends LambdaDefinition[N, SchematicFunctionLabel[0], Formula]
+  object LambdaPredicate {
+    def apply[N <: Arity](f: FillArgs[SchematicFunctionLabel[0], N] => Formula)(using v: ValueOf[N]): LambdaPredicate[N] = {
+      val n = v.value
+      val dummyVariable = SchematicFunctionLabel[0]("")
+      val taken = schematicFunctionsOf(fillTupleParameters(_ => dummyVariable, n, f)._2).map(_.id)
+      val (params, body) = fillTupleParameters(SchematicFunctionLabel.apply[0](_), n, f, taken)
+      new LambdaPredicate(params.toSeq, body)
+    }
+    def unsafe(parameters: Seq[SchematicFunctionLabel[0]], body: Formula): LambdaPredicate[?] = new LambdaPredicate(parameters, body)
+  }
+
+  case class InstantiatedPredicate private(schema: SchematicPredicateLabel[?], lambda: LambdaPredicate[?])
+    extends InstantiatedSchema[SchematicPredicateLabel[?], Formula, SchematicFunctionLabel[0]]
+  object InstantiatedPredicate {
+    def apply[N <: Arity](schema: SchematicPredicateLabel[N], lambda: LambdaPredicate[N])(using v: ValueOf[N]): InstantiatedPredicate = new InstantiatedPredicate(schema, lambda)
+    def unsafe(schema: SchematicPredicateLabel[?], lambda: LambdaPredicate[?]): InstantiatedPredicate = new InstantiatedPredicate(schema, lambda)
+  }
+
+  case class LambdaConnector[N <: Arity] private(parameters: Seq[SchematicPredicateLabel[0]], body: Formula) extends LambdaDefinition[N, SchematicPredicateLabel[0], Formula]
+  object LambdaConnector {
+    def apply[N <: Arity](f: FillArgs[SchematicPredicateLabel[0], N] => Formula)(using v: ValueOf[N]): LambdaConnector[N] = {
+      val n = v.value
+      val dummyVariable = SchematicPredicateLabel[0]("")
+      val taken = schematicPredicatesOf(fillTupleParameters(_ => dummyVariable, n, f)._2).map(_.id)
+      val (params, body) = fillTupleParameters(SchematicPredicateLabel.apply[0](_), n, f, taken)
+      new LambdaConnector(params.toSeq, body)
+    }
+    def unsafe(parameters: Seq[SchematicPredicateLabel[0]], body: Formula): LambdaConnector[?] = new LambdaConnector(parameters, body)
+  }
+
+  case class InstantiatedConnector private(schema: SchematicConnectorLabel[?], lambda: LambdaConnector[?])
+    extends InstantiatedSchema[SchematicConnectorLabel[?], Formula, SchematicPredicateLabel[0]]
+  object InstantiatedConnector {
+    def apply[N <: Arity](schema: SchematicConnectorLabel[N], lambda: LambdaConnector[N])(using v: ValueOf[N]): InstantiatedConnector = new InstantiatedConnector(schema, lambda)
+    def unsafe(schema: SchematicConnectorLabel[?], lambda: LambdaConnector[?]): InstantiatedConnector = new InstantiatedConnector(schema, lambda)
+  }
+
+
   def freshId(taken: Set[String], base: String): String = {
     def findFirst(i: Int): String = {
       val id = s"${base}_$i"
