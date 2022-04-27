@@ -4,55 +4,37 @@ import me.cassayre.florian.masterproject.front.fol.FOL.*
 
 trait UnificationDefinitions {
 
-  private case class ScopedUnificationContext(variables: Map[VariableLabel, VariableLabel]) {
+  private case class ScopedUnificationContext(variables: Map[VariableLabel, VariableLabel] = Map.empty) {
     def withVariable(patternVariable: VariableLabel, targetVariable: VariableLabel): ScopedUnificationContext =
       copy(variables = variables + (patternVariable -> targetVariable))
   }
-  private val emptyScopedUnificationContext = ScopedUnificationContext(Map.empty)
 
   case class UnificationContext(
-    predicates: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])],
-    functions: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])],
-    connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])],
-    variables: Map[VariableLabel, VariableLabel],
+    predicates: Map[SchematicPredicateLabel[?], LambdaPredicate[?]] = Map.empty,
+    functions: Map[SchematicFunctionLabel[?], LambdaFunction[?]] = Map.empty,
+    connectors: Map[SchematicConnectorLabel[?], LambdaConnector[?]] = Map.empty,
+    variables: Map[VariableLabel, VariableLabel] = Map.empty,
   ) {
-    def withPredicate(pattern: SchematicPredicateLabel[0], target: Formula): UnificationContext =
-      copy(predicates = predicates + (pattern -> (target, Seq.empty)))
-    def withFunction(pattern: SchematicFunctionLabel[0], target: Term): UnificationContext =
-      copy(functions = functions + (pattern -> (target, Seq.empty)))
-    def withPredicate(pattern: SchematicPredicateLabel[?], target: Formula, args: Seq[VariableLabel]): UnificationContext =
-      copy(predicates = predicates + (pattern -> (target, args)))
-    def withFunction(pattern: SchematicFunctionLabel[?], target: Term, args: Seq[VariableLabel]): UnificationContext =
-      copy(functions = functions + (pattern -> (target, args)))
-    def withVariable(patternVariable: VariableLabel, targetVariable: VariableLabel): UnificationContext =
-      copy(variables = variables + (patternVariable -> targetVariable))
-    def apply(predicate: SchematicPredicateLabel[0]): Formula = predicates(predicate)._1
-    def apply(function: SchematicFunctionLabel[0]): Term = functions(function)._1
+    def +(predicate: AssignedPredicate): UnificationContext = copy(predicates = predicates + (predicate.schema -> predicate.lambda))
+    def +(function: AssignedFunction): UnificationContext = copy(functions = functions + (function.schema -> function.lambda))
+    def +(connector: AssignedConnector): UnificationContext = copy(connectors = connectors + (connector.schema -> connector.lambda))
+    def +(pair: (VariableLabel, VariableLabel)): UnificationContext = copy(variables = variables + pair)
+
+    def apply[N <: Arity](predicate: SchematicPredicateLabel[N]): LambdaPredicate[N] = predicates(predicate).asInstanceOf[LambdaPredicate[N]]
+    def apply[N <: Arity](function: SchematicFunctionLabel[N]): LambdaFunction[N] = functions(function).asInstanceOf[LambdaFunction[N]]
+    def apply[N <: Arity](connector: SchematicConnectorLabel[N]): LambdaConnector[N] = connectors(connector).asInstanceOf[LambdaConnector[N]]
     def apply(variable: VariableLabel): VariableLabel = variables(variable)
-    def applyMultiary(function: SchematicFunctionLabel[?]): (Term, Seq[VariableLabel]) = functions(function)
-    def applyMultiary(predicate: SchematicPredicateLabel[?]): (Formula, Seq[VariableLabel]) = predicates(predicate)
-    def applyMultiary(connector: SchematicConnectorLabel[?]): (Formula, Seq[SchematicPredicateLabel[0]]) = connectors(connector)
-    def apply[N <: Arity](function: SchematicFunctionLabel[N])(args: FillArgs[Term, N]): Term = {
-      val (body, argsSeq) = functions(function)
-      substituteVariables(body, argsSeq.zip(args.toSeq).toMap)
-    }
-    def apply[N <: Arity](predicate: SchematicPredicateLabel[N])(args: FillArgs[Term, N]): Formula = {
-      val (body, argsSeq) = predicates(predicate)
-      substituteVariables(body, argsSeq.zip(args.toSeq).toMap)
-    }
-    def apply[N <: Arity](connector: SchematicConnectorLabel[N])(args: FillArgs[Formula, N]): Formula = {
-      val (body, argsSeq) = connectors(connector)
-      instantiatePredicateSchemas(body, argsSeq.zip(args.toSeq.map(_ -> Seq.empty)).toMap)
-    }
+
+    def assignedPredicates: Seq[AssignedPredicate] = predicates.map { case (k, v) => AssignedPredicate.unsafe(k, v) }.toSeq
+    def assignedFunctions: Seq[AssignedFunction] = functions.map { case (k, v) => AssignedFunction.unsafe(k, v) }.toSeq
+    def assignedConnectors: Seq[AssignedConnector] = connectors.map { case (k, v) => AssignedConnector.unsafe(k, v) }.toSeq
   }
-  val emptyUnificationContext: UnificationContext = UnificationContext(Map.empty, Map.empty, Map.empty, Map.empty)
 
   case class RenamingContext(
-    predicates: Map[SchematicPredicateLabel[?], SchematicPredicateLabel[?]],
-    functions: Map[SchematicFunctionLabel[?], SchematicFunctionLabel[?]],
-    connectors: Map[SchematicConnectorLabel[?], SchematicConnectorLabel[?]],
-    variables: Map[VariableLabel, VariableLabel],
+    predicates: Seq[RenamedPredicate] = Seq.empty,
+    functions: Seq[RenamedFunction] = Seq.empty,
+    connectors: Seq[RenamedConnector] = Seq.empty,
+    variables: Map[VariableLabel, VariableLabel] = Map.empty,
   )
-  val emptyRenamingContext: RenamingContext = RenamingContext(Map.empty, Map.empty, Map.empty, Map.empty)
 
 }

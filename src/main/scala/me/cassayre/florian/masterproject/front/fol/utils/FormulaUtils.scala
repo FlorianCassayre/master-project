@@ -360,6 +360,16 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
     instantiateInternal(formula)
   }
 
+  def unsafeRenameVariables(formula: Formula, map: Map[VariableLabel, VariableLabel]): Formula = formula match {
+    case PredicateFormula(label, args) =>
+      PredicateFormula.unsafe(label, args.map(unsafeRenameVariables(_, map)))
+    case ConnectorFormula(label, args) =>
+      ConnectorFormula.unsafe(label, args.map(unsafeRenameVariables(_, map)))
+    case BinderFormula(label, bound, inner) =>
+      val newBound = map.getOrElse(bound, bound)
+      BinderFormula(label, newBound, unsafeRenameVariables(inner, map))
+  }
+
   def fillTupleParametersPredicate[N <: Arity](n: N, f: FillArgs[VariableLabel, N] => Formula): (FillArgs[VariableLabel, N], Formula) = {
     val dummyVariable = VariableLabel("")
     val dummyFormula = fillTupleParameters(_ => dummyVariable, n, f)._2

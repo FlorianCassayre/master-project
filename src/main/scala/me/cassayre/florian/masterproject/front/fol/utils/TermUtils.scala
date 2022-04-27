@@ -163,6 +163,9 @@ trait TermUtils extends TermDefinitions with TermConversionsTo {
     instantiateInternal(term)
   }
 
+  def unsafeRenameVariables(term: Term, map: Map[VariableLabel, VariableLabel]): Term =
+    substituteVariables(term, map.view.mapValues(VariableTerm.apply).toMap)
+
   def renameSchemas(
     term: Term,
     functionsMap: Map[SchematicFunctionLabel[?], FunctionLabel[?]],

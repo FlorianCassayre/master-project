@@ -14,7 +14,7 @@ class Unification2Tests extends AnyFunSuite {
       IndexedSeq(PartialSequent(IndexedSeq(pattern), IndexedSeq.empty)),
       IndexedSeq(Sequent(IndexedSeq(target), IndexedSeq.empty)),
       IndexedSeq.empty,
-      emptyUnificationContext,
+      UnificationContext(),
       IndexedSeq((IndexedSeq(0), IndexedSeq.empty))
     ).nonEmpty
   }
