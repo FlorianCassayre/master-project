@@ -4,27 +4,78 @@ import me.cassayre.florian.masterproject.front.fol.conversions.to.TermConversion
 import me.cassayre.florian.masterproject.front.fol.definitions.TermDefinitions
 import me.cassayre.florian.masterproject.front.fol.ops.CommonOps
 
-trait TermUtils {
-  this: TermDefinitions & TermConversionsTo & CommonOps =>
+import scala.annotation.targetName
 
-  protected abstract class LambdaDefinition[N <: Arity, A <: SchematicLabel & WithArity[?], T <: LabeledTree[?]] {
-    val parameters: Seq[A]
+trait TermUtils extends TermDefinitions with TermConversionsTo {
+  this: CommonOps =>
+
+  def freshId(taken: Set[String], base: String = "x"): String = {
+    def findFirst(i: Int): String = {
+      val id = s"${base}_$i"
+      if(taken.contains(id)) findFirst(i + 1) else id
+    }
+    findFirst(0)
+  }
+
+  def freshIds(taken: Set[String], n: Int, base: String = "x"): Seq[String] = {
+    require(n >= 0)
+    def findMany(i: Int, n: Int, taken: Set[String], acc: Seq[String]): Seq[String] = {
+      if(n > 0) {
+        val id = s"${base}_$i"
+        if(taken.contains(id)) findMany(i + 1, n, taken, acc) else findMany(i + 1, n - 1, taken + id, id +: acc)
+      } else {
+        acc
+      }
+    }
+    findMany(0, n, taken, Seq.empty).reverse
+  }
+
+  case class RenamedLabel[+B <: Label & WithArity[?], +A <: B & SchematicLabel] private(from: A, to: B)
+  object RenamedLabel {
+    @targetName("applySafe")
+    def apply[N <: Arity, B <: Label & WithArity[N], A <: B & SchematicLabel](from: A, to: B): RenamedLabel[B, A] = new RenamedLabel(from, to)
+    def unsafe[B <: Label & WithArity[?], A <: B & SchematicLabel](from: A, to: B): RenamedLabel[B, A] = new RenamedLabel(from, to)
+  }
+  type RenamedFunction = RenamedLabel[FunctionLabel[?], SchematicFunctionLabel[?]]
+
+  given Conversion[RenamedFunction, AssignedFunction] = s => {
+    val parameters = freshIds(Set.empty, s.from.arity).map(SchematicFunctionLabel.apply[0])
+    AssignedFunction.unsafe(s.from, LambdaFunction.unsafe(parameters, FunctionTerm.unsafe(s.to, parameters.map(FunctionTerm.unsafe(_, Seq.empty)))))
+  }
+
+  protected abstract class LambdaDefinition[N <: Arity, S <: SchematicLabel & WithArity[?], T <: LabeledTree[?]] {
+    type U <: LabeledTree[_ >: S]
+
+    val parameters: Seq[S]
     val body: T
+
+    def apply(args: FillArgs[U, N]): T = unsafe(args.toSeq)
+    def unsafe(args: Seq[U]): T = {
+      require(args.size == arity)
+      instantiate(args)
+    }
+    protected def instantiate(args: Seq[U]): T
 
     val arity: N = parameters.size.asInstanceOf[N]
 
     require(parameters.forall(_.arity == 0))
     require(parameters.distinct.size == parameters.size)
   }
-  protected abstract class InstantiatedSchema[S <: SchematicLabel & WithArity[?], T <: LabeledTree[_ >: S], A <: SchematicLabel & WithArity[?]] {
-    val schema: S
-    val lambda: LambdaDefinition[?, A, T]
+  protected abstract class AssignedSchema[R <: SchematicLabel & WithArity[?], S <: SchematicLabel & WithArity[?]] {
+    type L <: LambdaDefinition[?, S, _ <: LabeledTree[_ >: R]]
+
+    val schema: R
+    val lambda: L
 
     require(schema.arity == lambda.arity)
   }
 
 
-  case class LambdaFunction[N <: Arity] private(parameters: Seq[SchematicFunctionLabel[0]], body: Term) extends LambdaDefinition[N, SchematicFunctionLabel[0], Term]
+  case class LambdaFunction[N <: Arity] private(parameters: Seq[SchematicFunctionLabel[0]], body: Term) extends LambdaDefinition[N, SchematicFunctionLabel[0], Term] {
+    override type U = Term
+    override protected def instantiate(args: Seq[Term]): Term =
+      instantiateSchemas2(body, parameters.zip(args).map { case (from, to) => AssignedFunction(from, LambdaFunction(_ => to)) })
+  }
   object LambdaFunction {
     def apply[N <: Arity](f: FillArgs[SchematicFunctionLabel[0], N] => Term)(using v: ValueOf[N]): LambdaFunction[N] = {
       val n = v.value
@@ -36,11 +87,13 @@ trait TermUtils {
     def unsafe(parameters: Seq[SchematicFunctionLabel[0]], body: Term): LambdaFunction[?] = new LambdaFunction(parameters, body)
   }
 
-  case class InstantiatedFunction private(schema: SchematicFunctionLabel[?], lambda: LambdaFunction[?])
-    extends InstantiatedSchema[SchematicFunctionLabel[?], Term, SchematicFunctionLabel[0]]
-  object InstantiatedFunction {
-    def apply[N <: Arity](schema: SchematicFunctionLabel[N], lambda: LambdaFunction[N])(using v: ValueOf[N]): InstantiatedFunction = new InstantiatedFunction(schema, lambda)
-    def unsafe(schema: SchematicFunctionLabel[?], lambda: LambdaFunction[?]): InstantiatedFunction = new InstantiatedFunction(schema, lambda)
+  case class AssignedFunction private(schema: SchematicFunctionLabel[?], lambda: LambdaFunction[?])
+    extends AssignedSchema[SchematicFunctionLabel[?], SchematicFunctionLabel[0]] {
+    override type L = LambdaFunction[?]
+  }
+  object AssignedFunction {
+    def apply[N <: Arity](schema: SchematicFunctionLabel[N], lambda: LambdaFunction[N])(using v: ValueOf[N]): AssignedFunction = new AssignedFunction(schema, lambda)
+    def unsafe(schema: SchematicFunctionLabel[?], lambda: LambdaFunction[?]): AssignedFunction = new AssignedFunction(schema, lambda)
   }
 
 
@@ -95,6 +148,19 @@ trait TermUtils {
   def instantiateFunctionSchemas(term: Term, map: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])]): Term = {
     require(map.forall { case (f, (_, args)) => f.arity == args.size })
     instantiateFunctionSchemasInternal(term, map)
+  }
+
+  def instantiateSchemas2(term: Term, substitutions: Seq[AssignedFunction]): Term = {
+    val map: Map[SchematicFunctionLabel[?], LambdaFunction[?]] = substitutions.map(i => i.schema -> i.lambda).toMap
+    def instantiateInternal(term: Term): Term = term match {
+      case _: VariableTerm => term
+      case FunctionTerm(label, args) =>
+        label match {
+          case f: SchematicFunctionLabel[?] if map.contains(f) => map(f).unsafe(args)
+          case _ => FunctionTerm.unsafe(label, args.map(instantiateInternal))
+        }
+    }
+    instantiateInternal(term)
   }
 
   def renameSchemas(

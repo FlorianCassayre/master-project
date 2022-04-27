@@ -2,12 +2,27 @@ package me.cassayre.florian.masterproject.front.fol.utils
 
 import me.cassayre.florian.masterproject.front.fol.conversions.to.FormulaConversionsTo
 import me.cassayre.florian.masterproject.front.fol.definitions.FormulaDefinitions
-import me.cassayre.florian.masterproject.front.fol.ops.CommonOps
+import me.cassayre.florian.masterproject.front.fol.ops.FormulaOps
 
-trait FormulaUtils extends TermUtils {
-  this: FormulaDefinitions & FormulaConversionsTo & CommonOps =>
+trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConversionsTo {
+  this: FormulaOps =>
 
-  case class LambdaPredicate[N <: Arity] private(parameters: Seq[SchematicFunctionLabel[0]], body: Formula) extends LambdaDefinition[N, SchematicFunctionLabel[0], Formula]
+  type RenamedPredicate = RenamedLabel[PredicateLabel[?], SchematicPredicateLabel[?]]
+  given Conversion[RenamedPredicate, AssignedPredicate] = s => {
+    val parameters = freshIds(Set.empty, s.from.arity).map(SchematicFunctionLabel.apply[0])
+    AssignedPredicate.unsafe(s.from, LambdaPredicate.unsafe(parameters, PredicateFormula.unsafe(s.to, parameters.map(FunctionTerm.unsafe(_, Seq.empty)))))
+  }
+  type RenamedConnector = RenamedLabel[ConnectorLabel[?], SchematicConnectorLabel[?]]
+  given Conversion[RenamedConnector, AssignedConnector] = s => {
+    val parameters = freshIds(Set.empty, s.from.arity).map(SchematicPredicateLabel.apply[0])
+    AssignedConnector.unsafe(s.from, LambdaConnector.unsafe(parameters, ConnectorFormula.unsafe(s.to, parameters.map(PredicateFormula.unsafe(_, Seq.empty)))))
+  }
+
+  case class LambdaPredicate[N <: Arity] private(parameters: Seq[SchematicFunctionLabel[0]], body: Formula) extends LambdaDefinition[N, SchematicFunctionLabel[0], Formula] {
+    override type U = Term
+    override protected def instantiate(args: Seq[Term]): Formula =
+      instantiateSchemas2(body, functions = parameters.zip(args).map { case (from, to) => AssignedFunction(from, LambdaFunction(_ => to)) })
+  }
   object LambdaPredicate {
     def apply[N <: Arity](f: FillArgs[SchematicFunctionLabel[0], N] => Formula)(using v: ValueOf[N]): LambdaPredicate[N] = {
       val n = v.value
@@ -19,14 +34,20 @@ trait FormulaUtils extends TermUtils {
     def unsafe(parameters: Seq[SchematicFunctionLabel[0]], body: Formula): LambdaPredicate[?] = new LambdaPredicate(parameters, body)
   }
 
-  case class InstantiatedPredicate private(schema: SchematicPredicateLabel[?], lambda: LambdaPredicate[?])
-    extends InstantiatedSchema[SchematicPredicateLabel[?], Formula, SchematicFunctionLabel[0]]
-  object InstantiatedPredicate {
-    def apply[N <: Arity](schema: SchematicPredicateLabel[N], lambda: LambdaPredicate[N])(using v: ValueOf[N]): InstantiatedPredicate = new InstantiatedPredicate(schema, lambda)
-    def unsafe(schema: SchematicPredicateLabel[?], lambda: LambdaPredicate[?]): InstantiatedPredicate = new InstantiatedPredicate(schema, lambda)
+  case class AssignedPredicate private(schema: SchematicPredicateLabel[?], lambda: LambdaPredicate[?])
+    extends AssignedSchema[SchematicPredicateLabel[?], SchematicFunctionLabel[0]] {
+    override type L = LambdaPredicate[?]
+  }
+  object AssignedPredicate {
+    def apply[N <: Arity](schema: SchematicPredicateLabel[N], lambda: LambdaPredicate[N])(using v: ValueOf[N]): AssignedPredicate = new AssignedPredicate(schema, lambda)
+    def unsafe(schema: SchematicPredicateLabel[?], lambda: LambdaPredicate[?]): AssignedPredicate = new AssignedPredicate(schema, lambda)
   }
 
-  case class LambdaConnector[N <: Arity] private(parameters: Seq[SchematicPredicateLabel[0]], body: Formula) extends LambdaDefinition[N, SchematicPredicateLabel[0], Formula]
+  case class LambdaConnector[N <: Arity] private(parameters: Seq[SchematicPredicateLabel[0]], body: Formula) extends LambdaDefinition[N, SchematicPredicateLabel[0], Formula] {
+    override type U = Formula
+    override protected def instantiate(args: Seq[Formula]): Formula =
+      instantiateSchemas2(body, predicates = parameters.zip(args).map { case (from, to) => AssignedPredicate(from, LambdaPredicate(_ => to)) })
+  }
   object LambdaConnector {
     def apply[N <: Arity](f: FillArgs[SchematicPredicateLabel[0], N] => Formula)(using v: ValueOf[N]): LambdaConnector[N] = {
       val n = v.value
@@ -38,34 +59,15 @@ trait FormulaUtils extends TermUtils {
     def unsafe(parameters: Seq[SchematicPredicateLabel[0]], body: Formula): LambdaConnector[?] = new LambdaConnector(parameters, body)
   }
 
-  case class InstantiatedConnector private(schema: SchematicConnectorLabel[?], lambda: LambdaConnector[?])
-    extends InstantiatedSchema[SchematicConnectorLabel[?], Formula, SchematicPredicateLabel[0]]
-  object InstantiatedConnector {
-    def apply[N <: Arity](schema: SchematicConnectorLabel[N], lambda: LambdaConnector[N])(using v: ValueOf[N]): InstantiatedConnector = new InstantiatedConnector(schema, lambda)
-    def unsafe(schema: SchematicConnectorLabel[?], lambda: LambdaConnector[?]): InstantiatedConnector = new InstantiatedConnector(schema, lambda)
+  case class AssignedConnector private(schema: SchematicConnectorLabel[?], lambda: LambdaConnector[?])
+    extends AssignedSchema[SchematicConnectorLabel[?], SchematicPredicateLabel[0]] {
+    override type L = LambdaConnector[?]
+  }
+  object AssignedConnector {
+    def apply[N <: Arity](schema: SchematicConnectorLabel[N], lambda: LambdaConnector[N])(using v: ValueOf[N]): AssignedConnector = new AssignedConnector(schema, lambda)
+    def unsafe(schema: SchematicConnectorLabel[?], lambda: LambdaConnector[?]): AssignedConnector = new AssignedConnector(schema, lambda)
   }
 
-
-  def freshId(taken: Set[String], base: String): String = {
-    def findFirst(i: Int): String = {
-      val id = s"${base}_$i"
-      if(taken.contains(id)) findFirst(i + 1) else id
-    }
-    findFirst(0)
-  }
-
-  def freshIds(taken: Set[String], n: Int, base: String = "x"): Seq[String] = {
-    require(n >= 0)
-    def findMany(i: Int, n: Int, taken: Set[String], acc: Seq[String]): Seq[String] = {
-      if(n > 0) {
-        val id = s"${base}_$i"
-        if(taken.contains(id)) findMany(i + 1, n, taken, acc) else findMany(i + 1, n - 1, taken + id, id +: acc)
-      } else {
-        acc
-      }
-    }
-    findMany(0, n, taken, Seq.empty).reverse
-  }
 
   def adaptConnectorSchemas(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] = {
     def recursive(formula: Formula, predicates: Set[SchematicPredicateLabel[?]], translation: Map[ConnectorFormula, SchematicPredicateLabel[?]]):
@@ -332,6 +334,30 @@ trait FormulaUtils extends TermUtils {
     case BinderFormula(label, bound, inner) =>
       val newBound = variablesMap.getOrElse(bound, bound)
       BinderFormula(label, newBound, renameSchemas(inner, functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap))
+  }
+
+  def instantiateSchemas2(
+    formula: Formula,
+    functions: Seq[AssignedFunction] = Seq.empty,
+    predicates: Seq[AssignedPredicate] = Seq.empty,
+    connectors: Seq[AssignedConnector] = Seq.empty,
+  ): Formula = {
+    val predicatesMap: Map[SchematicPredicateLabel[?], LambdaPredicate[?]] = predicates.map(i => i.schema -> i.lambda).toMap
+    val connectorsMap: Map[SchematicConnectorLabel[?], LambdaConnector[?]] = connectors.map(i => i.schema -> i.lambda).toMap
+    def instantiateInternal(formula: Formula): Formula = formula match {
+      case PredicateFormula(label, args) =>
+        label match {
+          case f: SchematicPredicateLabel[?] if predicatesMap.contains(f) => predicatesMap(f).unsafe(args)
+          case _ => PredicateFormula.unsafe(label, args.map(instantiateSchemas2(_, functions)))
+        }
+      case ConnectorFormula(label, args) =>
+        label match {
+          case f: SchematicConnectorLabel[?] if connectorsMap.contains(f) => connectorsMap(f).unsafe(args)
+          case _ => ConnectorFormula.unsafe(label, args.map(instantiateInternal))
+        }
+      case binder: BinderFormula => binder.copy(inner = instantiateInternal(binder.inner))
+    }
+    instantiateInternal(formula)
   }
 
   def fillTupleParametersPredicate[N <: Arity](n: N, f: FillArgs[VariableLabel, N] => Formula): (FillArgs[VariableLabel, N], Formula) = {
