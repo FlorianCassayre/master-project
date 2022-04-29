@@ -17,6 +17,9 @@ trait CommonOps {
     case _ => FillTuple[T, N]
   }
 
+  //given liftArgsConversion1[U, V]: Conversion[V, FillArgs[U, 0] => V] = v => _ => v
+  //given liftArgsConversion2[U, V]: Conversion[() => V, FillArgs[U, 0] => V] = v => _ => v()
+
   private[front] def fillTupleParameters[N <: Arity, T, U](name: String => T, n: N, f: FillArgs[T, N] => U, taken: Set[String] = Set.empty): (FillArgs[T, N], U) = {
     val newIds = LazyList.from(0).map(i => s"x$i").filter(!taken.contains(_)).take(n).toIndexedSeq
     val parameters = fillTuple[T, N](n, i => name(newIds(i)))

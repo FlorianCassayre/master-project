@@ -15,42 +15,36 @@ object Unifier {
 
   // TODO we should store information about which bound variables are in scope to avoid name clashes
   case class UnificationContext(
-    predicates: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])],
-    functions: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])],
-    connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])],
+    predicates: Map[SchematicPredicateLabel[?], LambdaPredicate[?]],
+    functions: Map[SchematicFunctionLabel[?], LambdaFunction[?]],
+    connectors: Map[SchematicConnectorLabel[?], LambdaConnector[?]],
     variables: Map[VariableLabel, VariableLabel], // TODO enforce uniqueness in pattern
   ) {
     def withPredicate(pattern: SchematicPredicateLabel[0], target: Formula): UnificationContext =
-      copy(predicates = predicates + (pattern -> (target, Seq.empty)))
+      copy(predicates = predicates + (pattern -> LambdaPredicate.unsafe(Seq.empty, target)))
     def withFunction(pattern: SchematicFunctionLabel[0], target: Term): UnificationContext =
-      copy(functions = functions + (pattern -> (target, Seq.empty)))
-    def withPredicate(pattern: SchematicPredicateLabel[?], target: Formula, args: Seq[VariableLabel]): UnificationContext =
-      copy(predicates = predicates + (pattern -> (target, args)))
-    def withFunction(pattern: SchematicFunctionLabel[?], target: Term, args: Seq[VariableLabel]): UnificationContext =
-      copy(functions = functions + (pattern -> (target, args)))
+      copy(functions = functions + (pattern -> LambdaFunction.unsafe(Seq.empty, target)))
+    def withPredicate(pattern: SchematicPredicateLabel[?], target: Formula, args: Seq[SchematicFunctionLabel[0]]): UnificationContext =
+      copy(predicates = predicates + (pattern -> LambdaPredicate.unsafe(args, target)))
+    def withFunction(pattern: SchematicFunctionLabel[?], target: Term, args: Seq[SchematicFunctionLabel[0]]): UnificationContext =
+      copy(functions = functions + (pattern -> LambdaFunction.unsafe(args, target)))
     def withVariable(patternVariable: VariableLabel, targetVariable: VariableLabel): UnificationContext =
       copy(variables = variables + (patternVariable -> targetVariable))
-    def apply(predicate: SchematicPredicateLabel[0]): Formula = predicates(predicate)._1
-    def apply(function: SchematicFunctionLabel[0]): Term = functions(function)._1
+    def apply(predicate: SchematicPredicateLabel[0]): Formula = predicates(predicate).body
+    def apply(function: SchematicFunctionLabel[0]): Term = functions(function).body
     def apply(variable: VariableLabel): VariableLabel = variables(variable)
-    def applyMultiary(function: SchematicFunctionLabel[?]): (Term, Seq[VariableLabel]) = functions(function)
-    def applyMultiary(predicate: SchematicPredicateLabel[?]): (Formula, Seq[VariableLabel]) = predicates(predicate)
-    def applyMultiary(connector: SchematicConnectorLabel[?]): (Formula, Seq[SchematicPredicateLabel[0]]) = connectors(connector)
-    def apply[N <: Arity](function: SchematicFunctionLabel[N])(args: FillArgs[Term, N]): Term = {
-      val (body, argsSeq) = functions(function)
-      substituteVariables(body, argsSeq.zip(args.toSeq).toMap)
-    }
-    def apply[N <: Arity](predicate: SchematicPredicateLabel[N])(args: FillArgs[Term, N]): Formula = {
-      val (body, argsSeq) = predicates(predicate)
-      substituteVariables(body, argsSeq.zip(args.toSeq).toMap)
-    }
-    def apply[N <: Arity](connector: SchematicConnectorLabel[N])(args: FillArgs[Formula, N]): Formula = {
-      val (body, argsSeq) = connectors(connector)
-      instantiatePredicateSchemas(body, argsSeq.zip(args.toSeq.map(_ -> Seq.empty)).toMap)
-    }
+    def applyMultiary(function: SchematicFunctionLabel[?]): LambdaFunction[?] = functions(function)
+    def applyMultiary(predicate: SchematicPredicateLabel[?]): LambdaPredicate[?] = predicates(predicate)
+    def applyMultiary(connector: SchematicConnectorLabel[?]): LambdaConnector[?] = connectors(connector)
+    def apply[N <: Arity](function: SchematicFunctionLabel[N]): LambdaFunction[N] = functions(function).asInstanceOf[LambdaFunction[N]]
+    def apply[N <: Arity](predicate: SchematicPredicateLabel[N]): LambdaPredicate[N] = predicates(predicate).asInstanceOf[LambdaPredicate[N]]
+    def apply[N <: Arity](connector: SchematicConnectorLabel[N]): LambdaConnector[N] = connectors(connector).asInstanceOf[LambdaConnector[N]]
+    def assignedPredicates: Seq[AssignedPredicate] = predicates.map { case (k, v) => AssignedPredicate.unsafe(k, v) }.toSeq
+    def assignedFunctions: Seq[AssignedFunction] = functions.map { case (k, v) => AssignedFunction.unsafe(k, v) }.toSeq
+    def assignedConnectors: Seq[AssignedConnector] = connectors.map { case (k, v) => AssignedConnector.unsafe(k, v) }.toSeq
   }
   private val emptyUnificationContext = UnificationContext(Map.empty, Map.empty, Map.empty, Map.empty)
-  
+
   case class RenamingContext(
     predicates: Map[SchematicPredicateLabel[?], SchematicPredicateLabel[?]],
     functions: Map[SchematicFunctionLabel[?], SchematicFunctionLabel[?]],
@@ -115,7 +109,7 @@ object Unifier {
         case SchematicFunctionLabel(_, 0) =>
           val nullaryLabel = patternSchematic.asInstanceOf[SchematicFunctionLabel[0]]
           ctx.functions.get(nullaryLabel) match {
-            case Some((expectedTarget, _)) =>
+            case Some(LambdaFunction(_, expectedTarget)) =>
               if (isSame(target, expectedTarget)) {
                 UnificationSuccess(ctx)
               } else {
@@ -146,7 +140,7 @@ object Unifier {
         case SchematicPredicateLabel(_, 0) =>
           val nullaryLabel = patternSchematic.asInstanceOf[SchematicPredicateLabel[0]]
           ctx.predicates.get(nullaryLabel) match {
-            case Some((expectedTarget, _)) =>
+            case Some(LambdaPredicate(_, expectedTarget)) =>
               if(isSame(target, expectedTarget)) {
                 UnificationSuccess(ctx)
               } else {
@@ -212,9 +206,11 @@ object Unifier {
   }
 
   def instantiateFormulaFromContext(formula: Formula, ctx: UnificationContext): Formula =
-    instantiatePredicateSchemas(
-      instantiateFunctionSchemas(instantiateConnectorSchemas(formula, ctx.connectors), ctx.functions),
-      ctx.predicates
+    instantiateFormulaSchemas(
+      formula,
+      functions = ctx.assignedFunctions,
+      predicates = ctx.assignedPredicates,
+      connectors = ctx.assignedConnectors,
     )
 
 }

@@ -10,7 +10,7 @@ import me.cassayre.florian.masterproject.front.{*, given}
 
   val (w, x, y, z) = (SchematicPredicateLabel[0]("w"), SchematicPredicateLabel[0]("x"), SchematicPredicateLabel[0]("y"), SchematicPredicateLabel[0]("z"))
 
-  val ctx = newEmptyEnvironment()
+  given ctx: ProofEnvironment = newEmptyEnvironment()
 
   val fproof1 = Proof(
     ProofState(
@@ -37,11 +37,11 @@ import me.cassayre.florian.masterproject.front.{*, given}
         )
       )
     ),
-    Seq(
+    Seq[Tactic](
       RuleSubstituteRightIff(
-        RuleBackwardParametersBuilder
+        RuleParameters()
           .withPredicate(Notations.a, a /\ b)
-          .withConnector(Notations.f, x, x)
+          .withConnector(Notations.f, identity)
       ),
       RuleHypothesis(),
       TacticApplyJustification,

@@ -141,12 +141,10 @@ object FrontMacro {
 
   private def getRenaming(variables: Seq[Variable])(using Quotes):
   Expr[(
-    Map[SchematicFunctionLabel[?], FunctionLabel[?]],
-      Map[SchematicPredicateLabel[?], PredicateLabel[?]],
-      Map[SchematicConnectorLabel[?], ConnectorLabel[?]],
+    Seq[AssignedFunction],
+      Seq[AssignedPredicate],
+      Seq[AssignedConnector],
       Map[VariableLabel, VariableLabel],
-      Map[SchematicFunctionLabel[0], Term],
-      Map[SchematicPredicateLabel[0], Formula],
     )] = {
     import LiftFOL.{*, given}
 
@@ -157,33 +155,43 @@ object FrontMacro {
       '{ ${liftSeq(list)}.toMap }
     }
 
-    val functionsMap: Expr[Map[SchematicFunctionLabel[?], FunctionLabel[?]]] = substMap(variables.collect {
+    val functionsMap: Expr[Seq[AssignedFunction]] = liftSeq(variables.collect {
       case FunctionLabelVariable(label, placeholder) =>
-        Expr(placeholder) -> label
+        '{ RenamedLabel.unsafe(${Expr(placeholder)}, $label).toAssignment }
     })
-    val predicatesMap: Expr[Map[SchematicPredicateLabel[?], PredicateLabel[?]]] = substMap(variables.collect {
+    val predicatesMap: Expr[Seq[AssignedPredicate]] = liftSeq(variables.collect {
       case PredicateLabelVariable(label, placeholder) =>
-        Expr(placeholder) -> label
+        '{ RenamedLabel.unsafe(${Expr(placeholder)}, $label).toAssignment }
     })
-    val connectorsMap: Expr[Map[SchematicConnectorLabel[?], ConnectorLabel[?]]] = substMap(variables.collect {
+    val connectorsMap: Expr[Seq[AssignedConnector]] = liftSeq(variables.collect {
       case ConnectorLabelVariable(label, placeholder) =>
-        Expr(placeholder) -> label
+        '{ RenamedLabel.unsafe(${Expr(placeholder)}, $label).toAssignment }
     })
     val variablesMap: Expr[Map[VariableLabel, VariableLabel]] = substMap(variables.collect {
       case VariableLabelVariable(label, placeholder) =>
         Expr(placeholder) -> label
     })
 
-    val termsMap: Expr[Map[SchematicFunctionLabel[0], Term]] = substMap(variables.collect {
+    val termsMap: Expr[Seq[AssignedFunction]] = liftSeq(variables.collect {
       case TermVariable(term, placeholder) =>
-        Expr(placeholder)(using toExprFunction0) -> term
+        '{ AssignedFunction.unsafe(${Expr(placeholder)(using toExprFunction0)}, LambdaFunction.unsafe(Seq.empty, $term)) }
     })
-    val formulasMap: Expr[Map[SchematicPredicateLabel[0], Formula]] = substMap(variables.collect {
+    val formulasMap: Expr[Seq[AssignedPredicate]] = liftSeq(variables.collect {
       case FormulaVariable(formula, placeholder) =>
-        Expr(placeholder)(using toExprPredicate0) -> formula
+        '{ AssignedPredicate.unsafe(${Expr(placeholder)(using toExprPredicate0)}, LambdaPredicate.unsafe(Seq.empty, $formula)) }
     })
 
-    '{ ($functionsMap, $predicatesMap, $connectorsMap, $variablesMap, $termsMap, $formulasMap) }
+    '{ ($functionsMap ++ $termsMap, $predicatesMap ++ $formulasMap, $connectorsMap, $variablesMap) }
+  }
+
+  def unsafeFixPointTermInstantiate(term: Term, functions: Seq[AssignedFunction], map: Map[VariableLabel, VariableLabel]): Term = {
+    val next = instantiateTermSchemas(unsafeRenameVariables(term, map), functions)
+    if(next == term) term else unsafeFixPointTermInstantiate(next, functions, map)
+  }
+
+  def unsafeFixPointFormulaInstantiate(formula: Formula, functions: Seq[AssignedFunction], predicates: Seq[AssignedPredicate], connectors: Seq[AssignedConnector], map: Map[VariableLabel, VariableLabel]): Formula = {
+    val next = instantiateFormulaSchemas(unsafeRenameVariables(formula, map), functions, predicates, connectors)
+    if(next == formula) formula else unsafeFixPointFormulaInstantiate(next, functions, predicates, connectors, map)
   }
 
   private def typeCheck(
@@ -257,8 +265,8 @@ object FrontMacro {
     typeCheck(interpolator, functionsOf(resolved), Set.empty, Set.empty, freeVariablesOf(resolved))
 
     '{
-      val (functionsMap, _, _, variablesMap, termsMap, _) = ${getRenaming(interpolator.variables)}
-      renameSchemas(${Expr(resolved)}, functionsMap, variablesMap, termsMap)
+      val (functionsMap, _, _, variablesMap) = ${getRenaming(interpolator.variables)}
+      unsafeFixPointTermInstantiate(${Expr(resolved)}, functionsMap, variablesMap)
     }
   }
   private def formulaApplyMacro[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Expr[Formula] = {
@@ -271,8 +279,8 @@ object FrontMacro {
     typeCheck(interpolator, functionsOf(resolved), predicatesOf(resolved), schematicConnectorsOf(resolved), freeVariablesOf(resolved))
 
     '{
-      val (functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap) = ${getRenaming(interpolator.variables)}
-      renameSchemas(${Expr(resolved)}, functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap)
+      val (functionsMap, predicatesMap, connectorsMap, variablesMap) = ${getRenaming(interpolator.variables)}
+      unsafeFixPointFormulaInstantiate(${Expr(resolved)}, functionsMap, predicatesMap, connectorsMap, variablesMap)
     }
   }
   private def sequentApplyMacro[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Expr[Sequent] = {
@@ -285,9 +293,9 @@ object FrontMacro {
     typeCheck(interpolator, functionsOfSequent(resolved), predicatesOfSequent(resolved), schematicConnectorsOfSequent(resolved), freeVariablesOfSequent(resolved))
 
     '{
-      val (functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap) = ${getRenaming(interpolator.variables)}
+      val (functionsMap, predicatesMap, connectorsMap, variablesMap) = ${getRenaming(interpolator.variables)}
       def rename(formula: Formula): Formula =
-        renameSchemas(formula, functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap)
+        unsafeFixPointFormulaInstantiate(formula, functionsMap, predicatesMap, connectorsMap, variablesMap)
       Sequent(${liftSeq(resolved.left.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename), ${liftSeq(resolved.right.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename))
     }
   }
@@ -301,10 +309,10 @@ object FrontMacro {
     typeCheck(interpolator, functionsOfSequent(resolved), predicatesOfSequent(resolved), schematicConnectorsOfSequent(resolved), freeVariablesOfSequent(resolved))
 
     '{
-    val (functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap) = ${getRenaming(interpolator.variables)}
-    def rename(formula: Formula): Formula =
-      renameSchemas(formula, functionsMap, predicatesMap, connectorsMap, variablesMap, termsMap, formulasMap)
-    PartialSequent(${liftSeq(resolved.left.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename), ${liftSeq(resolved.right.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename), ${Expr(resolved.partialLeft)}, ${Expr(resolved.partialRight)})
+      val (functionsMap, predicatesMap, connectorsMap, variablesMap) = ${getRenaming(interpolator.variables)}
+      def rename(formula: Formula): Formula =
+        unsafeFixPointFormulaInstantiate(formula, functionsMap, predicatesMap, connectorsMap, variablesMap)
+      PartialSequent(${liftSeq(resolved.left.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename), ${liftSeq(resolved.right.toSeq.map(Expr.apply))}.toIndexedSeq.map(rename), ${Expr(resolved.partialLeft)}, ${Expr(resolved.partialRight)})
     }
   }
 

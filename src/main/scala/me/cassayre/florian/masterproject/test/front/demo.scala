@@ -59,7 +59,7 @@ val (a, b, c) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"
     import proofMode.*
 
     apply(elimRSubstEq(
-      RuleBackwardParametersBuilder
+      RuleParameters()
         .withPredicate(Notations.p, _ === u)
         .withFunction(Notations.s, t())
         .withFunction(Notations.t, s())
@@ -91,7 +91,7 @@ val (a, b, c) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"
   val axEmpty: Axiom = axiomEmpty.asJustified.display()
 
   val thmEmptySchema: Theorem = elimRForallS(
-    RuleForwardParametersBuilder
+    RuleParameters()
       .withPredicate(Notations.p, x => !(x in emptySet))
       .withFunction(Notations.t, s())
   )(axEmpty).get.display()

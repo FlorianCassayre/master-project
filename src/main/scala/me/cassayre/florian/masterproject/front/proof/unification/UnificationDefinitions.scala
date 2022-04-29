@@ -31,9 +31,9 @@ trait UnificationDefinitions {
   }
 
   case class RenamingContext(
-    predicates: Seq[RenamedPredicate] = Seq.empty,
-    functions: Seq[RenamedFunction] = Seq.empty,
-    connectors: Seq[RenamedConnector] = Seq.empty,
+    predicates: Seq[RenamedPredicateSchema] = Seq.empty,
+    functions: Seq[RenamedFunctionSchema] = Seq.empty,
+    connectors: Seq[RenamedConnectorSchema] = Seq.empty,
     variables: Map[VariableLabel, VariableLabel] = Map.empty,
   )
 

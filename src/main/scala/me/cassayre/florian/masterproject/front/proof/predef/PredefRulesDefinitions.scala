@@ -22,7 +22,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
 
   import Notations.*
 
-  case object RuleHypothesis extends RuleIntroduction(
+  case object RuleHypothesis extends RuleBase(
     __,
     *(a) |- *(a),
     (bot, ctx) => IndexedSeq(Hypothesis(bot, ctx(a)))
@@ -30,67 +30,67 @@ trait PredefRulesDefinitions extends RuleDefinitions {
 
   // Introduction
 
-  case object RuleIntroductionLeftAnd extends RuleIntroduction(
+  case object RuleIntroductionLeftAnd extends RuleBase(
     *(a, b) |- **,
     *(a /\ b) |- **,
     (bot, ctx) => IndexedSeq(LeftAnd(bot, -1, ctx(a), ctx(b)))
   )
 
-  case object RuleIntroductionRightAnd extends RuleIntroduction(
+  case object RuleIntroductionRightAnd extends RuleBase(
     (** |- *(a)) :+ (** |- *(b)),
     ** |- *(a /\ b),
     (bot, ctx) => IndexedSeq(RightAnd(bot, Seq(-1, -2), Seq(ctx(a), ctx(b))))
   )
 
-  case object RuleIntroductionLeftOr extends RuleIntroduction(
+  case object RuleIntroductionLeftOr extends RuleBase(
     (*(a) |- **) :+ (*(b) |- **),
     *(a \/ b) |- **,
     (bot, ctx) => IndexedSeq(LeftOr(bot, Seq(-1, -2), Seq(ctx(a), ctx(b))))
   )
 
-  case object RuleIntroductionRightOr extends RuleIntroduction(
+  case object RuleIntroductionRightOr extends RuleBase(
     ** |- *(a, b),
     ** |- *(a \/ b),
     (bot, ctx) => IndexedSeq(RightOr(bot, -1, ctx(a), ctx(b)))
   )
 
-  case object RuleIntroductionLeftImplies extends RuleIntroduction(
+  case object RuleIntroductionLeftImplies extends RuleBase(
     (** |- *(a)) :+ (*(b) |- **),
     *(a ==> b) |- **,
     (bot, ctx) => IndexedSeq(LeftImplies(bot, -1, -2, ctx(a), ctx(b)))
   )
 
-  case object RuleIntroductionRightImplies extends RuleIntroduction(
+  case object RuleIntroductionRightImplies extends RuleBase(
     *(a) |- *(b),
     ** |- *(a ==> b),
     (bot, ctx) => IndexedSeq(RightImplies(bot, -1, ctx(a), ctx(b)))
   )
 
-  case object RuleIntroductionLeftIff extends RuleIntroduction(
+  case object RuleIntroductionLeftIff extends RuleBase(
     *(a ==> b, b ==> a) |- **,
     *(a <=> b) |- **,
     (bot, ctx) => IndexedSeq(LeftIff(bot, -1, ctx(a), ctx(b)))
   )
 
-  case object RuleIntroductionRightIff extends RuleIntroduction(
+  case object RuleIntroductionRightIff extends RuleBase(
     (** |- *(a ==> b)) :+ (** |- *(b ==> a)),
     ** |- *(a <=> b),
     (bot, ctx) => IndexedSeq(RightIff(bot, -1, -2, ctx(a), ctx(b)))
   )
 
-  case object RuleIntroductionLeftNot extends RuleIntroduction(
+  case object RuleIntroductionLeftNot extends RuleBase(
     ** |- *(a),
     *(!a) |- **,
     (bot, ctx) => IndexedSeq(LeftNot(bot, -1, ctx(a)))
   )
 
-  case object RuleIntroductionRightNot extends RuleIntroduction(
+  case object RuleIntroductionRightNot extends RuleBase(
     *(a) |- **,
     ** |- *(!a),
     (bot, ctx) => IndexedSeq(RightNot(bot, -1, ctx(a)))
   )
 
-  case object RuleIntroductionRightRefl extends RuleIntroduction(
+  case object RuleIntroductionRightRefl extends RuleBase(
     __,
     ** |- *(s === s),
     (bot, ctx) => IndexedSeq(RightRefl(bot, ctx(s) === ctx(s)))
@@ -98,139 +98,139 @@ trait PredefRulesDefinitions extends RuleDefinitions {
 
   // Substitution
 
-  case object RuleIntroductionLeftForall extends RuleIntroduction(
+  case object RuleIntroductionLeftForall extends RuleBase(
     *(p(t)) |- **,
     *(forall(x, p(x))) |- **,
     (bot, ctx) => {
-      val (fBody, fArgs) = ctx.applyMultiary(p)
-      val px = substituteVariables(fBody, Map(fArgs.head -> VariableTerm(ctx(x))))
+      val lambda = ctx.applyMultiary(p)
+      val px = lambda.unsafe(Seq(ctx(x)))
       IndexedSeq(
         LeftForall(bot, -1, px, ctx(x), ctx(t))
       )
     }
   )
 
-  case object RuleIntroductionRightForall extends RuleIntroduction(
+  case object RuleIntroductionRightForall extends RuleBase(
     ** |- *(p(x)),
     ** |- *(forall(x, p(x))),
     { case (bot, ctx) if !(bot.left ++ bot.right).flatMap(_.freeVariables).contains(ctx(x)) =>
       // TODO x not already free in sequent; ideally this should be handled automatically in `Rule`, not here
-      val (fBody, fArgs) = ctx.applyMultiary(p)
-      val px = substituteVariables(fBody, Map(fArgs.head -> VariableTerm(ctx(x))))
+      val lambda = ctx.applyMultiary(p)
+      val px = lambda.unsafe(Seq(ctx(x)))
       IndexedSeq(
         RightForall(bot, -1, px, x)
       )
     }
   )
 
-  case object RuleIntroductionLeftExists extends RuleIntroduction(
+  case object RuleIntroductionLeftExists extends RuleBase(
     *(p(x)) |- **,
     *(exists(x, p(x))) |- **,
     { case (bot, ctx) if !(bot.left ++ bot.right).flatMap(_.freeVariables).contains(ctx(x)) =>
-      val (fBody, fArgs) = ctx.applyMultiary(p)
-      val px = substituteVariables(fBody, Map(fArgs.head -> VariableTerm(ctx(x))))
+      val lambda = ctx.applyMultiary(p)
+      val px = lambda.unsafe(Seq(ctx(x)))
       IndexedSeq(
         LeftExists(bot, -1, px, x)
       )
     }
   )
 
-  case object RuleIntroductionRightExists extends RuleIntroduction(
+  case object RuleIntroductionRightExists extends RuleBase(
     ** |- *(p(t)),
     ** |- *(exists(x, p(x))),
     (bot, ctx) => {
-      val (fBody, fArgs) = ctx.applyMultiary(p)
-      val px = substituteVariables(fBody, Map(fArgs.head -> VariableTerm(ctx(x))))
+      val lambda = ctx.applyMultiary(p)
+      val px = lambda.unsafe(Seq(ctx(x)))
       IndexedSeq(
         RightExists(bot, -1, px, ctx(x), ctx(t))
       )
     }
   )
 
-  case object RuleIntroductionLeftExistsOne extends RuleIntroduction(
+  case object RuleIntroductionLeftExistsOne extends RuleBase(
     *(exists(y, exists(x, (x === y) <=> p(x)))) |- **,
     *(existsOne(x, p(x))) |- **,
     (bot, ctx) => {
       // TODO y not free in p
-      val (fBody, fArgs) = ctx.applyMultiary(p)
-      val px = substituteVariables(fBody, Map(fArgs.head -> VariableTerm(ctx(x))))
+      val lambda = ctx.applyMultiary(p)
+      val px = lambda.unsafe(Seq(ctx(x)))
       ???
     }
   )
 
   // RuleIntroductionLeftExistsOne
 
-  case object RuleIntroductionLeftSubstEq extends RuleIntroduction(
+  case object RuleIntroductionLeftSubstEq extends RuleBase(
     *(p(s)) |- **,
     *(s === t, p(t)) |- **,
     (bot, ctx) => {
-      val (fBody, fArgs) = ctx.applyMultiary(p)
-      val taken = schematicFunctionsOf(fBody).map(_.id)
+      val lambda = ctx.applyMultiary(p)
+      val taken = schematicFunctionsOf(lambda.body).map(_.id)
       val label = SchematicFunctionLabel[0](freshId(taken, "f"))
-      val ps = substituteVariables(fBody, Map(fArgs.head -> label()))
+      val ps = lambda.unsafe(Seq(label()))
       IndexedSeq(
         LeftSubstEq(bot, -1, ctx(s), ctx(t), ps, label)
       )
     }
   )
 
-  case object RuleIntroductionRightSubstEq extends RuleIntroduction(
+  case object RuleIntroductionRightSubstEq extends RuleBase(
     ** |- *(p(s)),
     *(s === t) |- *(p(t)),
     (bot, ctx) => {
-      val (fBody, fArgs) = ctx.applyMultiary(p)
-      val taken = schematicFunctionsOf(fBody).map(_.id)
+      val lambda = ctx.applyMultiary(p)
+      val taken = schematicFunctionsOf(lambda.body).map(_.id)
       val label = SchematicFunctionLabel[0](freshId(taken, "f"))
-      val ps = substituteVariables(fBody, Map(fArgs.head -> label()))
+      val ps = lambda.unsafe(Seq(label()))
       IndexedSeq(
         RightSubstEq(bot, -1, ctx(s), ctx(t), ps, label)
       )
     }
   )
 
-  case object RuleIntroductionLeftSubstIff extends RuleIntroduction(
+  case object RuleIntroductionLeftSubstIff extends RuleBase(
     *(f(a)) |- **,
     *(a <=> b, f(b)) |- **,
     (bot, ctx) => {
-      val (fBody, fArgs) = ctx.applyMultiary(f)
+      val lambda = ctx.applyMultiary(f)
       IndexedSeq(
-        LeftSubstIff(bot, -1, ctx(a), ctx(b), fBody, fArgs.head)
+        LeftSubstIff(bot, -1, ctx(a), ctx(b), lambda.body, lambda.parameters.head)
       )
     }
   )
 
-  case object RuleIntroductionRightSubstIff extends RuleIntroduction(
+  case object RuleIntroductionRightSubstIff extends RuleBase(
     ** |- *(f(a)),
     *(a <=> b) |- *(f(b)),
     (bot, ctx) => {
-      val (fBody, fArgs) = ctx.applyMultiary(f)
+      val lambda = ctx.applyMultiary(f)
       IndexedSeq(
-        RightSubstIff(bot, -1, ctx(a), ctx(b), fBody, fArgs.head)
+        RightSubstIff(bot, -1, ctx(a), ctx(b), lambda.body, lambda.parameters.head)
       )
     }
   )
 
   //
 
-  case object RuleSubstituteRightIff extends RuleIntroduction(
+  case object RuleSubstituteRightIff extends RuleBase(
     (** |- *(f(a))) :+ ($$ |- $(a <=> b)),
     ** |- *(f(b)),
     (bot, ctx) => {
-      val (fBody, fArgs) = ctx.applyMultiary(f)
+      val lambda = ctx.applyMultiary(f)
       IndexedSeq(
-        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), fBody, fArgs.head),
+        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), lambda.body, lambda.parameters.head),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
     }
   )
 
-  case object RuleSubstituteLeftIff extends RuleIntroduction(
+  case object RuleSubstituteLeftIff extends RuleBase(
     (*(f(a)) |- **) :+ ($$ |- $(a <=> b)),
     *(f(b)) |- **,
     (bot, ctx) => {
-      val (fBody, fArgs) = ctx.applyMultiary(f)
+      val lambda = ctx.applyMultiary(f)
       IndexedSeq(
-        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), fBody, fArgs.head),
+        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), lambda.body, lambda.parameters.head),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
     }
@@ -238,19 +238,19 @@ trait PredefRulesDefinitions extends RuleDefinitions {
 
   // Elimination
 
-  case object RuleCut extends RuleElimination(
+  case object RuleCut extends RuleBase(
     (** |- *(a)) :+ (*(a) |- **),
     ** |- **,
     (bot, ctx) => IndexedSeq(Cut(bot, -1, -2, ctx(a)))
   )
 
-  case object RuleEliminationLeftRefl extends RuleElimination(
+  case object RuleEliminationLeftRefl extends RuleBase(
     *(s === s) |- **,
     ** |- **,
     (bot, ctx) => IndexedSeq(LeftRefl(bot, -1, ctx(s) === ctx(s)))
   )
 
-  case object RuleEliminationLeftAnd extends RuleElimination(
+  case object RuleEliminationLeftAnd extends RuleBase(
     *(a /\ b) |- **,
     *(a, b) |- **,
     (bot, ctx) =>
@@ -262,7 +262,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
       )
   )
 
-  case object RuleEliminationRightOr extends RuleElimination(
+  case object RuleEliminationRightOr extends RuleBase(
     ** |- *(a \/ b),
     ** |- *(a, b),
     (bot, ctx) =>
@@ -274,7 +274,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
       )
   )
 
-  case object RuleEliminationRightForallSchema extends RuleElimination(
+  case object RuleEliminationRightForallSchema extends RuleBase(
     ** |- *(forall(x, p(x))),
     ** |- *(p(t)),
     (bot, ctx) => {
@@ -295,7 +295,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     }
   )
 
-  case object RuleModusPonens extends RuleElimination(
+  case object RuleModusPonens extends RuleBase(
     (** |- *(a)) :+ ($(a) |- $(b)),
     ** |- *(b),
     (bot, ctx) => {
@@ -305,7 +305,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     }
   )
 
-  case object RuleIntroductionRightForallSchema extends RuleIntroduction(
+  case object RuleIntroductionRightForallSchema extends RuleBase(
     ** |- *(p(t)),
     ** |- *(forall(x, p(x))),
     (bot, ctx) => {
@@ -325,14 +325,14 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     }
   )
 
-  case object RuleEliminationLeftSubstEq extends RuleElimination(
+  case object RuleEliminationLeftSubstEq extends RuleBase(
     (*(p(s)) |- **) +: (** |- *(s === t)),
     *(p(t)) |- **,
     (bot, ctx) => {
-      val (fBody, fArgs) = ctx.applyMultiary(p)
-      val taken = schematicFunctionsOf(fBody).map(_.id)
+      val lambda = ctx.applyMultiary(p)
+      val taken = schematicFunctionsOf(lambda.body).map(_.id)
       val label = SchematicFunctionLabel[0](freshId(taken, "f"))
-      val ps = substituteVariables(fBody, Map(fArgs.head -> label()))
+      val ps = lambda.unsafe(Seq(label()))
       IndexedSeq(
         LeftSubstEq(bot +< (ctx(s) === ctx(t)), -1, ctx(s), ctx(t), ps, label),
         Cut(bot, -2, 0, ctx(s) === ctx(t))
@@ -340,14 +340,14 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     }
   )
 
-  case object RuleEliminationRightSubstEq extends RuleElimination(
+  case object RuleEliminationRightSubstEq extends RuleBase(
     (** |- *(p(s))) +: (** |- *(s === t)),
     ** |- *(p(t)),
     (bot, ctx) => {
-      val (fBody, fArgs) = ctx.applyMultiary(p)
-      val taken = schematicFunctionsOf(fBody).map(_.id)
+      val lambda = ctx.applyMultiary(p)
+      val taken = schematicFunctionsOf(lambda.body).map(_.id)
       val label = SchematicFunctionLabel[0](freshId(taken, "f"))
-      val ps = substituteVariables(fBody, Map(fArgs.head -> label()))
+      val ps = lambda.unsafe(Seq(label()))
       IndexedSeq(
         RightSubstEq(bot +< (ctx(s) === ctx(t)), -1, ctx(s), ctx(t), ps, label),
         Cut(bot, -2, 0, ctx(s) === ctx(t))
@@ -355,25 +355,25 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     }
   )
 
-  case object RuleEliminationLeftSubstIff extends RuleElimination(
+  case object RuleEliminationLeftSubstIff extends RuleBase(
     (*(f(a)) |- **) +: (** |- *(a <=> b)),
     *(f(b)) |- **,
     (bot, ctx) => {
-      val (fBody, fArgs) = ctx.applyMultiary(f)
+      val lambda = ctx.applyMultiary(f)
       IndexedSeq(
-        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), fBody, fArgs.head),
+        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), lambda.body, lambda.parameters.head),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
     }
   )
 
-  case object RuleEliminationRightSubstIff extends RuleElimination(
+  case object RuleEliminationRightSubstIff extends RuleBase(
     (** |- *(f(a))) +: (** |- *(a <=> b)),
     ** |- *(f(b)),
     (bot, ctx) => {
-      val (fBody, fArgs) = ctx.applyMultiary(f)
+      val lambda = ctx.applyMultiary(f)
       IndexedSeq(
-        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), fBody, fArgs.head),
+        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), lambda.body, lambda.parameters.head),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
     }

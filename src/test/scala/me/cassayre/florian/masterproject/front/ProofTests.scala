@@ -30,84 +30,84 @@ class ProofTests extends AnyFunSuite {
   test("introduction rules") {
     checkProofs(
       Proof(
-        (a(), b /\ c) |- (b /\ c, b())
+        (a, b /\ c) |- (b /\ c, b)
       )(
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(1)(0)),
+        RuleHypothesis(RuleParameters().withIndices(0)(1)(0)),
       ),
       Proof(
-        (a /\ b) |- a()
+        (a /\ b) |- a
       )(
         RuleIntroductionLeftAnd(),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
+        RuleHypothesis(RuleParameters().withIndices(0)(0)(0)),
       ),
       Proof(
-        (a(), b()) |- (a /\ b)
+        (a, b) |- (a /\ b)
       )(
-        RuleIntroductionRightAnd(RuleBackwardParametersBuilder.withIndices()(0)),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(1)(0)),
+        RuleIntroductionRightAnd(RuleParameters().withIndices(0)()(0)),
+        RuleHypothesis(RuleParameters().withIndices(0)(0)(0)),
+        RuleHypothesis(RuleParameters().withIndices(0)(1)(0)),
       ),
       Proof(
-        (a \/ b) |- (a(), b())
+        (a \/ b) |- (a, b)
       )(
-        RuleIntroductionLeftOr(RuleBackwardParametersBuilder.withIndices(0)()),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(1)),
+        RuleIntroductionLeftOr(RuleParameters().withIndices(0)(0)()),
+        RuleHypothesis(RuleParameters().withIndices(0)(0)(0)),
+        RuleHypothesis(RuleParameters().withIndices(0)(0)(1)),
       ),
       Proof(
-        a() |- (a \/ b)
+        a |- (a \/ b)
       )(
-        RuleIntroductionRightOr(RuleBackwardParametersBuilder.withIndices()(0)),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
+        RuleIntroductionRightOr(RuleParameters().withIndices(0)()(0)),
+        RuleHypothesis(RuleParameters().withIndices(0)(0)(0)),
       ),
       Proof(
-        (a ==> b, a()) |- b()
+        (a ==> b, a) |- b
       )(
-        RuleIntroductionLeftImplies(RuleBackwardParametersBuilder.withIndices(0)()),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(1)),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(1)(0)),
+        RuleIntroductionLeftImplies(RuleParameters().withIndices(0)(0)()),
+        RuleHypothesis(RuleParameters().withIndices(0)(0)(1)),
+        RuleHypothesis(RuleParameters().withIndices(0)(1)(0)),
       ),
       Proof(
         () |- (a ==> a)
       )(
-        RuleIntroductionRightImplies(RuleBackwardParametersBuilder.withIndices()(0)),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
+        RuleIntroductionRightImplies(RuleParameters().withIndices(0)()(0)),
+        RuleHypothesis(RuleParameters().withIndices(0)(0)(0)),
       ),
       Proof(
         (a <=> b) |- (b ==> a)
       )(
-        RuleIntroductionLeftIff(RuleBackwardParametersBuilder.withIndices(0)()),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(1)(0)),
+        RuleIntroductionLeftIff(RuleParameters().withIndices(0)(0)()),
+        RuleHypothesis(RuleParameters().withIndices(0)(1)(0)),
       ),
       Proof(
         (a ==> b, b ==> a) |- (a <=> b)
       )(
-        RuleIntroductionRightIff(RuleBackwardParametersBuilder.withIndices()(0)),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(1)(0)),
+        RuleIntroductionRightIff(RuleParameters().withIndices(0)()(0)),
+        RuleHypothesis(RuleParameters().withIndices(0)(0)(0)),
+        RuleHypothesis(RuleParameters().withIndices(0)(1)(0)),
       ),
       Proof(
-        (a(), !a) |- b()
+        (a, !a) |- b
       )(
-        RuleIntroductionLeftNot(RuleBackwardParametersBuilder.withIndices(1)()),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(1)), // FIXME shouldn't it be 0?
+        RuleIntroductionLeftNot(RuleParameters().withIndices(0)(1)()),
+        RuleHypothesis(RuleParameters().withIndices(0)(0)(1)), // FIXME shouldn't it be 0?
       ),
       Proof(
-        () |- (!a, a())
+        () |- (!a, a)
       )(
-        RuleIntroductionRightNot(RuleBackwardParametersBuilder.withIndices()(0)),
-        RuleHypothesis(RuleBackwardParametersBuilder.withIndices(0)(0)),
+        RuleIntroductionRightNot(RuleParameters().withIndices(0)()(0)),
+        RuleHypothesis(RuleParameters().withIndices(0)(0)(0)),
       ),
       Proof(
         () |- (t === t)
       )(
-        RuleEliminationLeftRefl(RuleBackwardParametersBuilder.withFunction(Notations.s, t)),
+        RuleEliminationLeftRefl(RuleParameters().withFunction(Notations.s, t)),
         RuleHypothesis(),
       ),
       Proof(
         () |- (t === t)
       )(
-        RuleIntroductionRightRefl(RuleBackwardParametersBuilder.withFunction(Notations.s, t)),
+        RuleIntroductionRightRefl(RuleParameters().withFunction(Notations.s, t)),
       ),
     )
   }
@@ -118,27 +118,27 @@ class ProofTests extends AnyFunSuite {
         forall(x, u === x) |- (u === s)
       )(
         RuleIntroductionLeftForall(
-          RuleBackwardParametersBuilder
+          RuleParameters()
             .withPredicate(Notations.p, x => u === x)
             .withFunction(Notations.t, s)
         ),
         RuleHypothesis(),
       ),
       Proof(
-        a() |- forall(x, (u === x) \/ a)
+        a |- forall(x, (u === x) \/ a)
       )(
         RuleIntroductionRightForall(
-          RuleBackwardParametersBuilder
+          RuleParameters()
             .withPredicate(Notations.p, x => (u === x) \/ a)
         ),
         RuleIntroductionRightOr(),
         RuleHypothesis(),
       ),
       Proof(
-        exists(x, (s === x) /\ a) |- a()
+        exists(x, (s === x) /\ a) |- a
       )(
         RuleIntroductionLeftExists(
-          RuleBackwardParametersBuilder
+          RuleParameters()
             .withPredicate(Notations.p, x => (s === x) /\ a)
         ),
         RuleIntroductionLeftAnd(),
@@ -148,7 +148,7 @@ class ProofTests extends AnyFunSuite {
         (s === t) |- exists(x, s === x)
       )(
         RuleIntroductionRightExists(
-          RuleBackwardParametersBuilder
+          RuleParameters()
             .withPredicate(Notations.p, s === _)
             .withFunction(Notations.t, t)
         ),
@@ -158,7 +158,7 @@ class ProofTests extends AnyFunSuite {
         (s === t, u === t) |- (u === s)
       )(
         RuleIntroductionLeftSubstEq(
-          RuleBackwardParametersBuilder
+          RuleParameters()
             .withPredicate(Notations.p, u === _)
         ),
         RuleHypothesis(),
@@ -167,7 +167,7 @@ class ProofTests extends AnyFunSuite {
         (s === t, u === s) |- (u === t)
       )(
         RuleIntroductionRightSubstEq(
-          RuleBackwardParametersBuilder
+          RuleParameters()
             .withPredicate(Notations.p, u === _)
         ),
         RuleHypothesis(),
@@ -176,7 +176,7 @@ class ProofTests extends AnyFunSuite {
         (a <=> b, c <=> b) |- (c <=> a)
       )(
         RuleIntroductionLeftSubstIff(
-          RuleBackwardParametersBuilder
+          RuleParameters()
             .withConnector(Notations.f, c <=> _)
         ),
         RuleHypothesis(),
@@ -185,7 +185,7 @@ class ProofTests extends AnyFunSuite {
         (a <=> b, c <=> a) |- (c <=> b)
       )(
         RuleIntroductionRightSubstIff(
-          RuleBackwardParametersBuilder
+          RuleParameters()
             .withConnector(Notations.f, c <=> _)
         ),
         RuleHypothesis(),
@@ -201,7 +201,7 @@ class ProofTests extends AnyFunSuite {
         (s === t) |- (t === s)
       )(
         RuleEliminationLeftSubstIff(
-          RuleBackwardParametersBuilder
+          RuleParameters()
             .withConnector(Notations.f, identity)
             .withPredicate(Notations.a, t === s)
             .withPredicate(Notations.b, s === t)
@@ -214,7 +214,7 @@ class ProofTests extends AnyFunSuite {
         (s === t) |- (t === s)
       )(
         RuleEliminationRightSubstIff(
-          RuleBackwardParametersBuilder
+          RuleParameters()
             .withConnector(Notations.f, identity)
             .withPredicate(Notations.a, s === t)
             .withPredicate(Notations.b, t === s)
@@ -227,7 +227,7 @@ class ProofTests extends AnyFunSuite {
         (s === t, t === u) |- (s === u)
       )(
         RuleEliminationLeftSubstEq(
-          RuleBackwardParametersBuilder
+          RuleParameters()
             .withPredicate(Notations.p, _ === u)
             .withFunction(Notations.s, s)
             .withFunction(Notations.t, t)
@@ -239,7 +239,7 @@ class ProofTests extends AnyFunSuite {
         (s === t, t === u) |- (s === u)
       )(
         RuleEliminationRightSubstEq(
-          RuleBackwardParametersBuilder
+          RuleParameters()
             .withPredicate(Notations.p, _ === u)
             .withFunction(Notations.s, t)
             .withFunction(Notations.t, s)

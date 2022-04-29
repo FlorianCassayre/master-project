@@ -10,6 +10,23 @@ import me.cassayre.florian.masterproject.front.{*, given}
 
   given ProofEnvironment = newEmptyEnvironment()
 
+  val thmAndAssoc1 = {
+    val p = ProofMode(a |- b ==> (a /\ b))
+
+    p.apply(introRImp)
+    p.apply(introRAnd)
+    p.apply(introHypo)
+    p.apply(introHypo)
+
+    val thm = p.asTheorem()
+  }
+  val thmAndAssoc12 = {
+    val t1 = introHypo(RuleParameters().withPredicate(Notations.a, a())).get
+    val t2 = introHypo(RuleParameters().withPredicate(Notations.a, b())).get
+    val t3 = introRAnd(t1, t2).get
+    val thm = introRImp(t3).get
+    println(thm)
+  }
   val thmAndAssoc = {
     val proofMode = ProofMode(((x /\ y) /\ z) |- (x /\ (y /\ z)))
     import proofMode.*
@@ -74,7 +91,7 @@ import me.cassayre.florian.masterproject.front.{*, given}
     import proofMode.*
 
     apply(RuleIntroductionRightForallSchema(
-      RuleBackwardParametersBuilder
+      RuleParameters()
         .withPredicate(Notations.p, x => x === x)
         .withFunction(Notations.t, s())
     ))

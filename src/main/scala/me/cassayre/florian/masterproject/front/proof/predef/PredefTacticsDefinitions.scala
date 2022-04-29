@@ -60,41 +60,37 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
   }
 
   extension (theorem: Theorem) {
-    def apply(f: SchematicFunctionLabel[?], r: Term, args: Seq[VariableLabel]): Option[Theorem] = {
-      if(args.size == f.arity && args.distinct == args) {
-        val map: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])] = Map(f -> (r, args))
-        val replaced = Sequent(
-          theorem.sequent.left.map(formula => instantiateFunctionSchemas(formula, map)),
-          theorem.sequent.right.map(formula => instantiateFunctionSchemas(formula, map))
-        )
-        val scProof = SCProof(
-          IndexedSeq(
-            InstFunSchema(replaced, -1, f, r, args.map(toKernel))
-          ),
-          IndexedSeq(sequentToKernel(theorem.sequent))
-        )
-        Some(theorem.environment.mkTheorem(replaced, scProof, IndexedSeq(theorem)))
-      } else {
-        None
-      }
+    def apply(f: SchematicFunctionLabel[?], r: Term, args: Seq[SchematicFunctionLabel[0]]): Option[Theorem] = {
+      val map: Seq[AssignedFunction] = Seq(AssignedFunction.unsafe(f, LambdaFunction.unsafe(args, r)))
+      val replaced = Sequent(
+        theorem.sequent.left.map(formula => instantiateFormulaSchemas(formula, functions = map)),
+        theorem.sequent.right.map(formula => instantiateFormulaSchemas(formula, functions = map))
+      )
+      val scProof = SCProof(
+        IndexedSeq(
+          InstFunSchema(replaced, -1, f, r, ???) // args.map(toKernel)
+        ),
+        IndexedSeq(sequentToKernel(theorem.sequent))
+      )
+      Some(theorem.environment.mkTheorem(replaced, scProof, IndexedSeq(theorem)))
     }
-    def apply[N <: Arity](f: SchematicFunctionLabel[N], r: FillArgs[VariableLabel, N] => Term): Theorem = {
-      val (args, term) = fillTupleParameters(VariableLabel.apply, f.arity, r)
+    def apply[N <: Arity](f: SchematicFunctionLabel[N], r: FillArgs[SchematicFunctionLabel[0], N] => Term): Theorem = {
+      val (args, term) = fillTupleParameters(SchematicFunctionLabel.apply[0], f.arity, r)
       val argsSeq = args.toSeq
       apply(f, term, argsSeq).get // Never fails by assumption
     }
     def apply(f: SchematicFunctionLabel[0], r: Term): Theorem =
       apply[0](f, EmptyTuple => r)
-    def apply(f: SchematicPredicateLabel[?], r: Formula, args: Seq[VariableLabel]): Option[Theorem] = {
+    def apply(f: SchematicPredicateLabel[?], r: Formula, args: Seq[SchematicFunctionLabel[0]]): Option[Theorem] = {
       if(args.size == f.arity && args.distinct == args) {
-        val map: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])] = Map(f -> (r, args))
+        val map: Seq[AssignedPredicate] = Seq(AssignedPredicate.unsafe(f, LambdaPredicate.unsafe(args, r)))
         val replaced = Sequent(
-          theorem.sequent.left.map(formula => instantiatePredicateSchemas(formula, map)),
-          theorem.sequent.right.map(formula => instantiatePredicateSchemas(formula, map))
+          theorem.sequent.left.map(formula => instantiateFormulaSchemas(formula, predicates = map)),
+          theorem.sequent.right.map(formula => instantiateFormulaSchemas(formula, predicates = map))
         )
         val scProof = SCProof(
           IndexedSeq(
-            InstPredSchema(replaced, -1, f, r, args.map(toKernel))
+            InstPredSchema(replaced, -1, f, r, ???) // args.map(toKernel)
           ),
           IndexedSeq(sequentToKernel(theorem.sequent))
         )
@@ -103,8 +99,8 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
         None
       }
     }
-    def apply[N <: Arity](f: SchematicPredicateLabel[N], r: FillArgs[VariableLabel, N] => Formula): Theorem = {
-      val (args, formula) = fillTupleParameters(VariableLabel.apply, f.arity, r)
+    def apply[N <: Arity](f: SchematicPredicateLabel[N], r: FillArgs[SchematicFunctionLabel[0], N] => Formula): Theorem = {
+      val (args, formula) = fillTupleParameters(SchematicFunctionLabel.apply[0], f.arity, r)
       val argsSeq = args.toSeq
       apply(f, formula, argsSeq).get // ditto
     }

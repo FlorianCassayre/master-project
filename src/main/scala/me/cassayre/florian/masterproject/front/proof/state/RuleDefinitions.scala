@@ -10,117 +10,43 @@ import scala.collection.View
 trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils {
 
   type ReconstructRule = PartialFunction[(lisa.kernel.proof.SequentCalculus.Sequent, Unifier.UnificationContext), IndexedSeq[SCProofStep]]
-
-  sealed abstract class CommonRuleParameters {
-    protected type T <: CommonRuleParameters
-
-    val selectors: Map[Int, SequentSelector]
-    val functions: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])]
-    val predicates: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])]
-    val connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])]
-    val variables: Map[VariableLabel, VariableLabel]
-
-    def withFunction[N <: Arity](
-      label: SchematicFunctionLabel[N], value: Term, parameters: FillArgs[VariableLabel, N]
-    ): T
-    final def withFunction[N <: Arity](
-      label: SchematicFunctionLabel[N], f: FillArgs[VariableLabel, N] => Term
-    ): T = {
-      val (parameters, value) = fillTupleParametersFunction(label.arity, f)
-      withFunction(label, value, parameters)
-    }
-    final def withFunction(label: SchematicFunctionLabel[0], value: Term): T =
-      withFunction(label, value, EmptyTuple)
-    def withPredicate[N <: Arity](
-      label: SchematicPredicateLabel[N], value: Formula, parameters: FillArgs[VariableLabel, N]
-    ): T
-    final def withPredicate[N <: Arity](
-      label: SchematicPredicateLabel[N], f: FillArgs[VariableLabel, N] => Formula
-    ): T = {
-      val (parameters, value) = fillTupleParametersPredicate(label.arity, f)
-      withPredicate(label, value, parameters)
-    }
-    final def withPredicate(label: SchematicPredicateLabel[0], value: Formula): T =
-      withPredicate(label, value, EmptyTuple)
-    protected def withConnectorInternal[N <: Arity](
-      label: SchematicConnectorLabel[N], value: Formula, parameters: FillArgs[SchematicPredicateLabel[0], N]
-    ): T
-    final def withConnector[N <: Arity](
-      label: SchematicConnectorLabel[N], value: Formula, parameters: FillArgs[SchematicPredicateLabel[0], N]
-    ): T = {
-      require(label.arity > 0, "For consistency, use nullary predicate schemas instead of connectors")
-      withConnectorInternal(label, value, parameters)
-    }
-    final def withConnector[N <: Arity](
-      label: SchematicConnectorLabel[N], f: FillArgs[SchematicPredicateLabel[0], N] => Formula
-    ): T = {
-      val (parameters, value) = fillTupleParametersConnector(label.arity, f)
-      withConnector(label, value, parameters)
-    }
-    def withVariables(label: VariableLabel, value: VariableLabel): T
-  }
-
   type SequentSelector = (IndexedSeq[Int], IndexedSeq[Int])
 
-  case class RuleBackwardParameters(
-    selector: SequentSelector = (IndexedSeq.empty, IndexedSeq.empty),
-    functions: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])] = Map.empty,
-    predicates: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])] = Map.empty,
-    connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])] = Map.empty,
-    variables: Map[VariableLabel, VariableLabel] = Map.empty,
-  ) extends CommonRuleParameters {
-    override type T = RuleBackwardParameters
-
-    override val selectors: Map[Int, SequentSelector] = Map(0 -> selector)
-
-    def withIndices(left: Int*)(right: Int*): RuleBackwardParameters =
-      copy(selector = (left.toIndexedSeq, right.toIndexedSeq))
-    override def withFunction[N <: Arity](
-      label: SchematicFunctionLabel[N], value: Term, parameters: FillArgs[VariableLabel, N]
-    ): RuleBackwardParameters =
-      copy(functions = functions + (label -> (value, parameters.toSeq)))
-    override def withPredicate[N <: Arity](
-      label: SchematicPredicateLabel[N], value: Formula, parameters: FillArgs[VariableLabel, N]
-    ): RuleBackwardParameters =
-      copy(predicates = predicates + (label -> (value, parameters.toSeq)))
-    override protected def withConnectorInternal[N <: Arity](
-      label: SchematicConnectorLabel[N], value: Formula, parameters: FillArgs[SchematicPredicateLabel[0], N]
-    ): RuleBackwardParameters =
-      copy(connectors = connectors + (label -> (value, parameters.toSeq)))
-    override def withVariables(label: VariableLabel, value: VariableLabel): RuleBackwardParameters =
-      copy(variables = variables + (label -> value))
-  }
-  val RuleBackwardParametersBuilder: RuleBackwardParameters = RuleBackwardParameters()
-
-  case class RuleForwardParameters(
+  case class RuleParameters(
     selectors: Map[Int, SequentSelector] = Map.empty,
-    functions: Map[SchematicFunctionLabel[?], (Term, Seq[VariableLabel])] = Map.empty,
-    predicates: Map[SchematicPredicateLabel[?], (Formula, Seq[VariableLabel])] = Map.empty,
-    connectors: Map[SchematicConnectorLabel[?], (Formula, Seq[SchematicPredicateLabel[0]])] = Map.empty,
+    functions: Seq[AssignedFunction] = Seq.empty,
+    predicates: Seq[AssignedPredicate] = Seq.empty,
+    connectors: Seq[AssignedConnector] = Seq.empty,
     variables: Map[VariableLabel, VariableLabel] = Map.empty,
-  ) extends CommonRuleParameters {
-    override type T = RuleForwardParameters
-
-    def withIndices(i: Int)(left: Int*)(right: Int*): RuleForwardParameters = {
+  ) {
+    def withIndices(i: Int)(left: Int*)(right: Int*): RuleParameters = {
       val pair = (left.toIndexedSeq, right.toIndexedSeq)
       copy(selectors = selectors + (i -> pair))
     }
-    override def withFunction[N <: Arity](
-      label: SchematicFunctionLabel[N], value: Term, parameters: FillArgs[VariableLabel, N]
-    ): RuleForwardParameters =
-      copy(functions = functions + (label -> (value, parameters.toSeq)))
-    override def withPredicate[N <: Arity](
-      label: SchematicPredicateLabel[N], value: Formula, parameters: FillArgs[VariableLabel, N]
-    ): RuleForwardParameters =
-      copy(predicates = predicates + (label -> (value, parameters.toSeq)))
-    override protected def withConnectorInternal[N <: Arity](
-      label: SchematicConnectorLabel[N], value: Formula, parameters: FillArgs[SchematicPredicateLabel[0], N]
-    ): RuleForwardParameters =
-      copy(connectors = connectors + (label -> (value, parameters.toSeq)))
-    override def withVariables(label: VariableLabel, value: VariableLabel): RuleForwardParameters =
+
+    def withFunction[N <: Arity](
+      label: SchematicFunctionLabel[N], f: FillArgs[SchematicFunctionLabel[0], N] => Term
+    )(using ValueOf[N]): RuleParameters =
+      copy(functions = functions :+ AssignedFunction(label, LambdaFunction[N](f)))
+    def withFunction(label: SchematicFunctionLabel[0], value: Term): RuleParameters =
+      withFunction(label, _ => value)
+
+    def withPredicate[N <: Arity](
+      label: SchematicPredicateLabel[N], f: FillArgs[SchematicFunctionLabel[0], N] => Formula
+    )(using ValueOf[N]): RuleParameters = copy(predicates = predicates :+ AssignedPredicate(label, LambdaPredicate(f)))
+    def withPredicate(label: SchematicPredicateLabel[0], value: Formula): RuleParameters =
+      withPredicate(label, _ => value)
+
+    def withConnector[N <: Arity](
+      label: SchematicConnectorLabel[N], f: FillArgs[SchematicPredicateLabel[0], N] => Formula
+    )(using ValueOf[N]): RuleParameters = {
+      require(label.arity > 0, "For consistency, use nullary predicate schemas instead of connectors")
+      copy(connectors = connectors :+ AssignedConnector(label, LambdaConnector(f)))
+    }
+
+    def withVariables(label: VariableLabel, value: VariableLabel): RuleParameters =
       copy(variables = variables + (label -> value))
   }
-  val RuleForwardParametersBuilder: RuleForwardParameters = RuleForwardParameters()
 
   protected def matchIndices(map: Map[Int, SequentSelector], patterns: IndexedSeq[PartialSequent], values: IndexedSeq[Sequent]): View[IndexedSeq[SequentSelector]] = {
     require(patterns.size == values.size)
@@ -176,7 +102,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     }
 
     def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
-      formulas.map(formula => instantiateSchemas(formula, ctx.functions, ctx.predicates, ctx.connectors))
+      formulas.map(formula => instantiateFormulaSchemas(formula, functions = ctx.assignedFunctions, predicates = ctx.assignedPredicates, connectors = ctx.assignedConnectors))
 
     def createValueTo(common: IndexedSeq[Formula], pattern: IndexedSeq[Formula], partial: Boolean): IndexedSeq[Formula] = {
       val instantiated = instantiate(pattern)
@@ -202,7 +128,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
   }
 
   protected def applyRuleInference(
-    parameters: CommonRuleParameters,
+    parameters: RuleParameters,
     patternsFrom: IndexedSeq[PartialSequent],
     patternsTo: IndexedSeq[PartialSequent],
     valuesFrom: IndexedSeq[Sequent],
@@ -234,9 +160,9 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     val ruleConnectors = allPartialFormulas.flatMap(schematicConnectorsOfSequent).toSet ++ extraConnectors
     assert(ruleConnectors.forall(_.arity > 0))
 
-    val parametersFunctions = parameters.functions.keySet
-    val parametersPredicates = parameters.predicates.keySet
-    val parametersConnectors = parameters.connectors.keySet
+    val parametersFunctions = parameters.functions.map(_.schema).toSet
+    val parametersPredicates = parameters.predicates.map(_.schema).toSet
+    val parametersConnectors = parameters.connectors.map(_.schema).toSet
 
     lazy val isExactlyParametrized =
       ruleFunctions == parametersFunctions &&
@@ -245,14 +171,14 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
 
     // 0. Assignments should be well-formed (arity matches, arguments are distinct, body is well formed, no free variables or schematic connectors)
     lazy val noMalformedAssignment =
-      parameters.functions.forall { case (label, (t, args)) =>
-        label.arity == args.size && args.distinct == args && isWellFormed(t) && freeVariablesOf(t).subsetOf(args.toSet)
+      parameters.functions.forall { case AssignedFunction(label, LambdaFunction(args, t)) =>
+        isWellFormed(t) && freeVariablesOf(t).isEmpty
       } &&
-        parameters.predicates.forall { case (label, (f, args)) =>
-          label.arity == args.size && args.distinct == args && isWellFormed(f) && freeVariablesOf(f).subsetOf(args.toSet) && schematicConnectorsOf(f).isEmpty
+        parameters.predicates.forall { case AssignedPredicate(label, LambdaPredicate(args, f)) =>
+          isWellFormed(f) && freeVariablesOf(f).isEmpty && schematicConnectorsOf(f).isEmpty
         } &&
-        parameters.connectors.forall { case (label, (f, args)) =>
-          label.arity == args.size && args.distinct == args && isWellFormed(f) && freeVariablesOf(f).isEmpty && schematicConnectorsOf(f).isEmpty
+        parameters.connectors.forall { case AssignedConnector(label, LambdaConnector(args, f)) =>
+          isWellFormed(f) && freeVariablesOf(f).isEmpty && schematicConnectorsOf(f).isEmpty
         }
     // 1. All the parameters must be declared symbols
     lazy val noUnknownSymbols =
@@ -276,42 +202,46 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
       // What we do is to temporarily rename pattern schemas so that they don't collide
       // Then we force-assign the value schemas themselves, and at the end we rename the keys of the mapping
       val functionsInBodies = (
-        parameters.functions.values.flatMap { case (t, _) => schematicFunctionsOf(t) } ++
-          parameters.predicates.values.flatMap { case (f, _) => schematicFunctionsOf(f) } ++
-          parameters.connectors.values.flatMap { case (f, _) => schematicFunctionsOf(f) }).toSet
+        parameters.functions.flatMap(a => schematicFunctionsOf(a.lambda.body)) ++
+          parameters.predicates.flatMap(a => schematicFunctionsOf(a.lambda.body)) ++
+          parameters.connectors.flatMap(a => schematicFunctionsOf(a.lambda.body))).toSet
       val predicatesInBodies = (
-        parameters.predicates.values.flatMap { case (f, _) => schematicPredicatesOf(f) } ++
-          parameters.connectors.values.flatMap { case (f, _) => schematicPredicatesOf(f) }).toSet
+        parameters.predicates.flatMap(a => schematicPredicatesOf(a.lambda.body)) ++
+          parameters.connectors.flatMap(a => schematicPredicatesOf(a.lambda.body))).toSet
       val patternFunctionsToRename = ruleFunctions.intersect(functionsInBodies)
       val patternPredicatesToRename = rulePredicates.intersect(predicatesInBodies)
-      val (_, functionsMapping) = patternFunctionsToRename.foldLeft(((ruleFunctions ++ functionsInBodies).map(_.id), Map.empty[SchematicFunctionLabel[?], SchematicFunctionLabel[?]])) {
+      val (_, functionsMapping) = patternFunctionsToRename.foldLeft(((ruleFunctions ++ functionsInBodies).map(_.id), Seq.empty[RenamedFunctionSchema])) {
         case ((taken, map), f) =>
           val newId = freshId(taken, f.id)
           val newSchema = SchematicFunctionLabel.unsafe(newId, f.arity)
-          (taken + newId, map + (f -> newSchema))
+          (taken + newId, map :+ RenamedLabel.unsafe(f, newSchema))
       }
-      val (_, predicatesMapping) = patternPredicatesToRename.foldLeft(((rulePredicates ++ predicatesInBodies).map(_.id), Map.empty[SchematicPredicateLabel[?], SchematicPredicateLabel[?]])) {
+      val functionsMappingMap: Map[SchematicFunctionLabel[?], SchematicFunctionLabel[?]] = functionsMapping.map(r => r.from -> r.to).toMap
+      val (_, predicatesMapping) = patternPredicatesToRename.foldLeft(((rulePredicates ++ predicatesInBodies).map(_.id), Seq.empty[RenamedPredicateSchema])) {
         case ((taken, map), f) =>
           val newId = freshId(taken, f.id)
           val newSchema = SchematicPredicateLabel.unsafe(newId, f.arity)
-          (taken + newId, map + (f -> newSchema))
+          (taken + newId, map :+ RenamedLabel.unsafe(f, newSchema))
       }
+      val predicatesMappingMap: Map[SchematicPredicateLabel[?], SchematicPredicateLabel[?]] = predicatesMapping.map(r => r.from -> r.to).toMap
       def instantiatePatternsMappings(patterns: IndexedSeq[PartialSequent]): IndexedSeq[PartialSequent] =
         patterns.map(partial =>
           partial.copy(
-            left = partial.left.map(renameSchemas(_, functionsMapping, predicatesMapping, Map.empty, Map.empty, Map.empty, Map.empty)),
-            right = partial.right.map(renameSchemas(_, functionsMapping, predicatesMapping, Map.empty, Map.empty, Map.empty, Map.empty)),
+            left = partial.left.map(instantiateFormulaSchemas(_, functions = functionsMapping.map(_.toAssignment), predicates = predicatesMapping.map(_.toAssignment))),
+            right = partial.right.map(instantiateFormulaSchemas(_, functions = functionsMapping.map(_.toAssignment), predicates = predicatesMapping.map(_.toAssignment))),
           )
         )
           .map { partial =>
             def instantiate(seq: IndexedSeq[Formula]): IndexedSeq[Formula] =
-              seq.map(instantiateSchemas(_, parameters.functions, parameters.predicates, parameters.connectors))
+              seq.map(instantiateFormulaSchemas(_, functions = parameters.functions, predicates = parameters.predicates, connectors = parameters.connectors))
             partial.copy(left = instantiate(partial.left), right = instantiate(partial.right))
           }
       val patternFromRenamedInstantiated = instantiatePatternsMappings(patternsFrom)
       val patternToRenamedInstantiated = instantiatePatternsMappings(patternsTo)
 
       val (reverseFunctionsMapping, reversePredicatesMapping) = (functionsMapping.map(_.swap), predicatesMapping.map(_.swap))
+      val (reverseFunctionsMappingMap, reversePredicatesMappingMap) =
+        (reverseFunctionsMapping.map(r => r.from -> r.to).toMap.asInstanceOf[Map[SchematicFunctionLabel[?], SchematicFunctionLabel[?]]], reversePredicatesMapping.map(r => r.from -> r.to).toMap.asInstanceOf[Map[SchematicPredicateLabel[?], SchematicPredicateLabel[?]]])
 
       val formulaPatternsFrom = patternFromRenamedInstantiated.flatMap(p => p.left ++ p.right)
 
@@ -320,9 +250,9 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
           indicesLeft.map(valueLeft) ++ indicesRight.map(valueRight)
         }
         val initialContext = Unifier.UnificationContext(
-          parameters.predicates.map { case (k, v) => predicatesMapping.getOrElse(k, k) -> v },
-          parameters.functions.map { case (k, v) => functionsMapping.getOrElse(k, k) -> v },
-          parameters.connectors,
+          parameters.predicates.map(a => predicatesMappingMap.getOrElse(a.schema, a.schema) -> a.lambda).toMap,
+          parameters.functions.map(a => functionsMappingMap.getOrElse(a.schema, a.schema) -> a.lambda).toMap,
+          parameters.connectors.map(a => a.schema -> a.lambda).toMap,
           Map.empty,
         )
         Unifier.unifyAllFormulas(formulaPatternsFrom, formulaValueFrom, initialContext) match {
@@ -330,8 +260,8 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
 
             // We safely restore the original schema names, recursively
             val newCtx = Unifier.UnificationContext(
-              ctxRenamed.predicates.map { case (k, v) => reversePredicatesMapping.getOrElse(k, k) -> v },
-              ctxRenamed.functions.map { case (k, v) => reverseFunctionsMapping.getOrElse(k, k) -> v },
+              ctxRenamed.predicates.map { case (k, v) => reversePredicatesMappingMap.getOrElse(k, k) -> v },
+              ctxRenamed.functions.map { case (k, v) => reverseFunctionsMappingMap.getOrElse(k, k) -> v },
               ctxRenamed.connectors,
               ctxRenamed.variables,
             )
@@ -347,7 +277,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     }
   }
 
-  case class RuleTactic private[RuleDefinitions](rule: Rule, parameters: RuleBackwardParameters) extends TacticGoalFunctional {
+  case class RuleTactic private[RuleDefinitions](rule: Rule, parameters: RuleParameters) extends TacticGoalFunctional {
     override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
       applyRuleInference(parameters, IndexedSeq(rule.conclusion), rule.hypotheses, IndexedSeq(proofGoal), Set.empty, Set.empty, Set.empty).flatMap {
         case (newGoals, ctx) =>
@@ -377,20 +307,20 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
 
     require(isLegalPatterns(hypotheses) && isLegalPatterns(IndexedSeq(conclusion)))
 
-    final def apply(parameters: RuleBackwardParameters = RuleBackwardParametersBuilder): RuleTactic =
+    final def apply(parameters: RuleParameters = RuleParameters()): RuleTactic =
       RuleTactic(this, parameters)
 
     final def apply(justification0: Justified, rest: Justified*): Option[Theorem] =
-      apply(RuleForwardParametersBuilder)((justification0 +: rest): _*)(using justification0.environment)
-    /*final def apply(parameters: RuleForwardParameters)(justification0: Justified, rest: Justified*): Option[Theorem] = {
+      apply(RuleParameters())((justification0 +: rest): _*)(using justification0.environment)
+    /*final def apply(parameters: RuleParameters)(justification0: Justified, rest: Justified*): Option[Theorem] = {
       val env = justification0.environment
       val justifications = justification0 +: rest
       apply(parameters)(justifications: _*)(using env)
     }*/
-    final def apply(parameters: RuleForwardParameters)(using env: ProofEnvironment): Option[Theorem] =
+    final def apply(parameters: RuleParameters)(using env: ProofEnvironment): Option[Theorem] =
       apply(parameters)()
 
-    final def apply(parameters: RuleForwardParameters)(justifications: Justified*)(using env: ProofEnvironment): Option[Theorem] = {
+    final def apply(parameters: RuleParameters)(justifications: Justified*)(using env: ProofEnvironment): Option[Theorem] = {
       val justificationsSeq = justifications.toIndexedSeq
       val topSequents = justificationsSeq.map(_.sequent)
       applyRuleInference(parameters, hypotheses, IndexedSeq(conclusion), topSequents, Set.empty, Set.empty, Set.empty).flatMap {
@@ -404,8 +334,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     }
   }
 
-  class RuleIntroduction(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
-  class RuleElimination(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
+  class RuleBase(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
 
   given Conversion[Rule, RuleTactic] = _()
 

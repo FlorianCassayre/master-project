@@ -95,9 +95,9 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
         case _ => false
       }
       def instantiateTerm(term: Term, assignment: UnificationContext): Term =
-        instantiateSchemas2(unsafeRenameVariables(term, assignment.variables), assignment.assignedFunctions)
+        instantiateTermSchemas(unsafeRenameVariables(term, assignment.variables), assignment.assignedFunctions)
       def instantiateFormula(formula: Formula, assignment: UnificationContext): Formula =
-        instantiateSchemas2(unsafeRenameVariables(formula, assignment.variables), assignment.assignedFunctions, assignment.assignedPredicates, assignment.assignedConnectors)
+        instantiateFormulaSchemas(unsafeRenameVariables(formula, assignment.variables), assignment.assignedFunctions, assignment.assignedPredicates, assignment.assignedConnectors)
       def instantiateConstraint(constraint: Constraint, assignment: UnificationContext): Constraint = constraint match {
         case cse @ SchematicFunction(label, args, value, ctx) => cse.copy(args = args.map(instantiateTerm(_, assignment)))
         case cse @ SchematicPredicate(label, args, value, ctx) => cse.copy(args = args.map(instantiateTerm(_, assignment)))
@@ -147,7 +147,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
                 Some(None)
               }
             case None =>
-              val valueArgs = args.map(renameSchemas(_, Map.empty, ctx.toMap, Map.empty))
+              val valueArgs = args.map(unsafeRenameVariables(_, ctx.toMap))
               val freshArguments = freshIds(schematicFunctionsOf(value).map(_.id), valueArgs.size).map(SchematicFunctionLabel.apply[0])
               val (fBody, fArgs) = greedyFactoringFunction(value, freshArguments.zip(valueArgs).toIndexedSeq, Map.empty)
               Some(Some((IndexedSeq.empty, partialAssignment + AssignedFunction.unsafe(label, LambdaFunction.unsafe(freshArguments, fBody)))))
@@ -162,7 +162,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
                 Some(None)
               }
             case None =>
-              val valueArgs = args.map(renameSchemas(_, Map.empty, ctx.toMap, Map.empty))
+              val valueArgs = args.map(unsafeRenameVariables(_, ctx.toMap))
               val freshArguments = freshIds(schematicFunctionsOf(value).map(_.id), valueArgs.size).map(SchematicFunctionLabel.apply[0])
               val (fBody, fArgs) = greedyFactoringPredicate(value, freshArguments.zip(valueArgs).toIndexedSeq, Map.empty)
               Some(Some((IndexedSeq.empty, partialAssignment + AssignedPredicate.unsafe(label, LambdaPredicate.unsafe(freshArguments, fBody)))))
@@ -297,7 +297,12 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
 
       def rename(patterns: IndexedSeq[PartialSequent]): IndexedSeq[PartialSequent] = {
         def renameFormulas(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
-          formulas.map(f => renameSchemas(f, functionsFreshMapping, predicatesFreshMapping, connectorsFreshMapping, variablesFreshMapping, Map.empty, Map.empty))
+          formulas.map(f => instantiateFormulaSchemas(
+            unsafeRenameVariables(f, variablesFreshMapping),
+            functions = functionsFreshMapping.map { case (k, v) => RenamedLabel.unsafe(k, v).toAssignment }.toSeq,
+            predicates = predicatesFreshMapping.map { case (k, v) => RenamedLabel.unsafe(k, v).toAssignment }.toSeq,
+            connectors = connectorsFreshMapping.map { case (k, v) => RenamedLabel.unsafe(k, v).toAssignment }.toSeq,
+          ))
         patterns.map(p => p.copy(left = renameFormulas(p.left), right = renameFormulas(p.right)))
       }
 
@@ -345,7 +350,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
         }
 
         def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
-          formulas.map(formula => instantiateSchemas2(unsafeRenameVariables(formula, renamedAssignment.variables),
+          formulas.map(formula => instantiateFormulaSchemas(unsafeRenameVariables(formula, renamedAssignment.variables),
             renamedAssignment.assignedFunctions, renamedAssignment.assignedPredicates, renamedAssignment.assignedConnectors))
 
         def createValueTo(common: IndexedSeq[Formula], pattern: IndexedSeq[Formula], partial: Boolean): IndexedSeq[Formula] = {
