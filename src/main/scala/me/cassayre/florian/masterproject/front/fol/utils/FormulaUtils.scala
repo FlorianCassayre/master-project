@@ -74,6 +74,13 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
     def unsafe(schema: SchematicConnectorLabel[?], lambda: LambdaConnector[?]): AssignedConnector = new AssignedConnector(schema, lambda)
   }
 
+  def toKernel(lambda: LambdaPredicate[?]): lisa.kernel.fol.FOL.LambdaTermFormula =
+    lisa.kernel.fol.FOL.LambdaTermFormula(lambda.parameters.map(toKernel), lambda.body)
+  given Conversion[LambdaPredicate[?], lisa.kernel.fol.FOL.LambdaTermFormula] = toKernel
+
+  def toKernel(lambda: LambdaConnector[?]): lisa.kernel.fol.FOL.LambdaFormulaFormula =
+    lisa.kernel.fol.FOL.LambdaFormulaFormula(lambda.parameters.map(toKernel), lambda.body)
+  given Conversion[LambdaConnector[?], lisa.kernel.fol.FOL.LambdaFormulaFormula] = toKernel
 
   def adaptConnectorSchemas(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] = {
     def recursive(formula: Formula, predicates: Set[SchematicPredicateLabel[?]], translation: Map[ConnectorFormula, SchematicPredicateLabel[?]]):

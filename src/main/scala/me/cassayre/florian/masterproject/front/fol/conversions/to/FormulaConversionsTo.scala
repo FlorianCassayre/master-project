@@ -58,4 +58,6 @@ trait FormulaConversionsTo extends TermConversionsTo with FrontKernelMappings {
   given Conversion[BinderLabel, lisa.kernel.fol.FOL.BinderLabel] = toKernel
   given Conversion[FormulaLabel, lisa.kernel.fol.FOL.FormulaLabel] = toKernel
 
+  given Conversion[(Formula, Formula), (lisa.kernel.fol.FOL.Formula, lisa.kernel.fol.FOL.Formula)] = (a, b) => (a, b)
+
 }

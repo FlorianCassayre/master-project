@@ -68,7 +68,7 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
       )
       val scProof = SCProof(
         IndexedSeq(
-          InstFunSchema(replaced, -1, f, r, ???) // args.map(toKernel)
+          InstFunSchema(replaced, -1, Map(toKernel(f) -> LambdaFunction.unsafe(args, r)))
         ),
         IndexedSeq(sequentToKernel(theorem.sequent))
       )
@@ -90,7 +90,7 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
         )
         val scProof = SCProof(
           IndexedSeq(
-            InstPredSchema(replaced, -1, f, r, ???) // args.map(toKernel)
+            InstPredSchema(replaced, -1, Map(toKernel(f) -> LambdaPredicate.unsafe(args, r)))
           ),
           IndexedSeq(sequentToKernel(theorem.sequent))
         )

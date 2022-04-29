@@ -43,4 +43,6 @@ trait TermConversionsTo {
   given Conversion[FunctionTerm, lisa.kernel.fol.FOL.FunctionTerm] = toKernel
   given Conversion[Term, lisa.kernel.fol.FOL.Term] = toKernel
 
+  given Conversion[(Term, Term), (lisa.kernel.fol.FOL.Term, lisa.kernel.fol.FOL.Term)] = (a, b) => (a, b)
+
 }

@@ -2,6 +2,7 @@ package me.cassayre.florian.masterproject.front.proof.state
 
 import lisa.kernel.Printer
 import lisa.kernel.proof.{RunningTheory, SCProof, SCProofChecker}
+import lisa.kernel.proof.RunningTheoryJudgement.*
 import lisa.kernel.proof.SequentCalculus.{SCSubproof, sequentToFormula}
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 
@@ -15,7 +16,7 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
     private[ProofEnvironmentDefinitions] val proven: mutable.Map[Sequent, (Justified, runningTheory.Justification)] = mutable.Map.empty
 
     // Lift the initial axioms
-    runningTheory.getAxioms.foreach { kernelAxiom =>
+    runningTheory.axiomsList.foreach { kernelAxiom =>
       val frontAxiom = Axiom(this, fromKernel(kernelAxiom.ax))
       proven.addOne((frontAxiom.sequent, (frontAxiom, kernelAxiom)))
     }
@@ -54,9 +55,9 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
       val theorem = Theorem(this, sequent, scProof, justifications)
 
       val kernelJustifications = justificationPairs.map { case (_, kernelJustification) => kernelJustification }
-      val kernelTheorem = runningTheory.proofToTheorem(scProof, kernelJustifications) match {
-        case Some(result) => result
-        case None => throw new Error // Should have been caught before
+      val kernelTheorem = runningTheory.proofToTheorem(s"t${proven.size}", scProof, kernelJustifications) match {
+        case ValidJustification(result) => result
+        case InvalidJustification(_, _) => throw new Error // Should have been caught before
       }
 
       proven.addOne((sequent, (theorem, kernelTheorem)))

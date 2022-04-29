@@ -68,7 +68,7 @@ class MonadicSCProofBuilderTests extends AnyFunSuite {
         (_, h0) <- zf |- zf
         (_, h1) <- () |- (zf ==> zf) by h0
         (_, h2) <- () |- (zf <=> zf) by h1
-        _ <- RightSubstEq((pxy === pxy1) |- (zf <=> in(z, pxy1)), h2, pxy, pxy1, zf <=> in(z, FunctionTerm(g, Seq.empty)), g)
+        _ <- RightSubstEq((pxy === pxy1) |- (zf <=> in(z, pxy1)), h2, List(pxy -> pxy1), LambdaTermFormula(Seq(g), zf <=> in(z, FunctionTerm(g, Seq.empty))))
       } yield (), display = false)
       (_, i1) <- MonadicSCProofBuilder.subproof(for {
         _ <- (() |- pairAxiom).justified
@@ -79,7 +79,7 @@ class MonadicSCProofBuilderTests extends AnyFunSuite {
         _ <- withForallInstantiation(x1, y1, z)
       } yield (), display = false)
       (p3, i3) <- RightSubstEq(
-        (pxy === pxy1) |- (in(z, pxy1) <=> ((z === x) \/ (z === y))), i1, pxy, pxy1, in(z, FunctionTerm(g, Seq.empty)) <=> ((z === x) \/ (z === y)), g
+        (pxy === pxy1) |- (in(z, pxy1) <=> ((z === x) \/ (z === y))), i1, List(pxy -> pxy1), LambdaTermFormula(Seq(g), in(z, FunctionTerm(g, Seq.empty)) <=> ((z === x) \/ (z === y)))
       )
       (_, i4) <- (pxy === pxy1) |- (in(z, pxy1) <=> ((z === x) \/ (z === y))) by i3
     } yield ())

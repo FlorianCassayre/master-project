@@ -3,6 +3,7 @@ package me.cassayre.florian.masterproject.front.proof.predef
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 import me.cassayre.florian.masterproject.front.unification.Unifier.*
 import lisa.kernel.proof.SequentCalculus.*
+import lisa.kernel.fol.FOL.{LambdaFormulaFormula, LambdaTermFormula, LambdaTermTerm}
 import proven.tactics.SimplePropositionalSolver
 import me.cassayre.florian.masterproject.front.proof.state.RuleDefinitions
 
@@ -163,51 +164,37 @@ trait PredefRulesDefinitions extends RuleDefinitions {
   case object RuleIntroductionLeftSubstEq extends RuleBase(
     *(p(s)) |- **,
     *(s === t, p(t)) |- **,
-    (bot, ctx) => {
-      val lambda = ctx.applyMultiary(p)
-      val taken = schematicFunctionsOf(lambda.body).map(_.id)
-      val label = SchematicFunctionLabel[0](freshId(taken, "f"))
-      val ps = lambda.unsafe(Seq(label()))
+    (bot, ctx) =>
       IndexedSeq(
-        LeftSubstEq(bot, -1, ctx(s), ctx(t), ps, label)
+        LeftSubstEq(bot, -1, List(ctx(s) -> ctx(t)), ctx.applyMultiary(p))
       )
-    }
   )
 
   case object RuleIntroductionRightSubstEq extends RuleBase(
     ** |- *(p(s)),
     *(s === t) |- *(p(t)),
-    (bot, ctx) => {
-      val lambda = ctx.applyMultiary(p)
-      val taken = schematicFunctionsOf(lambda.body).map(_.id)
-      val label = SchematicFunctionLabel[0](freshId(taken, "f"))
-      val ps = lambda.unsafe(Seq(label()))
+    (bot, ctx) =>
       IndexedSeq(
-        RightSubstEq(bot, -1, ctx(s), ctx(t), ps, label)
+        RightSubstEq(bot, -1, List(ctx(s) -> ctx(t)), ctx.applyMultiary(p))
       )
-    }
   )
 
   case object RuleIntroductionLeftSubstIff extends RuleBase(
     *(f(a)) |- **,
     *(a <=> b, f(b)) |- **,
-    (bot, ctx) => {
-      val lambda = ctx.applyMultiary(f)
+    (bot, ctx) =>
       IndexedSeq(
-        LeftSubstIff(bot, -1, ctx(a), ctx(b), lambda.body, lambda.parameters.head)
+        LeftSubstIff(bot, -1, List(ctx(a) -> ctx(b)), ctx.applyMultiary(f))
       )
-    }
   )
 
   case object RuleIntroductionRightSubstIff extends RuleBase(
     ** |- *(f(a)),
     *(a <=> b) |- *(f(b)),
-    (bot, ctx) => {
-      val lambda = ctx.applyMultiary(f)
+    (bot, ctx) =>
       IndexedSeq(
-        RightSubstIff(bot, -1, ctx(a), ctx(b), lambda.body, lambda.parameters.head)
+        RightSubstIff(bot, -1, List(ctx(a) -> ctx(b)), ctx.applyMultiary(f))
       )
-    }
   )
 
   //
@@ -215,25 +202,21 @@ trait PredefRulesDefinitions extends RuleDefinitions {
   case object RuleSubstituteRightIff extends RuleBase(
     (** |- *(f(a))) :+ ($$ |- $(a <=> b)),
     ** |- *(f(b)),
-    (bot, ctx) => {
-      val lambda = ctx.applyMultiary(f)
+    (bot, ctx) =>
       IndexedSeq(
-        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), lambda.body, lambda.parameters.head),
+        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, List(ctx(a) -> ctx(b)), ctx.applyMultiary(f)),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
-    }
   )
 
   case object RuleSubstituteLeftIff extends RuleBase(
     (*(f(a)) |- **) :+ ($$ |- $(a <=> b)),
     *(f(b)) |- **,
-    (bot, ctx) => {
-      val lambda = ctx.applyMultiary(f)
+    (bot, ctx) =>
       IndexedSeq(
-        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), lambda.body, lambda.parameters.head),
+        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, List(ctx(a) -> ctx(b)), ctx.applyMultiary(f)),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
-    }
   )
 
   // Elimination
@@ -316,7 +299,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
           val cBot = bot -> forall(ctx(x), px)
           IndexedSeq(
             Hypothesis(cBot +< px +> px, px),
-            InstFunSchema(cBot +< pt +> px, 0, pl, vx, Seq.empty),
+            InstFunSchema(cBot +< pt +> px, 0, Map(toKernel(pl) -> LambdaFunction(vx))),
             RightForall(bot +< pt, 1, px, vx.label),
             Cut(bot, -1, 2, pt),
           )
@@ -328,55 +311,41 @@ trait PredefRulesDefinitions extends RuleDefinitions {
   case object RuleEliminationLeftSubstEq extends RuleBase(
     (*(p(s)) |- **) +: (** |- *(s === t)),
     *(p(t)) |- **,
-    (bot, ctx) => {
-      val lambda = ctx.applyMultiary(p)
-      val taken = schematicFunctionsOf(lambda.body).map(_.id)
-      val label = SchematicFunctionLabel[0](freshId(taken, "f"))
-      val ps = lambda.unsafe(Seq(label()))
+    (bot, ctx) =>
       IndexedSeq(
-        LeftSubstEq(bot +< (ctx(s) === ctx(t)), -1, ctx(s), ctx(t), ps, label),
+        LeftSubstEq(bot +< (ctx(s) === ctx(t)), -1, List(ctx(s) -> ctx(t)), ctx.applyMultiary(p)),
         Cut(bot, -2, 0, ctx(s) === ctx(t))
       )
-    }
   )
 
   case object RuleEliminationRightSubstEq extends RuleBase(
     (** |- *(p(s))) +: (** |- *(s === t)),
     ** |- *(p(t)),
-    (bot, ctx) => {
-      val lambda = ctx.applyMultiary(p)
-      val taken = schematicFunctionsOf(lambda.body).map(_.id)
-      val label = SchematicFunctionLabel[0](freshId(taken, "f"))
-      val ps = lambda.unsafe(Seq(label()))
+    (bot, ctx) =>
       IndexedSeq(
-        RightSubstEq(bot +< (ctx(s) === ctx(t)), -1, ctx(s), ctx(t), ps, label),
+        RightSubstEq(bot +< (ctx(s) === ctx(t)), -1, List(ctx(s) -> ctx(t)), ctx.applyMultiary(p)),
         Cut(bot, -2, 0, ctx(s) === ctx(t))
       )
-    }
   )
 
   case object RuleEliminationLeftSubstIff extends RuleBase(
     (*(f(a)) |- **) +: (** |- *(a <=> b)),
     *(f(b)) |- **,
-    (bot, ctx) => {
-      val lambda = ctx.applyMultiary(f)
+    (bot, ctx) =>
       IndexedSeq(
-        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), lambda.body, lambda.parameters.head),
+        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, List(ctx(a) -> ctx(b)), ctx.applyMultiary(f)),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
-    }
   )
 
   case object RuleEliminationRightSubstIff extends RuleBase(
     (** |- *(f(a))) +: (** |- *(a <=> b)),
     ** |- *(f(b)),
-    (bot, ctx) => {
-      val lambda = ctx.applyMultiary(f)
+    (bot, ctx) =>
       IndexedSeq(
-        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, ctx(a), ctx(b), lambda.body, lambda.parameters.head),
+        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, List(ctx(a) -> ctx(b)), ctx.applyMultiary(f)),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
-    }
   )
 
   // TODO more rules

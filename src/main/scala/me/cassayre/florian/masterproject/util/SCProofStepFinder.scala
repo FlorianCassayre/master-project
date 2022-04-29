@@ -140,14 +140,14 @@ object SCProofStepFinder {
               // Substitutions
               leftEquals.view.flatMap(pair => View(pair, pair.swap)).flatMap { case (ss, tt) =>
                 View(
-                  s.left.map(ts => LeftSubstEq(conclusion, i, ss, tt, inverseTermSubstitution(ts, ss, phi), phi)),
-                  s.right.map(ts => RightSubstEq(conclusion, i, ss, tt, inverseTermSubstitution(ts, ss, phi), phi)),
+                  s.left.map(ts => LeftSubstEq(conclusion, i, List(ss -> tt), LambdaTermFormula(Seq(phi), inverseTermSubstitution(ts, ss, phi)))),
+                  s.right.map(ts => RightSubstEq(conclusion, i, List(ss -> tt), LambdaTermFormula(Seq(phi), inverseTermSubstitution(ts, ss, phi)))),
                 ).flatten
               },
               leftBinaryConnectors(Iff).view.flatMap(pair => View(pair, pair.swap)).flatMap { case (l, r) =>
                 View(
-                  s.left.map(g => LeftSubstIff(conclusion, i, l, r, inverseFormulaSubstitution(g, l, psi), psi)),
-                  s.right.map(g => RightSubstIff(conclusion, i, l, r, inverseFormulaSubstitution(g, l, psi), psi)),
+                  s.left.map(g => LeftSubstIff(conclusion, i, List(l -> r), LambdaFormulaFormula(Seq(psi), inverseFormulaSubstitution(g, l, psi)))),
+                  s.right.map(g => RightSubstIff(conclusion, i, List(l -> r), LambdaFormulaFormula(Seq(psi), inverseFormulaSubstitution(g, l, psi)))),
                 ).flatten
               }
             ).flatten

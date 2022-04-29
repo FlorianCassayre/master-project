@@ -75,6 +75,10 @@ trait TermUtils extends TermDefinitions with TermConversionsTo {
     require(schema.arity == lambda.arity)
   }
 
+  def toKernel(lambda: LambdaFunction[?]): lisa.kernel.fol.FOL.LambdaTermTerm =
+    lisa.kernel.fol.FOL.LambdaTermTerm(lambda.parameters.map(toKernel), lambda.body)
+  given Conversion[LambdaFunction[?], lisa.kernel.fol.FOL.LambdaTermTerm] = toKernel
+
 
   case class LambdaFunction[N <: Arity] private(parameters: Seq[SchematicFunctionLabel[0]], body: Term) extends LambdaDefinition[N, SchematicFunctionLabel[0], Term] {
     override type U = Term
