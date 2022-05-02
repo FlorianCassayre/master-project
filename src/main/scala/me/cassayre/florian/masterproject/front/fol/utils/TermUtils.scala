@@ -48,7 +48,7 @@ trait TermUtils extends TermDefinitions with TermConversionsTo {
       AssignedFunction.unsafe(renamed.from, LambdaFunction.unsafe(parameters, FunctionTerm.unsafe(renamed.to, parameters.map(FunctionTerm.unsafe(_, Seq.empty)))))
     }
 
-  protected abstract class LambdaDefinition[N <: Arity, S <: SchematicLabel & WithArity[?], T <: LabeledTree[?]] {
+  protected abstract class LambdaDefinition[N <: Arity, S <: SchematicLabel & WithArity[?], T <: LabeledTree[?]] extends WithArity[N] {
     type U <: LabeledTree[_ >: S]
 
     val parameters: Seq[S]
@@ -61,7 +61,7 @@ trait TermUtils extends TermDefinitions with TermConversionsTo {
     }
     protected def instantiate(args: Seq[U]): T
 
-    val arity: N = parameters.size.asInstanceOf[N]
+    override val arity: N = parameters.size.asInstanceOf[N]
 
     require(parameters.forall(_.arity == 0))
     require(parameters.distinct.size == parameters.size)
@@ -105,6 +105,11 @@ trait TermUtils extends TermDefinitions with TermConversionsTo {
     def apply[N <: Arity](schema: SchematicFunctionLabel[N], lambda: LambdaFunction[N])(using v: ValueOf[N]): AssignedFunction = new AssignedFunction(schema, lambda)
     def unsafe(schema: SchematicFunctionLabel[?], lambda: LambdaFunction[?]): AssignedFunction = new AssignedFunction(schema, lambda)
   }
+
+  given Conversion[Term, LambdaFunction[0]] = LambdaFunction.apply
+  given labelToLambdaFunction[T](using Conversion[T, Term]): Conversion[T, LambdaFunction[0]] = LambdaFunction.apply
+  given lambdaToLambdaFunction1: Conversion[SchematicFunctionLabel[0] => Term, LambdaFunction[1]] = LambdaFunction.apply
+  given lambdaToLambdaFunction2: Conversion[((SchematicFunctionLabel[0], SchematicFunctionLabel[0])) => Term, LambdaFunction[2]] = LambdaFunction.apply
 
 
   def isSame(t1: Term, t2: Term): Boolean =

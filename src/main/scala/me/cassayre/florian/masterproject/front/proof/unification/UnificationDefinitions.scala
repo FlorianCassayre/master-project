@@ -15,10 +15,10 @@ trait UnificationDefinitions {
     connectors: Map[SchematicConnectorLabel[?], LambdaConnector[?]] = Map.empty,
     variables: Map[VariableLabel, VariableLabel] = Map.empty,
   ) {
-    def +(predicate: AssignedPredicate): UnificationContext = copy(predicates = predicates + (predicate.schema -> predicate.lambda))
-    def +(function: AssignedFunction): UnificationContext = copy(functions = functions + (function.schema -> function.lambda))
-    def +(connector: AssignedConnector): UnificationContext = copy(connectors = connectors + (connector.schema -> connector.lambda))
-    def +(pair: (VariableLabel, VariableLabel)): UnificationContext = copy(variables = variables + pair)
+    infix def +(predicate: AssignedPredicate): UnificationContext = copy(predicates = predicates + (predicate.schema -> predicate.lambda))
+    infix def +(function: AssignedFunction): UnificationContext = copy(functions = functions + (function.schema -> function.lambda))
+    infix def +(connector: AssignedConnector): UnificationContext = copy(connectors = connectors + (connector.schema -> connector.lambda))
+    infix def +(pair: (VariableLabel, VariableLabel)): UnificationContext = copy(variables = variables + pair)
 
     def apply[N <: Arity](predicate: SchematicPredicateLabel[N]): LambdaPredicate[N] = predicates(predicate).asInstanceOf[LambdaPredicate[N]]
     def apply[N <: Arity](function: SchematicFunctionLabel[N]): LambdaFunction[N] = functions(function).asInstanceOf[LambdaFunction[N]]

@@ -28,8 +28,13 @@ trait FormulaOps extends CommonOps {
   extension[N <: Arity] (label: BinderLabel)
     def apply(bound: VariableLabel, inner: Formula): BinderFormula = BinderFormula(label, bound, inner)
 
+  given Conversion[ConstantPredicateLabel[0], PredicateFormula] = PredicateFormula.unsafe(_, Seq.empty)
+  given Conversion[SchematicPredicateLabel[0], PredicateFormula] = PredicateFormula.unsafe(_, Seq.empty)
   given Conversion[PredicateLabel[0], PredicateFormula] = PredicateFormula.unsafe(_, Seq.empty)
-  given Conversion[ConnectorLabel[0], ConnectorFormula] = ConnectorFormula.unsafe(_, Seq.empty) // For completeness
+
+  given Conversion[ConstantConnectorLabel[0], ConnectorFormula] = ConnectorFormula.unsafe(_, Seq.empty)
+  given Conversion[SchematicConnectorLabel[0], ConnectorFormula] = ConnectorFormula.unsafe(_, Seq.empty)
+  given Conversion[ConnectorLabel[0], ConnectorFormula] = ConnectorFormula.unsafe(_, Seq.empty)
 
   @deprecated
   given Conversion[Formula, FormulaLabel] = _.label

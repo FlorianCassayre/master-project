@@ -1,45 +1,112 @@
 package me.cassayre.florian.masterproject.front
 
+import me.cassayre.florian.masterproject.front.fol.FOL.{LabelType, WithArityType}
 import me.cassayre.florian.masterproject.front.{*, given}
 import org.scalatest.funsuite.AnyFunSuite
 
 class Unification2Tests extends AnyFunSuite {
 
   val (sa, sb, sc) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"))
-
   val (a, b, c) = (ConstantPredicateLabel[0]("a"), ConstantPredicateLabel[0]("b"), ConstantPredicateLabel[0]("c"))
 
-  def unify(pattern: Formula, target: Formula): Boolean = {
+  val (st, su, sv) = (SchematicFunctionLabel[0]("t"), SchematicFunctionLabel[0]("u"), SchematicFunctionLabel[0]("v"))
+  val (t, u, v) = (ConstantFunctionLabel[0]("t"), ConstantFunctionLabel[0]("u"), ConstantFunctionLabel[0]("v"))
+
+  val (sf1, f1) = (SchematicFunctionLabel[1]("f1"), ConstantFunctionLabel[1]("f1"))
+  val (sg1) = (SchematicConnectorLabel[1]("g1"))
+  val (sp1, p1) = (SchematicPredicateLabel[1]("p1"), ConstantPredicateLabel[1]("p1"))
+
+  def unify(pattern: Formula, target: Formula, partial: UnificationContext = UnificationContext()): Option[(IndexedSeq[Sequent], UnificationContext)] =
     unifyAndResolve(
       IndexedSeq(PartialSequent(IndexedSeq(pattern), IndexedSeq.empty)),
       IndexedSeq(Sequent(IndexedSeq(target), IndexedSeq.empty)),
       IndexedSeq.empty,
-      UnificationContext(),
+      partial,
       IndexedSeq((IndexedSeq(0), IndexedSeq.empty))
-    ).nonEmpty
+    )
+
+  @deprecated
+  def checkUnifies(pattern: Formula, target: Formula, partial: UnificationContext = UnificationContext()): Unit = {
+    assert(unify(pattern, target, partial).nonEmpty, "It did not unify")
   }
 
-  def checkUnifies(pattern: Formula, target: Formula): Unit = {
-    assert(unify(pattern, target), "Did not unify")
+  def checkDoesNotUnify(pattern: Formula, target: Formula, partial: UnificationContext = UnificationContext()): Unit = {
+    assert(unify(pattern, target, partial).isEmpty, "It did unify")
   }
 
-  def checkDoesNotUnify(pattern: Formula, target: Formula): Unit = {
-    assert(!unify(pattern, target), "It did unify")
+  def contextsEqual(ctx1: UnificationContext, ctx2: UnificationContext): Boolean = {
+    def names(lambda: WithArityType[?]): Seq[String] = (0 until lambda.arity).map(i => s"unique_name_$i")
+    def normalizeFunction(lambda: LambdaFunction[?]): LambdaFunction[?] = {
+      val newParams = names(lambda).map(SchematicFunctionLabel.apply[0])
+      LambdaFunction.unsafe(
+        newParams,
+        instantiateTermSchemas(lambda.body, lambda.parameters.zip(newParams).map { case (l1, l2) => RenamedLabel.unsafe(l1, l2).toAssignment })
+      )
+    }
+    def normalizePredicate(lambda: LambdaPredicate[?]): LambdaPredicate[?] = {
+      val newParams = names(lambda).map(SchematicFunctionLabel.apply[0])
+      LambdaPredicate.unsafe(
+        newParams,
+        instantiateFormulaSchemas(lambda.body, lambda.parameters.zip(newParams).map { case (l1, l2) => RenamedLabel.unsafe(l1, l2).toAssignment }, Seq.empty, Seq.empty)
+      )
+    }
+    def normalizeConnector(lambda: LambdaConnector[?]): LambdaConnector[?] = {
+      val newParams = names(lambda).map(SchematicPredicateLabel.apply[0])
+      LambdaConnector.unsafe(
+        newParams,
+        instantiateFormulaSchemas(lambda.body, Seq.empty, lambda.parameters.zip(newParams).map { case (l1, l2) => RenamedLabel.unsafe(l1, l2).toAssignment }, Seq.empty)
+      )
+    }
+    def normalizeContext(ctx: UnificationContext): UnificationContext =
+      UnificationContext(
+        ctx.predicates.view.mapValues(normalizePredicate).toMap,
+        ctx.functions.view.mapValues(normalizeFunction).toMap,
+        ctx.connectors.view.mapValues(normalizeConnector).toMap,
+        ctx.variables,
+      )
+    normalizeContext(ctx1) == normalizeContext(ctx2)
   }
+
+  def checkUnifiesAs(pattern: Formula, target: Formula, partial: UnificationContext, ctx: UnificationContext): Unit = {
+    unify(pattern, target, partial) match
+      case Some((_, resultCtx)) => assert(contextsEqual(resultCtx, ctx), resultCtx)
+      case None => throw new AssertionError("It did not unify")
+  }
+
+  def checkUnifiesAs(pattern: Formula, target: Formula, ctx: UnificationContext): Unit =
+    checkUnifiesAs(pattern, target, UnificationContext(), ctx)
+
+  val U: UnificationContext = UnificationContext()
 
   test("unification 2") {
-    checkUnifies(a, a)
+    checkUnifiesAs(a, a, UnificationContext())
     checkDoesNotUnify(a, b)
     checkDoesNotUnify(a, sa)
-    checkUnifies(a /\ b, a /\ b)
-    checkUnifies(sa, a)
-    checkUnifies(sa, sa)
-    checkUnifies(sa /\ b, a /\ b)
-    checkUnifies(sa /\ sb, a /\ b)
-    checkUnifies(sa /\ b, sb /\ b)
-    checkUnifies(sa /\ sb, (a ==> b) /\ (c \/ a))
-    checkUnifies(sa /\ sa, b /\ b)
+    checkUnifiesAs(a /\ b, a /\ b, U)
+
+    checkUnifiesAs(sa, a, U + AssignedPredicate(sa, a))
+    checkUnifiesAs(sa, sa, U + AssignedPredicate(sa, sa))
+    checkUnifiesAs(sa /\ b, a /\ b, U + AssignedPredicate(sa, a))
+    checkUnifiesAs(sa /\ sb, a /\ b, U + AssignedPredicate(sa, a) + AssignedPredicate(sb, b))
+    checkUnifiesAs(sa /\ b, sb /\ b, U + AssignedPredicate(sa, sb))
+    checkUnifiesAs(sa /\ sb, (a ==> b) /\ (c \/ a), U + AssignedPredicate(sa, a ==> b) + AssignedPredicate(sb, c \/ a))
+    checkUnifiesAs(sa /\ sa, b /\ b, U + AssignedPredicate(sa, b))
+    checkUnifiesAs(sa /\ sa, (a \/ b) /\ (b \/ a), U + AssignedPredicate(sa, a \/ b))
     checkDoesNotUnify(sa /\ sa, a /\ b)
+
+    checkUnifiesAs(sa, a /\ b, U + AssignedPredicate(sa, b /\ a), U + AssignedPredicate(sa, b /\ a))
+    checkDoesNotUnify(sa, a, U + AssignedPredicate(sa, b))
+    checkDoesNotUnify(sa, a, U + AssignedPredicate(sb, a))
+
+    checkUnifiesAs(p1(t), p1(t), U)
+    checkUnifiesAs(p1(st), p1(u), U + AssignedFunction(st, u))
+    checkUnifiesAs(sp1(t), p1(t), U + AssignedPredicate(sp1, LambdaPredicate(x => p1(x))))
+    checkUnifiesAs(sp1(t), p1(t) /\ p1(u), U + AssignedPredicate(sp1, LambdaPredicate(x => p1(x) /\ p1(u))))
+
+    checkUnifiesAs(sg1(a), b, U + AssignedConnector(sg1, LambdaConnector(_ => b)))
+    checkDoesNotUnify(sg1(sa), a)
+    //checkUnifiesAs(sg1(sa), b, U + AssignedConnector(sg1, LambdaConnector(x => x)), U + AssignedConnector(sg1, LambdaConnector(x => x)) + AssignedPredicate(sa, b))
+    //checkUnifiesAs(sg1(sa), b, U + AssignedPredicate(sa, b), U + AssignedPredicate(sa, b) + AssignedConnector(sg1, LambdaConnector(x => x)))
   }
 
 }

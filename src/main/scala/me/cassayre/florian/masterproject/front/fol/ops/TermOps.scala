@@ -15,6 +15,9 @@ trait TermOps extends CommonOps {
     def apply(): FunctionTerm = FunctionTerm.unsafe(label, Seq.empty)
 
   given Conversion[VariableLabel, VariableTerm] = VariableTerm.apply
+
+  given Conversion[ConstantFunctionLabel[0], FunctionTerm] = FunctionTerm.unsafe(_, Seq.empty)
+  given Conversion[SchematicFunctionLabel[0], FunctionTerm] = FunctionTerm.unsafe(_, Seq.empty)
   given Conversion[FunctionLabel[0], FunctionTerm] = FunctionTerm.unsafe(_, Seq.empty)
 
   @deprecated

@@ -47,6 +47,11 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
     def apply[N <: Arity](schema: SchematicPredicateLabel[N], lambda: LambdaPredicate[N])(using v: ValueOf[N]): AssignedPredicate = new AssignedPredicate(schema, lambda)
     def unsafe(schema: SchematicPredicateLabel[?], lambda: LambdaPredicate[?]): AssignedPredicate = new AssignedPredicate(schema, lambda)
   }
+  given Conversion[Formula, LambdaPredicate[0]] = LambdaPredicate.apply
+  given labelToLambdaPredicate[T](using Conversion[T, Formula]): Conversion[T, LambdaPredicate[0]] = LambdaPredicate.apply
+  //given lambdaToLambdaPredicate[N <: Arity](using ValueOf[N]): Conversion[FillArgs[SchematicFunctionLabel[0], N] => Formula, LambdaPredicate[N]] = LambdaPredicate.apply
+  given lambdaToLambdaPredicate1: Conversion[SchematicFunctionLabel[0] => Formula, LambdaPredicate[1]] = LambdaPredicate.apply
+  given lambdaToLambdaPredicate2: Conversion[((SchematicFunctionLabel[0], SchematicFunctionLabel[0])) => Formula, LambdaPredicate[2]] = LambdaPredicate.apply
 
   case class LambdaConnector[N <: Arity] private(parameters: Seq[SchematicPredicateLabel[0]], body: Formula) extends LambdaDefinition[N, SchematicPredicateLabel[0], Formula] {
     override type U = Formula
@@ -64,6 +69,10 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
     def apply(f: Formula): LambdaConnector[0] = LambdaConnector(Seq.empty, f)
     def unsafe(parameters: Seq[SchematicPredicateLabel[0]], body: Formula): LambdaConnector[?] = new LambdaConnector(parameters, body)
   }
+  given Conversion[Formula, LambdaConnector[0]] = LambdaConnector.apply
+  given labelToLambdaConnector[T](using Conversion[T, Formula]): Conversion[T, LambdaConnector[0]] = LambdaConnector.apply
+  given lambdaToLambdaConnector1: Conversion[SchematicPredicateLabel[0] => Formula, LambdaConnector[1]] = LambdaConnector.apply
+  given lambdaToLambdaConnector2: Conversion[((SchematicPredicateLabel[0], SchematicPredicateLabel[0])) => Formula, LambdaConnector[2]] = LambdaConnector.apply
 
   case class AssignedConnector private(schema: SchematicConnectorLabel[?], lambda: LambdaConnector[?])
     extends AssignedSchema[SchematicConnectorLabel[?], SchematicPredicateLabel[0]] {

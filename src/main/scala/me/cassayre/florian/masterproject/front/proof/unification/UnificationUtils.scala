@@ -18,6 +18,11 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
     noMalformedFormulas && noClashingBoundVariablePatterns && noConflictingBoundFreeVariables
   }
 
+  private type Constraints = Seq[Constraint]
+  private type ConstraintsResult = Option[Constraints]
+
+  private type Context = Set[(VariableLabel, VariableLabel)]
+
   private enum Constraint {
     case SchematicFunction(label: SchematicFunctionLabel[?], args: Seq[Term], value: Term, ctx: Context)
     case SchematicPredicate(label: SchematicPredicateLabel[?], args: Seq[Term], value: Formula, ctx: Context)
@@ -25,11 +30,6 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
     case Variable(pattern: VariableLabel, value: VariableLabel)
   }
   import Constraint.*
-
-  private type Constraints = Seq[Constraint]
-  private type ConstraintsResult = Option[Constraints]
-
-  private type Context = Set[(VariableLabel, VariableLabel)]
 
   private def collect(patternsAndValues: IndexedSeq[(Formula, Formula)]): ConstraintsResult = {
     val empty: ConstraintsResult = Some(Seq.empty)
@@ -105,6 +105,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
         case _: Variable => constraint // Nothing to do for variables
       }
 
+      // This function tries to factor out all occurrences of `args._2` into `args._1` within `term`, and will store the result in `assignment`
       def greedyFactoringFunction(term: Term, args: IndexedSeq[(SchematicFunctionLabel[0], Term)], assignment: Map[SchematicFunctionLabel[0], Term]): (Term, Map[SchematicFunctionLabel[0], Term]) = {
         args.find { case (_, t) => t == term } match {
           case Some((variable, value)) => (variable, if(!assignment.contains(variable)) assignment + (variable -> value) else assignment)
@@ -129,19 +130,43 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
               (newAssignment, currentFArgs :+ newA)
             }
             (PredicateFormula.unsafe(label, finalFArgs), finalAssignment)
-          case ConnectorFormula(label, args) => (formula, assignment) // Identity
+          case ConnectorFormula(label, fArgs) =>
+            val (finalArgs, finalAssignment) = fArgs.foldLeft((Seq.empty[Formula], assignment)) { case ((argsAcc, currentAssignment), arg) =>
+              val (newFormula, newAssignment) = greedyFactoringPredicate(arg, args, currentAssignment)
+              (argsAcc :+ newFormula, newAssignment)
+            }
+            (ConnectorFormula.unsafe(label, finalArgs), finalAssignment)
           case BinderFormula(label, bound, inner) => ???
         }
       }
 
+      def greedyFactoringConnector(formula: Formula, args: IndexedSeq[(SchematicPredicateLabel[0], Formula)], assignment: Map[SchematicPredicateLabel[0], Formula]): (Formula, Map[SchematicPredicateLabel[0], Formula]) = {
+        args.find { case (_, f) => f == formula } match {
+          case Some((variable, value)) => (variable, if(!assignment.contains(variable)) assignment + (variable -> value) else assignment)
+          case None =>
+            formula match {
+              case PredicateFormula(label, fArgs) => (formula, assignment) // Identity
+              case ConnectorFormula(label, fArgs) =>
+                val (finalArgs, finalAssignment) = fArgs.foldLeft((Seq.empty[Formula], assignment)) { case ((argsAcc, currentAssignment), arg) =>
+                  val (newFormula, newAssignment) = greedyFactoringConnector(arg, args, currentAssignment)
+                  (argsAcc :+ newFormula, newAssignment)
+                }
+                (ConnectorFormula.unsafe(label, finalArgs), finalAssignment)
+              case BinderFormula(label, bound, inner) => ???
+            }
+        }
+      }
+
+      // The method tries to resolve a constraint and returns two nested options:
+      // * None => the constraint is unsolvable (e.g. too many degrees of freedom)
+      // * Some(None) => there is a contradiction
       def handler(constraint: Constraint): Option[Option[(Constraints, UnificationContext)]] = constraint match {
         case SchematicFunction(label, args, value, ctx) if args.forall(isSolvableTerm(_)(using ctx.map(_._1))) =>
           // TODO are all bound variables already instantiated?
           // TODO rename args before comparing
           partialAssignment.functions.get(label) match {
             case Some(lambda) =>
-              val instantiatedExisting = lambda.unsafe(args)
-              if(isSame(value, instantiatedExisting)) {
+              if(isSame(value, lambda.unsafe(args))) {
                 Some(Some((IndexedSeq.empty, partialAssignment)))
               } else { // Contradiction with the environment
                 Some(None)
@@ -149,26 +174,39 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
             case None =>
               val valueArgs = args.map(unsafeRenameVariables(_, ctx.toMap))
               val freshArguments = freshIds(schematicFunctionsOf(value).map(_.id), valueArgs.size).map(SchematicFunctionLabel.apply[0])
-              val (fBody, fArgs) = greedyFactoringFunction(value, freshArguments.zip(valueArgs).toIndexedSeq, Map.empty)
+              // We drop the resulting arguments map (because it is not needed anymore)
+              val (fBody, _) = greedyFactoringFunction(value, freshArguments.zip(valueArgs).toIndexedSeq, Map.empty)
               Some(Some((IndexedSeq.empty, partialAssignment + AssignedFunction.unsafe(label, LambdaFunction.unsafe(freshArguments, fBody)))))
           }
         case SchematicPredicate(label, args, value, ctx) if args.forall(isSolvableTerm(_)(using ctx.map(_._1))) =>
+          // Analogous to the above
           partialAssignment.predicates.get(label) match {
             case Some(lambda) =>
-              val instantiatedExisting = lambda.unsafe(args)
-              if(isSame(value, instantiatedExisting)) {
+              if(isSame(value, lambda.unsafe(args))) {
                 Some(Some((IndexedSeq.empty, partialAssignment)))
-              } else { // Contradiction with the environment
+              } else {
                 Some(None)
               }
             case None =>
               val valueArgs = args.map(unsafeRenameVariables(_, ctx.toMap))
               val freshArguments = freshIds(schematicFunctionsOf(value).map(_.id), valueArgs.size).map(SchematicFunctionLabel.apply[0])
-              val (fBody, fArgs) = greedyFactoringPredicate(value, freshArguments.zip(valueArgs).toIndexedSeq, Map.empty)
+              val (fBody, _) = greedyFactoringPredicate(value, freshArguments.zip(valueArgs).toIndexedSeq, Map.empty)
               Some(Some((IndexedSeq.empty, partialAssignment + AssignedPredicate.unsafe(label, LambdaPredicate.unsafe(freshArguments, fBody)))))
           }
         case SchematicConnector(label, args, value, ctx) if args.forall(isSolvableFormula(_)(using ctx.map(_._1))) =>
-          ???
+          partialAssignment.connectors.get(label) match {
+            case Some(lambda) =>
+              if(isSame(value, lambda.unsafe(args))) {
+                Some(Some((IndexedSeq.empty, partialAssignment)))
+              } else {
+                Some(None)
+              }
+            case None =>
+              val valueArgs = args.map(unsafeRenameVariables(_, ctx.toMap))
+              val freshArguments = freshIds(schematicPredicatesOf(value).map(_.id), valueArgs.size).map(SchematicPredicateLabel.apply[0])
+              val (fBody, _) = greedyFactoringConnector(value, freshArguments.zip(valueArgs).toIndexedSeq, Map.empty)
+              Some(Some((IndexedSeq.empty, partialAssignment + AssignedConnector.unsafe(label, LambdaConnector.unsafe(freshArguments, fBody)))))
+          }
         case Variable(pattern, value) =>
           if(partialAssignment.variables.forall { case (l, r) => l != pattern || r == value }) {
             Some(Some((IndexedSeq.empty, partialAssignment + (pattern, value))))
@@ -236,9 +274,9 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
     lazy val noMalformedValues = values.forall(isSequentWellFormed)
     lazy val noSchematicConnectorsValues = values.flatMap(schematicConnectorsOfSequent).isEmpty
     lazy val noMalformedAssignment = // TODO some of these should be a contract in `UnificationContext`
-      partialAssignment.functions.forall { case (label, lambda) => isWellFormed(lambda.body) } &&
-        partialAssignment.predicates.forall { case (label, lambda) => isWellFormed(lambda.body) && schematicConnectorsOf(lambda.body).isEmpty } &&
-        partialAssignment.connectors.forall { case (label, lambda) => isWellFormed(lambda.body) && schematicConnectorsOf(lambda.body).isEmpty}
+      partialAssignment.functions.values.forall(lambda => isWellFormed(lambda.body)) &&
+        partialAssignment.predicates.values.forall(lambda => isWellFormed(lambda.body) && schematicConnectorsOf(lambda.body).isEmpty) &&
+        partialAssignment.connectors.values.forall(lambda => isWellFormed(lambda.body) && schematicConnectorsOf(lambda.body).isEmpty)
     lazy val noDeclaredUnknown =
       partialAssignedFunctions.subsetOf(allPatternsFunctions) &&
         partialAssignedPredicates.subsetOf(allPatternsPredicates) &&
@@ -248,9 +286,9 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
         partialAssignedPredicates.subsetOf(nonUnifiablePredicates) &&
         partialAssignedConnectors.subsetOf(nonUnifiableConnectors)
 
-    lazy val allRequirements =
+    val allRequirements =
       isLegalPatterns(patterns) && isLegalPatterns(otherPatterns) &&
-        noInvalidSizeRange && noMalformedValues && noMalformedAssignment &&
+        noInvalidSizeRange && noMalformedValues && noSchematicConnectorsValues && noMalformedAssignment &&
         noDeclaredUnknown && noUndeclaredNonUnifiable
 
     if(allRequirements) {
