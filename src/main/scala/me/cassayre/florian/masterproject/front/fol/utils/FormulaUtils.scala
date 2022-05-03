@@ -213,14 +213,16 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
     val connectorsMap: Map[SchematicConnectorLabel[?], LambdaConnector[?]] = connectors.map(i => i.schema -> i.lambda).toMap
     def instantiateInternal(formula: Formula): Formula = formula match {
       case PredicateFormula(label, args) =>
+        lazy val newArgs = args.map(instantiateTermSchemas(_, functions))
         label match {
-          case f: SchematicPredicateLabel[?] if predicatesMap.contains(f) => predicatesMap(f).unsafe(args)
-          case _ => PredicateFormula.unsafe(label, args.map(instantiateTermSchemas(_, functions)))
+          case f: SchematicPredicateLabel[?] if predicatesMap.contains(f) => predicatesMap(f).unsafe(newArgs)
+          case _ => PredicateFormula.unsafe(label, newArgs)
         }
       case ConnectorFormula(label, args) =>
+        lazy val newArgs = args.map(instantiateInternal)
         label match {
-          case f: SchematicConnectorLabel[?] if connectorsMap.contains(f) => connectorsMap(f).unsafe(args)
-          case _ => ConnectorFormula.unsafe(label, args.map(instantiateInternal))
+          case f: SchematicConnectorLabel[?] if connectorsMap.contains(f) => connectorsMap(f).unsafe(newArgs)
+          case _ => ConnectorFormula.unsafe(label, newArgs)
         }
       case binder: BinderFormula => binder.copy(inner = instantiateInternal(binder.inner))
     }

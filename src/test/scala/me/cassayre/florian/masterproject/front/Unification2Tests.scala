@@ -95,6 +95,7 @@ class Unification2Tests extends AnyFunSuite {
     checkDoesNotUnify(sa /\ sa, a /\ b)
 
     checkUnifiesAs(sa, a /\ b, U + AssignedPredicate(sa, b /\ a), U + AssignedPredicate(sa, b /\ a))
+    checkUnifiesAs(sa, a, U + AssignedPredicate(sa, a), U + AssignedPredicate(sa, a))
     checkDoesNotUnify(sa, a, U + AssignedPredicate(sa, b))
     checkDoesNotUnify(sa, a, U + AssignedPredicate(sb, a))
 
@@ -105,8 +106,11 @@ class Unification2Tests extends AnyFunSuite {
 
     checkUnifiesAs(sg1(a), b, U + AssignedConnector(sg1, LambdaConnector(_ => b)))
     checkDoesNotUnify(sg1(sa), a)
-    //checkUnifiesAs(sg1(sa), b, U + AssignedConnector(sg1, LambdaConnector(x => x)), U + AssignedConnector(sg1, LambdaConnector(x => x)) + AssignedPredicate(sa, b))
-    //checkUnifiesAs(sg1(sa), b, U + AssignedPredicate(sa, b), U + AssignedPredicate(sa, b) + AssignedConnector(sg1, LambdaConnector(x => x)))
-  }
+    checkUnifiesAs(sg1(sa), b, U + AssignedConnector(sg1, LambdaConnector(x => x)), U + AssignedConnector(sg1, LambdaConnector(x => x)) + AssignedPredicate(sa, b))
+    checkUnifiesAs(sg1(sa), b, U + AssignedPredicate(sa, b), U + AssignedPredicate(sa, b) + AssignedConnector(sg1, LambdaConnector(x => x)))
 
+    checkUnifiesAs(sg1(sa), b, U + AssignedConnector(sg1, LambdaConnector(x => x)) + AssignedPredicate(sa, b), U + AssignedConnector(sg1, LambdaConnector(x => x)) + AssignedPredicate(sa, b))
+    checkDoesNotUnify(sg1(sa), b, U + AssignedConnector(sg1, LambdaConnector(x => x)) + AssignedPredicate(sa, a))
+    checkDoesNotUnify(sg1(sa), b, U + AssignedConnector(sg1, LambdaConnector(_ => a)) + AssignedPredicate(sa, b))
+  }
 }

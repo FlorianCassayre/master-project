@@ -147,9 +147,10 @@ trait TermUtils extends TermDefinitions with TermConversionsTo {
     def instantiateInternal(term: Term): Term = term match {
       case _: VariableTerm => term
       case FunctionTerm(label, args) =>
+        lazy val newArgs = args.map(instantiateInternal)
         label match {
-          case f: SchematicFunctionLabel[?] if map.contains(f) => map(f).unsafe(args)
-          case _ => FunctionTerm.unsafe(label, args.map(instantiateInternal))
+          case f: SchematicFunctionLabel[?] if map.contains(f) => map(f).unsafe(newArgs)
+          case _ => FunctionTerm.unsafe(label, newArgs)
         }
     }
     instantiateInternal(term)
