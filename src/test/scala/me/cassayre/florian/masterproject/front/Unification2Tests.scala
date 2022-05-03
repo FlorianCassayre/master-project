@@ -16,6 +16,8 @@ class Unification2Tests extends AnyFunSuite {
   val (sg1) = (SchematicConnectorLabel[1]("g1"))
   val (sp1, p1) = (SchematicPredicateLabel[1]("p1"), ConstantPredicateLabel[1]("p1"))
 
+  val (x, y, z) = (VariableLabel("x"), VariableLabel("y"), VariableLabel("z"))
+
   def unify(pattern: Formula, target: Formula, partial: UnificationContext = UnificationContext()): Option[(IndexedSeq[Sequent], UnificationContext)] =
     unifyAndResolve(
       IndexedSeq(PartialSequent(IndexedSeq(pattern), IndexedSeq.empty)),
@@ -112,5 +114,22 @@ class Unification2Tests extends AnyFunSuite {
     checkUnifiesAs(sg1(sa), b, U + AssignedConnector(sg1, LambdaConnector(x => x)) + AssignedPredicate(sa, b), U + AssignedConnector(sg1, LambdaConnector(x => x)) + AssignedPredicate(sa, b))
     checkDoesNotUnify(sg1(sa), b, U + AssignedConnector(sg1, LambdaConnector(x => x)) + AssignedPredicate(sa, a))
     checkDoesNotUnify(sg1(sa), b, U + AssignedConnector(sg1, LambdaConnector(_ => a)) + AssignedPredicate(sa, b))
+
+    checkUnifiesAs(exists(x, a), exists(x, a), U + (x -> x))
+    checkUnifiesAs(exists(x, a), exists(y, a), U + (x -> y))
+    checkUnifiesAs(exists(x, p1(x)), exists(y, p1(y)), U + (x -> y))
+    checkDoesNotUnify(exists(x, p1(x)), exists(y, p1(z)))
+    checkUnifiesAs(p1(x), p1(x), U + (x -> x))
+    checkUnifiesAs(p1(x), p1(y), U + (x -> y))
+    checkUnifiesAs(p1(x), p1(y), U + (x -> y), U + (x -> y))
+    checkDoesNotUnify(p1(x), p1(y), U + (x -> z))
+
+    checkUnifiesAs(exists(x, sp1(x)), exists(y, p1(y) /\ a), U + (x -> y) + AssignedPredicate(sp1, LambdaPredicate(v => p1(v) /\ a)))
+    checkUnifiesAs(exists(x, sa), exists(x, p1(t)), U + (x -> x) + AssignedPredicate(sa, p1(t)))
+    checkDoesNotUnify(exists(x, sa), exists(x, p1(x)))
+    checkDoesNotUnify(exists(x, sp1(x)), exists(x, p1(x)), U + (x -> x) + AssignedPredicate(sp1, LambdaPredicate(_ => p1(x))))
+
+    checkUnifiesAs(p1(st) /\ p1(su), p1(x) /\ p1(x), U + AssignedFunction(st, x) + AssignedFunction(su, x))
+    //checkDoesNotUnify(p1(st) /\ p1(st), p1(x) /\ p1(y))
   }
 }

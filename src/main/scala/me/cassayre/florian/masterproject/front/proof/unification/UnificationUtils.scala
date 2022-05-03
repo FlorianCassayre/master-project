@@ -62,15 +62,12 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
     case (ConnectorFormula(labelPattern: SchematicConnectorLabel[?], argsPattern), _) =>
       Some(Seq(SchematicConnector(labelPattern, argsPattern, value, ctx)))
     case (BinderFormula(labelPattern, boundPattern, innerPattern), BinderFormula(labelValue, boundValue, innerValue)) if labelPattern == labelValue =>
-      collectRecursiveFormula(innerPattern, innerValue)(using ctx + ((boundPattern, boundValue)))
+      collectRecursiveFormula(innerPattern, innerValue)(using ctx + ((boundPattern, boundValue))).map(Variable(boundPattern, boundValue) +: _)
     case _ => None
   }
 
-  private def collect(patternsAndValues: IndexedSeq[(Formula, Formula)]): ConstraintsResult = {
-
-
+  private def collect(patternsAndValues: IndexedSeq[(Formula, Formula)]): ConstraintsResult =
     patternsAndValues.map { case (pattern, value) => collectRecursiveFormula(pattern, value)(using Set.empty) }.fold(empty)(merge)
-  }
 
   private def unifyFromConstraints(
     constraints: Constraints,
@@ -163,13 +160,21 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
       def instantiateFormulaPartial(formula: Formula): Formula =
         instantiateFormulaSchemas(formula, partialAssignment.assignedFunctions, partialAssignment.assignedPredicates, partialAssignment.assignedConnectors)
 
+      def isFormulaBodyNoBoundVariables(body: Formula, ctx: Context): Boolean =
+        ctx.map(_._2).intersect(freeVariablesOf(body)).isEmpty
+      def isTermBodyNoBoundVariables(body: Term, ctx: Context): Boolean =
+        ctx.map(_._2).intersect(freeVariablesOf(body)).isEmpty
+
       // The method tries to resolve a constraint and returns two nested options:
       // * None => the constraint is unsolvable (e.g. too many degrees of freedom)
       // * Some(None) => there is a contradiction
       def handler(constraint: Constraint): Option[Option[(Constraints, UnificationContext)]] = constraint match {
         case SchematicFunction(label, args, value, ctx) if partialAssignment.functions.contains(label) =>
           val lambda = partialAssignment.functions(label)
-          if(isSame(value, lambda.unsafe(args.map(instantiateTermPartial)))) {
+          if(!isTermBodyNoBoundVariables(lambda.body, ctx)) {
+            // All the bound variables must appear in a way or another as arguments of this lambda
+            Some(None)
+          } else if(isSame(value, lambda.unsafe(args.map(instantiateTermPartial)))) {
             Some(Some((IndexedSeq.empty, partialAssignment)))
           } else {
             collectRecursiveTerm(lambda.unsafe(args), value)(using ctx) match
@@ -178,15 +183,20 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
           }
         case SchematicFunction(label, args, value, ctx) if args.forall(isSolvableTerm(_)(using ctx.map(_._1))) =>
           // TODO are all bound variables already instantiated?
-          // TODO rename args before comparing
           val valueArgs = args.map(unsafeRenameVariables(_, ctx.toMap))
           val freshArguments = freshIds(schematicFunctionsOf(value).map(_.id), valueArgs.size).map(SchematicFunctionLabel.apply[0])
           // We drop the resulting arguments map (because it is not needed anymore)
           val (fBody, _) = greedyFactoringFunction(value, freshArguments.zip(valueArgs).toIndexedSeq, Map.empty)
-          Some(Some((IndexedSeq.empty, partialAssignment + AssignedFunction.unsafe(label, LambdaFunction.unsafe(freshArguments, fBody)))))
+          if(isTermBodyNoBoundVariables(fBody, ctx)) {
+            Some(Some((IndexedSeq.empty, partialAssignment + AssignedFunction.unsafe(label, LambdaFunction.unsafe(freshArguments, fBody)))))
+          } else {
+            Some(None)
+          }
         case SchematicPredicate(label, args, value, ctx) if partialAssignment.predicates.contains(label) =>
           val lambda = partialAssignment.predicates(label)
-          if(isSame(value, lambda.unsafe(args.map(instantiateTermPartial)))) {
+          if(!isFormulaBodyNoBoundVariables(lambda.body, ctx)) {
+            Some(None)
+          } else if(isSame(value, lambda.unsafe(args.map(instantiateTermPartial)))) {
             Some(Some((IndexedSeq.empty, partialAssignment)))
           } else {
             collectRecursiveFormula(lambda.unsafe(args), value)(using ctx) match
@@ -198,10 +208,16 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
           val valueArgs = args.map(unsafeRenameVariables(_, ctx.toMap))
           val freshArguments = freshIds(schematicFunctionsOf(value).map(_.id), valueArgs.size).map(SchematicFunctionLabel.apply[0])
           val (fBody, _) = greedyFactoringPredicate(value, freshArguments.zip(valueArgs).toIndexedSeq, Map.empty)
-          Some(Some((IndexedSeq.empty, partialAssignment + AssignedPredicate.unsafe(label, LambdaPredicate.unsafe(freshArguments, fBody)))))
+          if(isFormulaBodyNoBoundVariables(fBody, ctx)) {
+            Some(Some((IndexedSeq.empty, partialAssignment + AssignedPredicate.unsafe(label, LambdaPredicate.unsafe(freshArguments, fBody)))))
+          } else {
+            Some(None)
+          }
         case SchematicConnector(label, args, value, ctx) if partialAssignment.connectors.contains(label) =>
           val lambda = partialAssignment.connectors(label)
-          if(isSame(value, lambda.unsafe(args.map(instantiateFormulaPartial)))) {
+          if(!isFormulaBodyNoBoundVariables(lambda.body, ctx)) {
+            Some(None)
+          } else if(isSame(value, lambda.unsafe(args.map(instantiateFormulaPartial)))) {
             Some(Some((IndexedSeq.empty, partialAssignment)))
           } else {
             collectRecursiveFormula(lambda.unsafe(args), value)(using ctx) match
@@ -212,7 +228,11 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
           val valueArgs = args.map(unsafeRenameVariables(_, ctx.toMap))
           val freshArguments = freshIds(schematicPredicatesOf(value).map(_.id), valueArgs.size).map(SchematicPredicateLabel.apply[0])
           val (fBody, _) = greedyFactoringConnector(value, freshArguments.zip(valueArgs).toIndexedSeq, Map.empty)
-          Some(Some((IndexedSeq.empty, partialAssignment + AssignedConnector.unsafe(label, LambdaConnector.unsafe(freshArguments, fBody)))))
+          if(isFormulaBodyNoBoundVariables(fBody, ctx)) {
+            Some(Some((IndexedSeq.empty, partialAssignment + AssignedConnector.unsafe(label, LambdaConnector.unsafe(freshArguments, fBody)))))
+          } else {
+            Some(None)
+          }
         case Variable(pattern, value) =>
           if(partialAssignment.variables.forall { case (l, r) => l != pattern || r == value }) {
             Some(Some((IndexedSeq.empty, partialAssignment + (pattern, value))))
@@ -348,20 +368,13 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
       )
 
       def rename(patterns: IndexedSeq[PartialSequent]): IndexedSeq[PartialSequent] = {
-        def renameFormula(formula: Formula): Formula = {
-          val renamed = instantiateFormulaSchemas(
+        def renameFormula(formula: Formula): Formula =
+          instantiateFormulaSchemas(
             unsafeRenameVariables(formula, variablesFreshMapping),
             functions = functionsFreshMapping.map { case (k, v) => RenamedLabel.unsafe(k, v).toAssignment }.toSeq,
             predicates = predicatesFreshMapping.map { case (k, v) => RenamedLabel.unsafe(k, v).toAssignment }.toSeq,
             connectors = connectorsFreshMapping.map { case (k, v) => RenamedLabel.unsafe(k, v).toAssignment }.toSeq,
           )
-          /*instantiateFormulaSchemas(renamed, // <- we don't want to do that
-            functions = renamedPartialAssignment.functions.map(AssignedFunction.unsafe).toSeq,
-            predicates = renamedPartialAssignment.predicates.map(AssignedPredicate.unsafe).toSeq,
-            connectors = renamedPartialAssignment.connectors.map(AssignedConnector.unsafe).toSeq,
-          )*/
-          renamed
-        }
         def renameFormulas(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] = formulas.map(renameFormula)
         patterns.map(p => p.copy(left = renameFormulas(p.left), right = renameFormulas(p.right)))
       }
