@@ -130,6 +130,10 @@ class Unification2Tests extends AnyFunSuite {
     checkDoesNotUnify(exists(x, sp1(x)), exists(x, p1(x)), U + (x -> x) + AssignedPredicate(sp1, LambdaPredicate(_ => p1(x))))
 
     checkUnifiesAs(p1(st) /\ p1(su), p1(x) /\ p1(x), U + AssignedFunction(st, x) + AssignedFunction(su, x))
-    //checkDoesNotUnify(p1(st) /\ p1(st), p1(x) /\ p1(y))
+    checkDoesNotUnify(p1(st) /\ p1(st), p1(x) /\ p1(y))
+    checkDoesNotUnify(p1(st) /\ p1(st), p1(su) /\ p1(sv))
+    checkUnifiesAs(p1(st) /\ p1(st), p1(su) /\ p1(su), U + AssignedFunction(st, su))
+
+    checkUnifiesAs(exists(x, exists(y, p1(x) /\ p1(y))), exists(y, exists(x, p1(y) /\ p1(x))), U + (x -> y) + (y -> x))
   }
 }

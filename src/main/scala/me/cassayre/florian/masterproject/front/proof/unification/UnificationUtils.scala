@@ -37,13 +37,23 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
       c1 <- o1
         c2 <- o2
     } yield c1 ++ c2
-  private def collectRecursiveTerm(pattern: Term, value: Term)(using ctx: Context): ConstraintsResult = (pattern, value) match {
-    case (FunctionTerm(labelPattern: ConstantFunctionLabel[?], argsPattern), FunctionTerm(labelValue: ConstantFunctionLabel[?], argsValue)) if labelPattern == labelValue =>
-      argsPattern.zip(argsValue).map { case (argPattern, argValue) => collectRecursiveTerm(argPattern, argValue) }.fold(empty)(merge)
-    case (FunctionTerm(labelPattern: SchematicFunctionLabel[?], argsPattern), _) =>
+  private def collectRecursiveTerm(
+    pattern: Term,
+    value: Term,
+    valuesFunctions: Set[SchematicFunctionLabel[?]], valuesVariables: Set[VariableLabel],
+  )(using ctx: Context): ConstraintsResult = (pattern, value) match {
+    case (FunctionTerm(labelPattern: FunctionLabel[?], argsPattern), FunctionTerm(labelValue: FunctionLabel[?], argsValue)) if labelPattern == labelValue =>
+      argsPattern.zip(argsValue).map { case (argPattern, argValue) => collectRecursiveTerm(argPattern, argValue, valuesFunctions, valuesVariables) }.fold(empty)(merge)
+    case (FunctionTerm(labelPattern: SchematicFunctionLabel[?], argsPattern), _) if !valuesFunctions.contains(labelPattern) =>
       Some(Seq(SchematicFunction(labelPattern, argsPattern, value, ctx)))
     case (VariableTerm(labelPattern), VariableTerm(labelValue)) =>
-      if(ctx.contains((labelPattern, labelValue))) { // Bound variable
+      if(valuesVariables.contains(labelPattern)) {
+        if(labelPattern == labelValue) {
+          Some(Seq.empty)
+        } else {
+          None
+        }
+      } else if(ctx.contains((labelPattern, labelValue))) { // Bound variable
         Some(Seq(Variable(labelPattern, labelValue)))
       } else if(ctx.forall { case (p, v) => p != labelPattern && v != labelValue }) { // Free variable
         Some(Seq(Variable(labelPattern, labelValue))) // TODO merge these branches
@@ -52,22 +62,32 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
       }
     case _ => None
   }
-  private def collectRecursiveFormula(pattern: Formula, value: Formula)(using ctx: Set[(VariableLabel, VariableLabel)]): ConstraintsResult = (pattern, value) match {
-    case (PredicateFormula(labelPattern: ConstantPredicateLabel[?], argsPattern), PredicateFormula(labelValue: ConstantPredicateLabel[?], argsValue)) if labelPattern == labelValue =>
-      argsPattern.zip(argsValue).map { case (argPattern, argValue) => collectRecursiveTerm(argPattern, argValue) }.fold(empty)(merge)
-    case (PredicateFormula(labelPattern: SchematicPredicateLabel[?], argsPattern), _) =>
+  private def collectRecursiveFormula(
+    pattern: Formula,
+    value: Formula,
+    valuesFunctions: Set[SchematicFunctionLabel[?]], valuesPredicates: Set[SchematicPredicateLabel[?]], valuesConnectors: Set[SchematicConnectorLabel[?]], valuesVariables: Set[VariableLabel],
+  )(using ctx: Set[(VariableLabel, VariableLabel)]): ConstraintsResult = (pattern, value) match {
+    case (PredicateFormula(labelPattern: PredicateLabel[?], argsPattern), PredicateFormula(labelValue: PredicateLabel[?], argsValue)) if labelPattern == labelValue =>
+      argsPattern.zip(argsValue).map { case (argPattern, argValue) => collectRecursiveTerm(argPattern, argValue, valuesFunctions, valuesVariables) }.fold(empty)(merge)
+    case (PredicateFormula(labelPattern: SchematicPredicateLabel[?], argsPattern), _) if !valuesPredicates.contains(labelPattern) =>
       Some(Seq(SchematicPredicate(labelPattern, argsPattern, value, ctx)))
-    case (ConnectorFormula(labelPattern: ConstantConnectorLabel[?], argsPattern), ConnectorFormula(labelValue: ConstantConnectorLabel[?], argsValue)) if labelPattern == labelValue =>
-      argsPattern.zip(argsValue).map { case (argPattern, argValue) => collectRecursiveFormula(argPattern, argValue) }.fold(empty)(merge)
-    case (ConnectorFormula(labelPattern: SchematicConnectorLabel[?], argsPattern), _) =>
+    case (ConnectorFormula(labelPattern: ConnectorLabel[?], argsPattern), ConnectorFormula(labelValue: ConnectorLabel[?], argsValue)) if labelPattern == labelValue =>
+      argsPattern.zip(argsValue).map { case (argPattern, argValue) => collectRecursiveFormula(argPattern, argValue, valuesFunctions, valuesPredicates, valuesConnectors, valuesVariables) }.fold(empty)(merge)
+    case (ConnectorFormula(labelPattern: SchematicConnectorLabel[?], argsPattern), _) if !valuesConnectors.contains(labelPattern) =>
       Some(Seq(SchematicConnector(labelPattern, argsPattern, value, ctx)))
     case (BinderFormula(labelPattern, boundPattern, innerPattern), BinderFormula(labelValue, boundValue, innerValue)) if labelPattern == labelValue =>
-      collectRecursiveFormula(innerPattern, innerValue)(using ctx + ((boundPattern, boundValue))).map(Variable(boundPattern, boundValue) +: _)
+      collectRecursiveFormula(innerPattern, innerValue, valuesFunctions, valuesPredicates, valuesConnectors, valuesVariables)(using ctx + ((boundPattern, boundValue))).map(Variable(boundPattern, boundValue) +: _)
     case _ => None
   }
 
-  private def collect(patternsAndValues: IndexedSeq[(Formula, Formula)]): ConstraintsResult =
-    patternsAndValues.map { case (pattern, value) => collectRecursiveFormula(pattern, value)(using Set.empty) }.fold(empty)(merge)
+  private def collect(
+    patternsAndValues: IndexedSeq[(Formula, Formula)],
+    valuesFunctions: Set[SchematicFunctionLabel[?]],
+    valuesPredicates: Set[SchematicPredicateLabel[?]],
+    valuesConnectors: Set[SchematicConnectorLabel[?]],
+    valuesVariables: Set[VariableLabel],
+  ): ConstraintsResult =
+    patternsAndValues.map { case (pattern, value) => collectRecursiveFormula(pattern, value, valuesFunctions, valuesPredicates, valuesConnectors, valuesVariables)(using Set.empty) }.fold(empty)(merge)
 
   private def unifyFromConstraints(
     constraints: Constraints,
@@ -79,7 +99,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
   ): Option[UnificationContext] = {
     if(constraints.nonEmpty) {
       def isSolvableTerm(pattern: Term)(using ctx: Set[VariableLabel]): Boolean = pattern match {
-        case VariableTerm(label) => /*ctx.contains(label) ||*/ valueVariables.contains(label) // TODO is this correct?
+        case VariableTerm(label) => valueVariables.contains(label) || partialAssignment.variables.contains(label)
         case FunctionTerm(_: ConstantFunctionLabel[?], args) => args.forall(isSolvableTerm)
         case FunctionTerm(schematic: SchematicFunctionLabel[?], args) => (valueFunctions.contains(schematic) || partialAssignment.functions.contains(schematic)) && args.forall(isSolvableTerm)
         case _ => false
@@ -91,16 +111,6 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
         case ConnectorFormula(schematic: SchematicConnectorLabel[?], args) => (valueConnectors.contains(schematic) || partialAssignment.connectors.contains(schematic)) && args.forall(isSolvableFormula)
         case BinderFormula(_, bound, inner) => valueVariables.contains(bound) && isSolvableFormula(inner)(using ctx + bound)
         case _ => false
-      }
-      def instantiateTerm(term: Term, assignment: UnificationContext): Term =
-        instantiateTermSchemas(unsafeRenameVariables(term, assignment.variables), assignment.assignedFunctions)
-      def instantiateFormula(formula: Formula, assignment: UnificationContext): Formula =
-        instantiateFormulaSchemas(unsafeRenameVariables(formula, assignment.variables), assignment.assignedFunctions, assignment.assignedPredicates, assignment.assignedConnectors)
-      def instantiateConstraint(constraint: Constraint, assignment: UnificationContext): Constraint = constraint match {
-        case cse @ SchematicFunction(label, args, value, ctx) => cse.copy(args = args.map(instantiateTerm(_, assignment)))
-        case cse @ SchematicPredicate(label, args, value, ctx) => cse.copy(args = args.map(instantiateTerm(_, assignment)))
-        case cse @ SchematicConnector(label, args, value, ctx) => cse.copy(args = args.map(instantiateFormula(_, assignment)))
-        case _: Variable => constraint // Nothing to do for variables
       }
 
       // This function tries to factor out all occurrences of `args._2` into `args._1` within `term`, and will store the result in `assignment`
@@ -177,7 +187,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
           } else if(isSame(value, lambda.unsafe(args.map(instantiateTermPartial)))) {
             Some(Some((IndexedSeq.empty, partialAssignment)))
           } else {
-            collectRecursiveTerm(lambda.unsafe(args), value)(using ctx) match
+            collectRecursiveTerm(lambda.unsafe(args), value, valueFunctions, valueVariables)(using ctx) match
               case Some(addedConstraints) => Some(Some(addedConstraints, partialAssignment))
               case None => Some(None)
           }
@@ -199,7 +209,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
           } else if(isSame(value, lambda.unsafe(args.map(instantiateTermPartial)))) {
             Some(Some((IndexedSeq.empty, partialAssignment)))
           } else {
-            collectRecursiveFormula(lambda.unsafe(args), value)(using ctx) match
+            collectRecursiveFormula(lambda.unsafe(args), value, valueFunctions, valuePredicates, valueConnectors, valueVariables)(using ctx) match
               case Some(addedConstraints) => Some(Some(addedConstraints, partialAssignment))
               case None => Some(None)
           }
@@ -220,7 +230,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
           } else if(isSame(value, lambda.unsafe(args.map(instantiateFormulaPartial)))) {
             Some(Some((IndexedSeq.empty, partialAssignment)))
           } else {
-            collectRecursiveFormula(lambda.unsafe(args), value)(using ctx) match
+            collectRecursiveFormula(lambda.unsafe(args), value, valueFunctions, valuePredicates, valueConnectors, valueVariables)(using ctx) match
               case Some(addedConstraints) => Some(Some(addedConstraints, partialAssignment))
               case None => Some(None)
           }
@@ -234,8 +244,14 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
             Some(None)
           }
         case Variable(pattern, value) =>
-          if(partialAssignment.variables.forall { case (l, r) => l != pattern || r == value }) {
-            Some(Some((IndexedSeq.empty, partialAssignment + (pattern, value))))
+          if(valueVariables.contains(pattern)) {
+            if(pattern == value) {
+              Some(Some((IndexedSeq.empty, partialAssignment)))
+            } else {
+              Some(None)
+            }
+          } else if(partialAssignment.variables.forall { case (l, r) => l != pattern || r == value }) {
+            Some(Some((IndexedSeq.empty, partialAssignment + (pattern -> value))))
           } else {
             Some(None) // Contradiction
           }
@@ -246,8 +262,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
       }.headOption match {
         case Some(option) => option match {
           case Some((newConstraints, newContext, i)) =>
-            def replacement(constraint: Constraint): Constraint = instantiateConstraint(constraint, newContext)
-            unifyFromConstraints(constraints.take(i).map(replacement) ++ newConstraints ++ constraints.drop(i + 1).map(replacement), newContext,
+            unifyFromConstraints(constraints.take(i) ++ newConstraints ++ constraints.drop(i + 1), newContext,
               valueFunctions, valuePredicates, valueConnectors, valueVariables)
           case None => None // Explicit error
         }
@@ -299,7 +314,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
       (partialAssignment.predicates.values ++ partialAssignment.connectors.values).flatMap { f => freeVariablesOf(f.body) ++ declaredBoundVariablesOf(f.body) }
 
     val (nonUnifiableFunctions, nonUnifiablePredicates, nonUnifiableConnectors) =
-      (patternsFunctions.diff(otherPatternsFunctions), patternsPredicates.diff(otherPatternsPredicates), patternsConnectors.diff(otherPatternsConnectors))
+      (otherPatternsFunctions.diff(patternsFunctions), otherPatternsPredicates.diff(patternsPredicates), otherPatternsConnectors.diff(patternsConnectors))
 
     lazy val noInvalidSizeRange = patterns.size == values.size && patterns.size == formulaIndices.size && patterns.zip(formulaIndices).zip(values).forall {
       case ((PartialSequent(leftPattern, rightPattern, _, _), (leftIndices, rightIndices)), Sequent(leftValue, rightValue)) =>
@@ -318,9 +333,9 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
         partialAssignedPredicates.subsetOf(allPatternsPredicates) &&
         partialAssignedConnectors.subsetOf(allPatternsConnectors)
     lazy val noUndeclaredNonUnifiable =
-      partialAssignedFunctions.subsetOf(nonUnifiableFunctions) &&
-        partialAssignedPredicates.subsetOf(nonUnifiablePredicates) &&
-        partialAssignedConnectors.subsetOf(nonUnifiableConnectors)
+      nonUnifiableFunctions.subsetOf(partialAssignedFunctions) &&
+        nonUnifiablePredicates.subsetOf(partialAssignedPredicates) &&
+        nonUnifiableConnectors.subsetOf(partialAssignedConnectors)
 
     val allRequirements =
       isLegalPatterns(patterns) && isLegalPatterns(otherPatterns) &&
@@ -381,11 +396,15 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
 
       val (renamedPatterns, renamedOtherPatterns) = (rename(patterns), rename(otherPatterns))
 
-      val constraints = collect(renamedPatterns.flatMap(_.formulas).zip(values.flatMap(_.formulas)))
+      val orderedValues = values.zip(formulaIndices).flatMap { case (value, (indicesLeft, indicesRight)) =>
+        indicesLeft.map(value.left) ++ indicesRight.map(value.right)
+      }
+
+      val constraints = collect(renamedPatterns.flatMap(_.formulas).zip(orderedValues), valuesFunctions, valuesPredicates, valuesConnectors, valuesVariables)
 
       val unified = constraints
         .flatMap(unifyFromConstraints(_, renamedPartialAssignment, allValuesFunctions, allValuesPredicates, allValuesConnectors, allValuesVariables))
-        .filter(assignment => // Check if the assignment is full
+        .filter(assignment => // Check if the assignment is full (should this be an assertion?)
           assignment.functions.keySet.map(functionsInverseMapping) == allPatternsFunctions &&
             assignment.predicates.keySet.map(predicatesInverseMapping) == allPatternsPredicates &&
             assignment.connectors.keySet.map(connectorsInverseMapping) == allPatternsConnectors &&
@@ -411,7 +430,7 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
         // Union all
         val (commonLeft, commonRight) = formulaIndices.zip(values).map { case ((indicesLeft, indicesRight), Sequent(valueLeft, valueRight)) =>
           (removeIndices(valueLeft, indicesLeft), removeIndices(valueRight, indicesRight))
-        }.reduce { case ((l1, r1), (l2, r2)) =>
+        }.foldLeft((IndexedSeq.empty[Formula], IndexedSeq.empty[Formula])) { case ((l1, r1), (l2, r2)) =>
           (l1 ++ l2.diff(l1), r1 ++ r2.diff(r1))
         }
 
