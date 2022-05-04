@@ -4,8 +4,8 @@ import lisa.kernel.Printer
 import lisa.kernel.proof.{SCProof, SCProofChecker, SequentCalculus}
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 import me.cassayre.florian.masterproject.legacy.parser.SCReader.*
-import me.cassayre.florian.masterproject.front.unification.Unifier
-import me.cassayre.florian.masterproject.front.unification.Unifier.*
+import me.cassayre.florian.masterproject.legacy.unification.Unifier
+import me.cassayre.florian.masterproject.legacy.unification.Unifier.*
 import lisa.kernel.proof.SequentCalculus.{Cut, Hypothesis, LeftAnd, RightAnd, SCProofStep, SCSubproof, Weakening}
 import me.cassayre.florian.masterproject.util.SCUtils
 import proven.tactics.SimplePropositionalSolver

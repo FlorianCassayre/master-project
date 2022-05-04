@@ -2,7 +2,6 @@ package me.cassayre.florian.masterproject.front.proof.predef
 
 import lisa.kernel.proof.SCProof
 import me.cassayre.florian.masterproject.front.fol.FOL.*
-import me.cassayre.florian.masterproject.front.unification.Unifier.*
 import lisa.kernel.proof.SequentCalculus.*
 import proven.tactics.SimplePropositionalSolver
 import me.cassayre.florian.masterproject.front.proof.state.ProofEnvironmentDefinitions

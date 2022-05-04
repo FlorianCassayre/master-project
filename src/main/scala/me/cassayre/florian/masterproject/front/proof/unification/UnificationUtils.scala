@@ -18,6 +18,48 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
     noMalformedFormulas && noClashingBoundVariablePatterns && noConflictingBoundFreeVariables
   }
 
+  private def inflateValues(
+    patternsTo: IndexedSeq[PartialSequent],
+    valuesFrom: IndexedSeq[Sequent],
+    ctx: UnificationContext,
+    indices: IndexedSeq[(IndexedSeq[Int], IndexedSeq[Int])]
+  ): IndexedSeq[Sequent] = {
+    def removeIndices[T](array: IndexedSeq[T], indices: Seq[Int]): IndexedSeq[T] = {
+      val set = indices.toSet
+      for {
+        (v, i) <- array.zipWithIndex
+          if !set.contains(i)
+      } yield v
+    }
+
+    def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
+      formulas.map(formula => instantiateFormulaSchemas(
+        unsafeRenameVariables(formula, ctx.variables),
+        functions = ctx.assignedFunctions, predicates = ctx.assignedPredicates, connectors = ctx.assignedConnectors))
+
+    def createValueTo(common: IndexedSeq[Formula], pattern: IndexedSeq[Formula], partial: Boolean): IndexedSeq[Formula] = {
+      val instantiated = instantiate(pattern)
+      if(partial) common ++ instantiated else instantiated
+    }
+
+    val (commonLeft, commonRight) = {
+      indices.zip(valuesFrom).map { case ((indicesLeft, indicesRight), Sequent(valueLeft, valueRight)) => // Union all
+        (removeIndices(valueLeft, indicesLeft), removeIndices(valueRight, indicesRight))
+      }.foldLeft((IndexedSeq.empty[Formula], IndexedSeq.empty[Formula])) { case ((accL, accR), ((ls, rs))) =>
+        (accL ++ ls.diff(accL), accR ++ rs.diff(accR))
+      }
+    }
+
+    val newValues = patternsTo.map(patternTo =>
+      Sequent(
+        createValueTo(commonLeft, patternTo.left, patternTo.partialLeft),
+        createValueTo(commonRight, patternTo.right, patternTo.partialRight),
+      )
+    )
+
+    newValues
+  }
+
   private type Constraints = Seq[Constraint]
   private type ConstraintsResult = Option[Constraints]
 
@@ -419,36 +461,8 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
           renamedAssignment.variables.map { case (k, v) => variablesInverseMapping.getOrElse(k, k) -> v },
         )
 
-        def removeIndices[T](array: IndexedSeq[T], indices: Seq[Int]): IndexedSeq[T] = {
-          val set = indices.toSet
-          for {
-            (v, i) <- array.zipWithIndex
-              if !set.contains(i)
-          } yield v
-        }
-
         // Union all
-        val (commonLeft, commonRight) = formulaIndices.zip(values).map { case ((indicesLeft, indicesRight), Sequent(valueLeft, valueRight)) =>
-          (removeIndices(valueLeft, indicesLeft), removeIndices(valueRight, indicesRight))
-        }.foldLeft((IndexedSeq.empty[Formula], IndexedSeq.empty[Formula])) { case ((l1, r1), (l2, r2)) =>
-          (l1 ++ l2.diff(l1), r1 ++ r2.diff(r1))
-        }
-
-        def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
-          formulas.map(formula => instantiateFormulaSchemas(unsafeRenameVariables(formula, renamedAssignment.variables),
-            renamedAssignment.assignedFunctions, renamedAssignment.assignedPredicates, renamedAssignment.assignedConnectors))
-
-        def createValueTo(common: IndexedSeq[Formula], pattern: IndexedSeq[Formula], partial: Boolean): IndexedSeq[Formula] = {
-          val instantiated = instantiate(pattern)
-          if(partial) common ++ instantiated else instantiated
-        }
-
-        val otherValues = renamedOtherPatterns.map(patterns =>
-          Sequent(
-            createValueTo(commonLeft, patterns.left, patterns.partialLeft),
-            createValueTo(commonRight, patterns.right, patterns.partialRight),
-          )
-        )
+        val otherValues = inflateValues(renamedOtherPatterns, values, renamedAssignment, formulaIndices)
 
         (otherValues, assignment)
       }

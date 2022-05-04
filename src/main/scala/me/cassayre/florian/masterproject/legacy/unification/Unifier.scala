@@ -1,4 +1,4 @@
-package me.cassayre.florian.masterproject.front.unification
+package me.cassayre.florian.masterproject.legacy.unification
 
 import lisa.kernel.Printer
 import me.cassayre.florian.masterproject.front.fol.FOL.*

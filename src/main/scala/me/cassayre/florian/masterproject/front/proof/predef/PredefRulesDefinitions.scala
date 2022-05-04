@@ -1,7 +1,6 @@
 package me.cassayre.florian.masterproject.front.proof.predef
 
 import me.cassayre.florian.masterproject.front.fol.FOL.*
-import me.cassayre.florian.masterproject.front.unification.Unifier.*
 import lisa.kernel.proof.SequentCalculus.*
 import lisa.kernel.fol.FOL.{LambdaFormulaFormula, LambdaTermFormula, LambdaTermTerm}
 import proven.tactics.SimplePropositionalSolver

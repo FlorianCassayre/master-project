@@ -2,7 +2,6 @@ package me.cassayre.florian.masterproject.front.proof.state
 
 import lisa.kernel.proof.SCProof
 import me.cassayre.florian.masterproject.front.fol.FOL.*
-import me.cassayre.florian.masterproject.front.unification.Unifier.*
 import lisa.kernel.proof.SequentCalculus.{Rewrite, SCProofStep}
 import me.cassayre.florian.masterproject.util.SCUtils
 import me.cassayre.florian.masterproject.front.proof.sequent.{SequentDefinitions, SequentOps}
