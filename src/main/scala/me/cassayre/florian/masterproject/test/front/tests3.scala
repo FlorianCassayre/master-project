@@ -92,7 +92,6 @@ import me.cassayre.florian.masterproject.front.{*, given}
 
     apply(RuleIntroductionRightForallSchema(
       RuleParameters()
-        .withPredicate(Notations.p, x => x === x)
         .withFunction(Notations.t, s())
     ))
     apply(introRRefl)

@@ -102,8 +102,8 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     *(p(t)) |- **,
     *(forall(x, p(x))) |- **,
     (bot, ctx) => {
-      val lambda = ctx.applyMultiary(p)
-      val px = lambda.unsafe(Seq(ctx(x)))
+      val lambda = ctx(p)
+      val px = lambda(VariableTerm(ctx(x)))
       IndexedSeq(
         LeftForall(bot, -1, px, ctx(x), ctx(t))
       )
@@ -115,8 +115,8 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     ** |- *(forall(x, p(x))),
     { case (bot, ctx) if !(bot.left ++ bot.right).flatMap(_.freeVariables).contains(ctx(x)) =>
       // TODO x not already free in sequent; ideally this should be handled automatically in `Rule`, not here
-      val lambda = ctx.applyMultiary(p)
-      val px = lambda.unsafe(Seq(ctx(x)))
+      val lambda = ctx(p)
+      val px = lambda(VariableTerm(ctx(x)))
       IndexedSeq(
         RightForall(bot, -1, px, x)
       )
@@ -127,8 +127,8 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     *(p(x)) |- **,
     *(exists(x, p(x))) |- **,
     { case (bot, ctx) if !(bot.left ++ bot.right).flatMap(_.freeVariables).contains(ctx(x)) =>
-      val lambda = ctx.applyMultiary(p)
-      val px = lambda.unsafe(Seq(ctx(x)))
+      val lambda = ctx(p)
+      val px = lambda(VariableTerm(ctx(x)))
       IndexedSeq(
         LeftExists(bot, -1, px, x)
       )
@@ -139,8 +139,8 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     ** |- *(p(t)),
     ** |- *(exists(x, p(x))),
     (bot, ctx) => {
-      val lambda = ctx.applyMultiary(p)
-      val px = lambda.unsafe(Seq(ctx(x)))
+      val lambda = ctx(p)
+      val px = lambda(VariableTerm(ctx(x)))
       IndexedSeq(
         RightExists(bot, -1, px, ctx(x), ctx(t))
       )
@@ -152,8 +152,8 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     *(existsOne(x, p(x))) |- **,
     (bot, ctx) => {
       // TODO y not free in p
-      val lambda = ctx.applyMultiary(p)
-      val px = lambda.unsafe(Seq(ctx(x)))
+      val lambda = ctx(p)
+      val px = lambda(VariableTerm(ctx(x)))
       ???
     }
   )
@@ -165,7 +165,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     *(s === t, p(t)) |- **,
     (bot, ctx) =>
       IndexedSeq(
-        LeftSubstEq(bot, -1, List(ctx(s) -> ctx(t)), ctx.applyMultiary(p))
+        LeftSubstEq(bot, -1, List(ctx(s) -> ctx(t)), ctx(p))
       )
   )
 
@@ -174,7 +174,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     *(s === t) |- *(p(t)),
     (bot, ctx) =>
       IndexedSeq(
-        RightSubstEq(bot, -1, List(ctx(s) -> ctx(t)), ctx.applyMultiary(p))
+        RightSubstEq(bot, -1, List(ctx(s) -> ctx(t)), ctx(p))
       )
   )
 
@@ -183,7 +183,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     *(a <=> b, f(b)) |- **,
     (bot, ctx) =>
       IndexedSeq(
-        LeftSubstIff(bot, -1, List(ctx(a) -> ctx(b)), ctx.applyMultiary(f))
+        LeftSubstIff(bot, -1, List(ctx(a) -> ctx(b)), ctx(f))
       )
   )
 
@@ -192,7 +192,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     *(a <=> b) |- *(f(b)),
     (bot, ctx) =>
       IndexedSeq(
-        RightSubstIff(bot, -1, List(ctx(a) -> ctx(b)), ctx.applyMultiary(f))
+        RightSubstIff(bot, -1, List(ctx(a) -> ctx(b)), ctx(f))
       )
   )
 
@@ -203,7 +203,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     ** |- *(f(b)),
     (bot, ctx) =>
       IndexedSeq(
-        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, List(ctx(a) -> ctx(b)), ctx.applyMultiary(f)),
+        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, List(ctx(a) -> ctx(b)), ctx(f)),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
   )
@@ -213,7 +213,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     *(f(b)) |- **,
     (bot, ctx) =>
       IndexedSeq(
-        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, List(ctx(a) -> ctx(b)), ctx.applyMultiary(f)),
+        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, List(ctx(a) -> ctx(b)), ctx(f)),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
   )
@@ -312,7 +312,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     *(p(t)) |- **,
     (bot, ctx) =>
       IndexedSeq(
-        LeftSubstEq(bot +< (ctx(s) === ctx(t)), -1, List(ctx(s) -> ctx(t)), ctx.applyMultiary(p)),
+        LeftSubstEq(bot +< (ctx(s) === ctx(t)), -1, List(ctx(s) -> ctx(t)), ctx(p)),
         Cut(bot, -2, 0, ctx(s) === ctx(t))
       )
   )
@@ -322,7 +322,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     ** |- *(p(t)),
     (bot, ctx) =>
       IndexedSeq(
-        RightSubstEq(bot +< (ctx(s) === ctx(t)), -1, List(ctx(s) -> ctx(t)), ctx.applyMultiary(p)),
+        RightSubstEq(bot +< (ctx(s) === ctx(t)), -1, List(ctx(s) -> ctx(t)), ctx(p)),
         Cut(bot, -2, 0, ctx(s) === ctx(t))
       )
   )
@@ -332,7 +332,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     *(f(b)) |- **,
     (bot, ctx) =>
       IndexedSeq(
-        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, List(ctx(a) -> ctx(b)), ctx.applyMultiary(f)),
+        LeftSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, List(ctx(a) -> ctx(b)), ctx(f)),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
   )
@@ -342,7 +342,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     ** |- *(f(b)),
     (bot, ctx) =>
       IndexedSeq(
-        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, List(ctx(a) -> ctx(b)), ctx.applyMultiary(f)),
+        RightSubstIff(bot +< (ctx(a) <=> ctx(b)), -1, List(ctx(a) -> ctx(b)), ctx(f)),
         Cut(bot, -2, 0, ctx(a) <=> ctx(b))
       )
   )

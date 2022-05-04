@@ -18,15 +18,11 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
   // Here we take advantage of forward mode to derive an axiom into a different theorem
   val axExtS: Theorem = {
     val t0 = elimRForallS(
-      RuleParameters()
-        .withPredicate(Notations.p, x => forall(y, forall(z, (z in x) <=> (z in y)) <=> (x === y)))
-        .withFunction(Notations.t, s())
+      RuleParameters().withFunction(Notations.t, s())
     )(axExt).get
 
     val t1 = elimRForallS(
-      RuleParameters()
-        .withPredicate(Notations.p, y => forall(z, (z in s) <=> (z in y)) <=> (s === y))
-        .withFunction(Notations.t, t())
+      RuleParameters().withFunction(Notations.t, t())
     )(t0).get
 
     t1.display()
@@ -56,7 +52,6 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
 
     apply(elimRSubstEq(
       RuleParameters()
-        .withPredicate(Notations.p, _ === u)
         .withFunction(Notations.s, t())
         .withFunction(Notations.t, s())
     ))
