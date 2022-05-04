@@ -20,7 +20,7 @@ import lisa.kernel.proof.SCProofChecker
       )
     ),
     Seq(
-      TacticSolver,
+      TacticSolverNative,
     )
   )
 

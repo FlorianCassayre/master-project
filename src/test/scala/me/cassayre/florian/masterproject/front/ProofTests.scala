@@ -258,7 +258,7 @@ class ProofTests extends AnyFunSuite {
       Proof(
         () |- ((a /\ b) ==> (b /\ a))
       )(
-        TacticSolver,
+        TacticSolverNative,
       )
     )
 
@@ -266,7 +266,7 @@ class ProofTests extends AnyFunSuite {
       Proof(
         () |- ((b /\ a) ==> (a /\ b))
       )(
-        TacticSolver,
+        TacticSolverNative,
       )
     )
 

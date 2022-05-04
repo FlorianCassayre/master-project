@@ -5,11 +5,11 @@ import lisa.kernel.Printer
 import scala.util.chaining.*
 import me.cassayre.florian.masterproject.front.{*, given}
 
-val (a, b, c) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"))
-
 // `sbt console`
 
 @main def demo1(): Unit = {
+  val (a, b, c) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"))
+
   given ProofEnvironment = newEmptyEnvironment()
 
   val p1 = ProofMode(a |- b ==> (a /\ b))
@@ -35,6 +35,7 @@ val (a, b, c) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"
 @main def demo2(): Unit = {
   import me.cassayre.florian.masterproject.front.theory.SetTheory.*
 
+  val (a, b, c) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"))
   val (s, t, u) = (SchematicFunctionLabel[0]("s"), SchematicFunctionLabel[0]("t"), SchematicFunctionLabel[0]("u"))
   val (x, y, z) = (VariableLabel("x"), VariableLabel("y"), VariableLabel("z"))
 

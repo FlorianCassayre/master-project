@@ -118,7 +118,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
       val lambda = ctx(p)
       val px = lambda(VariableTerm(ctx(x)))
       IndexedSeq(
-        RightForall(bot, -1, px, x)
+        RightForall(bot, -1, px, ctx(x))
       )
     }
   )
@@ -130,7 +130,7 @@ trait PredefRulesDefinitions extends RuleDefinitions {
       val lambda = ctx(p)
       val px = lambda(VariableTerm(ctx(x)))
       IndexedSeq(
-        LeftExists(bot, -1, px, x)
+        LeftExists(bot, -1, px, ctx(x))
       )
     }
   )
@@ -280,11 +280,21 @@ trait PredefRulesDefinitions extends RuleDefinitions {
   case object RuleModusPonens extends RuleBase(
     (** |- *(a)) :+ ($(a) |- $(b)),
     ** |- *(b),
-    (bot, ctx) => {
+    (bot, ctx) =>
       IndexedSeq(
         Cut(bot, -1, -2, ctx(a)),
       )
-    }
+  )
+
+  case object RuleEliminationRightNot extends RuleBase(
+    ** |- *(!a),
+    *(a) |- **,
+    (bot, ctx) =>
+      IndexedSeq(
+        Hypothesis(ctx(a) |- ctx(a), ctx(a)),
+        LeftNot((ctx(a), !ctx(a)) |- (), 0, ctx(a)),
+        Cut(bot, -1, 1, !ctx(a)),
+      )
   )
 
   case object RuleIntroductionRightForallSchema extends RuleBase(
@@ -297,10 +307,8 @@ trait PredefRulesDefinitions extends RuleDefinitions {
           val (px, pt) = (ctx(p)(vx), ctx(p)(ctx(t)))
           val cBot = bot -> forall(ctx(x), px)
           IndexedSeq(
-            Hypothesis(cBot +< px +> px, px),
-            InstFunSchema(cBot +< pt +> px, 0, Map(toKernel(pl) -> LambdaFunction(vx))),
-            RightForall(bot +< pt, 1, px, vx.label),
-            Cut(bot, -1, 2, pt),
+            InstFunSchema(cBot +> px, -1, Map(toKernel(pl) -> LambdaFunction(vx))),
+            RightForall(bot, 0, px, vx.label),
           )
         case e => throw new MatchError(e)
       }

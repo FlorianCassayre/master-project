@@ -22,7 +22,7 @@ import me.cassayre.florian.masterproject.front.{*, given}
       )
     ),
     Seq(
-      TacticSolver,
+      TacticSolverNative,
     )
   )
 

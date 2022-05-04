@@ -41,9 +41,14 @@ object Proof
   val elimRSubstIff: RuleEliminationRightSubstIff.type = RuleEliminationRightSubstIff
   val elimLSubstEq: RuleEliminationLeftSubstEq.type = RuleEliminationLeftSubstEq
   val elimRSubstEq: RuleEliminationRightSubstEq.type = RuleEliminationRightSubstEq
+  val elimRNot: RuleEliminationRightNot.type = RuleEliminationRightNot
 
-  val solveProp: TacticSolver.type = TacticSolver
+  val instFunS: TacticInstantiateFunctionSchema.type = TacticInstantiateFunctionSchema
+
+  val solvePropFast: TacticSolverNative.type = TacticSolverNative
+  val solveProp: TacticPropositionalSolver.type = TacticPropositionalSolver
   val rewrite: TacticalRewrite.type = TacticalRewrite
+  val weaken: TacticalWeaken.type = TacticalWeaken
   val fallback: TacticFallback.type = TacticFallback
 
   val justification: TacticApplyJustification.type = TacticApplyJustification

@@ -43,7 +43,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
       copy(connectors = connectors :+ AssignedConnector(label, LambdaConnector(f)))
     }
 
-    def withVariables(label: VariableLabel, value: VariableLabel): RuleParameters =
+    def withVariable(label: VariableLabel, value: VariableLabel): RuleParameters =
       copy(variables = variables + (label -> value))
   }
 

@@ -8,8 +8,7 @@ import me.cassayre.florian.masterproject.front.proof.state.ProofEnvironmentDefin
 
 trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
 
-  @deprecated
-  case object TacticSolver extends TacticGoalFunctional {
+  case object TacticSolverNative extends TacticGoalFunctional {
     import Notations.*
 
     override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
@@ -52,9 +51,48 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
     def apply(rewritten: Sequent): TacticRewriteSequent = TacticRewriteSequent(rewritten)
   }
 
-  case class TacticInstantiateFunction(f: SchematicFunctionLabel[?], r: Term, args: Seq[VariableLabel]) extends TacticGoalFunctional {
+  case class TacticWeakenPartial(left: Set[Int] = Set.empty, right: Set[Int] = Set.empty) extends TacticGoalFunctional {
     override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
-      ??? // TODO backwards
+      if(left.forall(proofGoal.left.indices.contains) && right.forall(proofGoal.right.indices.contains)) {
+        val weaker = Sequent(
+          proofGoal.left.zipWithIndex.filter { case (_, i) => !left.contains(i) }.map { case (f, _) => f },
+          proofGoal.right.zipWithIndex.filter { case (_, i) => !right.contains(i) }.map { case (f, _) => f }
+        )
+        Some((IndexedSeq(weaker), () => IndexedSeq(Weakening(proofGoal, -1))))
+      } else {
+        None
+      }
+    }
+  }
+
+  case class TacticWeakenSequent(weaker: Sequent) extends TacticGoalFunctional {
+    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
+      // This can be made powerful with a matching algorithm
+      ???
+    }
+  }
+
+  object TacticalWeaken {
+    def apply(left: Set[Int] = Set.empty, right: Set[Int] = Set.empty): TacticWeakenPartial =
+      TacticWeakenPartial(left, right)
+    //def apply(weaker: Sequent): TacticWeakenSequent = TacticWeakenSequent(weaker)
+  }
+
+  case class TacticInstantiateFunctionSchema(sequent: Sequent, assigned: AssignedFunction) extends TacticGoalFunctional {
+    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
+      val map = Seq(assigned)
+      val instantiated = Sequent(
+        sequent.left.map(formula => instantiateFormulaSchemas(formula, functions = map)),
+        sequent.right.map(formula => instantiateFormulaSchemas(formula, functions = map))
+      )
+      if(isSameSequent(proofGoal, instantiated)) {
+        Some((
+          IndexedSeq(sequent),
+          () => IndexedSeq(InstFunSchema(proofGoal, -1, Map(toKernel(assigned.schema) -> assigned.lambda)))
+        ))
+      } else {
+        None
+      }
     }
   }
 
