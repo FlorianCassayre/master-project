@@ -3,8 +3,7 @@ package me.cassayre.florian.masterproject.front.proof.sequent
 import me.cassayre.florian.masterproject.front.proof.sequent.SequentDefinitions
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 
-trait SequentOps {
-  this: SequentDefinitions =>
+trait SequentOps extends SequentDefinitions {
 
   protected trait IndexedSeqConverter[S, T] {
     def apply(t: T): IndexedSeq[S]

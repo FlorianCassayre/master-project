@@ -239,7 +239,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
 
   object Notations {
     val (a, b, c, d, e) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"), SchematicPredicateLabel[0]("d"), SchematicPredicateLabel[0]("e"))
-    val (s, t) = (SchematicFunctionLabel[0]("s"), SchematicFunctionLabel[0]("t"))
+    val (s, t, u) = (SchematicFunctionLabel[0]("s"), SchematicFunctionLabel[0]("t"), SchematicFunctionLabel[0]("u"))
     val f: SchematicConnectorLabel[1] = SchematicConnectorLabel[1]("f")
     val p: SchematicPredicateLabel[1] = SchematicPredicateLabel[1]("p")
     val (x, y) = (VariableLabel("x"), VariableLabel("y"))

@@ -2,8 +2,7 @@ package me.cassayre.florian.masterproject.front.fol.conversions
 
 import me.cassayre.florian.masterproject.front.fol.definitions.FormulaDefinitions
 
-trait FrontKernelMappings {
-  this: FormulaDefinitions =>
+trait FrontKernelMappings extends FormulaDefinitions {
 
   protected val connectorsTo: Map[ConstantConnectorLabel[?], lisa.kernel.fol.FOL.ConnectorLabel] = Map(
     neg -> lisa.kernel.fol.FOL.Neg,

@@ -5,9 +5,10 @@ lazy val root = (project in file("."))
     organization := "me.cassayre.florian",
     version := "0.2.0",
     versionScheme := Some("semver-spec"),
-    scalaVersion := "3.2.0-RC1-bin-20220429-400427d-NIGHTLY",
+    scalaVersion := "3.2.0-RC1-bin-20220504-26f9e77-NIGHTLY",
     scalacOptions ++= Seq(
       "-feature",
+      "-deprecation",
       "-language:implicitConversions"
     ),
     libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1",

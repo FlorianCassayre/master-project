@@ -3,8 +3,7 @@ package me.cassayre.florian.masterproject.front.fol.conversions.to
 import me.cassayre.florian.masterproject.front.fol.conversions.FrontKernelMappings
 import me.cassayre.florian.masterproject.front.fol.definitions.FormulaDefinitions
 
-trait FormulaConversionsTo extends TermConversionsTo with FrontKernelMappings {
-  this: FormulaDefinitions =>
+trait FormulaConversionsTo extends FormulaDefinitions with TermConversionsTo with FrontKernelMappings {
 
   def toKernel(label: ConstantConnectorLabel[?]): lisa.kernel.fol.FOL.ConnectorLabel = connectorsTo(label)
 

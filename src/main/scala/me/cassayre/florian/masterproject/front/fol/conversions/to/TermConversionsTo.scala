@@ -2,8 +2,7 @@ package me.cassayre.florian.masterproject.front.fol.conversions.to
 
 import me.cassayre.florian.masterproject.front.fol.definitions.TermDefinitions
 
-trait TermConversionsTo {
-  this: TermDefinitions =>
+trait TermConversionsTo extends TermDefinitions {
 
   def toKernel(label: VariableLabel): lisa.kernel.fol.FOL.VariableLabel = lisa.kernel.fol.FOL.VariableLabel(label.id)
 

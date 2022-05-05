@@ -4,8 +4,7 @@ import me.cassayre.florian.masterproject.front.fol.definitions.CommonDefinitions
 
 import scala.compiletime.ops.int.-
 
-trait CommonOps {
-  this: CommonDefinitions =>
+trait CommonOps extends CommonDefinitions {
 
   protected type FillTuple[T, N <: Arity] = N match {
     case 0 => EmptyTuple

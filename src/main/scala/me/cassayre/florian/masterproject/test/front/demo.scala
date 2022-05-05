@@ -20,7 +20,7 @@ import me.cassayre.florian.masterproject.front.{*, given}
   val thm = p1.asTheorem()
 
   val thm2 = thm.rewrite(a |- b ==> (b /\ a)).get.display()
-  val thm3 = thm2(a, b()).display()
+  val thm3 = thm2(AssignedPredicate(a, b())).display()
 
   def autoProp = (introHypo
     | introLAnd | introRAnd
@@ -79,8 +79,8 @@ import me.cassayre.florian.masterproject.front.{*, given}
     import proofMode.*
 
     // Bring these facts in context
-    thmEqSym(s, VariableTerm(x))(t, VariableTerm(y))
-    thmEqSym(s, VariableTerm(y))(t, VariableTerm(x))
+    thmEqSym(AssignedFunction(s, VariableTerm(x)))(AssignedFunction(t, VariableTerm(y)))
+    thmEqSym(AssignedFunction(s, VariableTerm(y)))(AssignedFunction(t, VariableTerm(x)))
 
     apply((introRIff | introRImp | justification).+)
 
@@ -97,7 +97,7 @@ import me.cassayre.florian.masterproject.front.{*, given}
       .withFunction(Notations.t, s())
   )(axEmpty).get.display()
 
-  val xNotInEmptyThm = thmEmptySchema(s, VariableTerm(x)).display()
+  val xNotInEmptyThm = thmEmptySchema(AssignedFunction(s, VariableTerm(x))).display()
 
   println(Printer.prettySCProof(reconstructSCProofForTheorem(xNotInEmptyThm)))
 }

@@ -4,8 +4,7 @@ import me.cassayre.florian.masterproject.front.fol.conversions.to.FormulaConvers
 import me.cassayre.florian.masterproject.front.fol.definitions.FormulaDefinitions
 import me.cassayre.florian.masterproject.front.fol.ops.FormulaOps
 
-trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConversionsTo {
-  this: FormulaOps =>
+trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConversionsTo with FormulaOps {
 
   type RenamedPredicate[B <: PredicateLabel[?]] = RenamedLabel[PredicateLabel[?], SchematicPredicateLabel[?], B]
   type RenamedPredicateSchema = RenamedPredicate[SchematicPredicateLabel[?]]
@@ -48,7 +47,10 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
     def unsafe(schema: SchematicPredicateLabel[?], lambda: LambdaPredicate[?]): AssignedPredicate = new AssignedPredicate(schema, lambda)
   }
   given Conversion[Formula, LambdaPredicate[0]] = LambdaPredicate.apply
-  given labelToLambdaPredicate[T](using Conversion[T, Formula]): Conversion[T, LambdaPredicate[0]] = LambdaPredicate.apply
+  given labelToLambdaPredicate[T](using Conversion[T, Formula]): Conversion[T, LambdaPredicate[0]] = (t: T) => {
+    val formula: Formula = t
+    formula
+  }
   //given lambdaToLambdaPredicate[N <: Arity](using ValueOf[N]): Conversion[FillArgs[SchematicFunctionLabel[0], N] => Formula, LambdaPredicate[N]] = LambdaPredicate.apply
   given lambdaToLambdaPredicate1: Conversion[SchematicFunctionLabel[0] => Formula, LambdaPredicate[1]] = LambdaPredicate.apply
   given lambdaToLambdaPredicate2: Conversion[((SchematicFunctionLabel[0], SchematicFunctionLabel[0])) => Formula, LambdaPredicate[2]] = LambdaPredicate.apply

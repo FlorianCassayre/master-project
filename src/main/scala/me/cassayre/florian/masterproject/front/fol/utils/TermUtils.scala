@@ -6,8 +6,7 @@ import me.cassayre.florian.masterproject.front.fol.ops.CommonOps
 
 import scala.annotation.targetName
 
-trait TermUtils extends TermDefinitions with TermConversionsTo {
-  this: CommonOps =>
+trait TermUtils extends TermDefinitions with TermConversionsTo with CommonOps {
 
   def freshId(taken: Set[String], base: String = "x"): String = {
     def findFirst(i: Int): String = {

@@ -3,8 +3,7 @@ package me.cassayre.florian.masterproject.front.fol.conversions.from
 import me.cassayre.florian.masterproject.front.fol.conversions.FrontKernelMappings
 import me.cassayre.florian.masterproject.front.fol.definitions.FormulaDefinitions
 
-trait FormulaConversionsFrom extends TermConversionsFrom with FrontKernelMappings {
-  this: FormulaDefinitions =>
+trait FormulaConversionsFrom extends FormulaDefinitions with TermConversionsFrom with FrontKernelMappings {
 
   def fromKernel(label: lisa.kernel.fol.FOL.ConstantPredicateLabel): ConstantPredicateLabel[?] =
     predicatesFrom.getOrElse(label, ConstantPredicateLabel.unsafe(label.id, label.arity))

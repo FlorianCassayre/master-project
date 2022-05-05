@@ -46,6 +46,15 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     def withVariable(label: VariableLabel, value: VariableLabel): RuleParameters =
       copy(variables = variables + (label -> value))
   }
+  object RuleParameters {
+    def apply(args: (AssignedFunction | AssignedPredicate | AssignedConnector | (VariableLabel, VariableLabel))*): RuleParameters =
+      args.foldLeft(new RuleParameters())((acc, e) => e match {
+        case assigned: AssignedFunction => acc.copy(functions = acc.functions :+ assigned)
+        case assigned: AssignedPredicate => acc.copy(predicates = acc.predicates :+ assigned)
+        case assigned: AssignedConnector => acc.copy(connectors = acc.connectors :+ assigned)
+        case pair @ (_: VariableLabel, _: VariableLabel) => acc.copy(variables = acc.variables + pair)
+      })
+  }
 
   protected def matchIndices(map: Map[Int, SequentSelector], patterns: IndexedSeq[PartialSequent], values: IndexedSeq[Sequent]): View[IndexedSeq[SequentSelector]] = {
     require(patterns.size == values.size)

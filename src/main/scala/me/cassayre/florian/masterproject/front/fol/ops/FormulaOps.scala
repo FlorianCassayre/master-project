@@ -2,8 +2,7 @@ package me.cassayre.florian.masterproject.front.fol.ops
 
 import me.cassayre.florian.masterproject.front.fol.definitions.FormulaDefinitions
 
-trait FormulaOps extends CommonOps {
-  this: FormulaDefinitions =>
+trait FormulaOps extends FormulaDefinitions with CommonOps {
 
   // lampepfl/dotty#14907
 

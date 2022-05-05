@@ -2,8 +2,7 @@ package me.cassayre.florian.masterproject.front.fol.ops
 
 import me.cassayre.florian.masterproject.front.fol.definitions.TermDefinitions
 
-trait TermOps extends CommonOps {
-  this: TermDefinitions =>
+trait TermOps extends TermDefinitions with CommonOps {
 
   extension[N <: Arity] (label: FunctionLabel[N])
     def apply(args: FillArgs[Term, N]): FunctionTerm = FunctionTerm.unsafe(label, tuple2seq(args))

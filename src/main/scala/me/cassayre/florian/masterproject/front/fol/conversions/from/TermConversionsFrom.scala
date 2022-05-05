@@ -2,8 +2,7 @@ package me.cassayre.florian.masterproject.front.fol.conversions.from
 
 import me.cassayre.florian.masterproject.front.fol.definitions.TermDefinitions
 
-trait TermConversionsFrom {
-  this: TermDefinitions =>
+trait TermConversionsFrom extends TermDefinitions {
 
   def fromKernel(label: lisa.kernel.fol.FOL.ConstantFunctionLabel): ConstantFunctionLabel[?] =
     ConstantFunctionLabel.unsafe(label.id, label.arity)

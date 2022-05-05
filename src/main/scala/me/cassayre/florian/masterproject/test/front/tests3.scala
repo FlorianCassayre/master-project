@@ -58,7 +58,7 @@ import me.cassayre.florian.masterproject.front.{*, given}
     asTheorem()
   }
 
-  val thmAandBComm = thmAndComm(x, a())(y, b())
+  val thmAandBComm = thmAndComm(AssignedPredicate(x, a()))(AssignedPredicate(y, b()))
 
   println(thmAandBComm)
   println()
