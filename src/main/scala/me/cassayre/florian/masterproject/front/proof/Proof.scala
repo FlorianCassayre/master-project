@@ -33,6 +33,7 @@ object Proof
   val introRSubstIff: RuleIntroductionRightSubstIff.type = RuleIntroductionRightSubstIff
   // RuleIntroductionLeftExistsOne & RuleIntroductionRightExistsOne
   val introRForallS: RuleIntroductionRightForallSchema.type = RuleIntroductionRightForallSchema
+  val introLExistsS: RuleIntroductionLeftExistsSchema.type = RuleIntroductionLeftExistsSchema
 
   val elimCut: RuleCut.type = RuleCut
   val elimLRefl: RuleEliminationLeftRefl.type = RuleEliminationLeftRefl

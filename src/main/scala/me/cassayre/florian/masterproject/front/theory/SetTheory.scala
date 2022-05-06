@@ -13,9 +13,13 @@ object SetTheory {
 
   def newSetTheoryEnvironment(): ProofEnvironment = {
     val runningTheory = new RunningTheory()
+    val additionalAxioms: Seq[(String, AxiomaticFormula)] = Seq(
+      "def_sub" -> definitionSubset,
+    )
     AxiomaticSetTheory.functions.foreach(runningTheory.addSymbol)
     AxiomaticSetTheory.predicates.foreach(runningTheory.addSymbol)
     AxiomaticSetTheory.axioms.foreach(runningTheory.addAxiom)
+    additionalAxioms.foreach { case (name, axiom) => runningTheory.addAxiom(name, axiom) }
     new ProofEnvironment(runningTheory)
   }
 
@@ -40,6 +44,11 @@ object SetTheory {
   val axiomSchemaReplacement: AxiomaticFormula = fromKernel(AxiomaticSetTheory.replacementSchema)
 
   val axiomTarski: AxiomaticFormula = fromKernel(AxiomaticSetTheory.tarskiAxiom)
+
+  val definitionSubset: AxiomaticFormula = {
+    val (x, y, z) = (VariableLabel("x"), VariableLabel("y"), VariableLabel("z"))
+    forall(x, forall(y, subset(x, y) <=> forall(z, (z in x) ==> (z in y))))
+  }
 
   extension (term: Term) {
     def in(other: Term): Formula = membership(term, other)

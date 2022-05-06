@@ -13,12 +13,19 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
   final class ProofEnvironment private[front](
     private[ProofEnvironmentDefinitions] val runningTheory: RunningTheory, // For now, doesn't need to be generically typed
   ) extends ReadableProofEnvironment {
-    private[ProofEnvironmentDefinitions] val proven: mutable.Map[Sequent, (Justified, runningTheory.Justification)] = mutable.Map.empty
+    private[ProofEnvironmentDefinitions] val proven: mutable.Map[Sequent, Seq[(Justified, runningTheory.Justification)]] = mutable.Map.empty
+
+    private def addOne(sequent: Sequent, justified: Justified, kernelJustification: runningTheory.Justification): Unit = {
+      if(!proven.contains(sequent)) {
+        proven.addOne(sequent, Seq.empty)
+      }
+      proven.addOne(sequent, proven(sequent) :+ (justified, kernelJustification))
+    }
 
     // Lift the initial axioms
     runningTheory.axiomsList.foreach { kernelAxiom =>
       val frontAxiom = Axiom(this, fromKernel(kernelAxiom.ax))
-      proven.addOne((frontAxiom.sequent, (frontAxiom, kernelAxiom)))
+      addOne(frontAxiom.sequent, frontAxiom, kernelAxiom)
     }
 
     override def contains(sequent: Sequent): Boolean = proven.contains(sequent)
@@ -50,9 +57,8 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
         )
       }
 
-      val justificationPairs = scProof.imports.indices.map(justifiedImports).map(proven)
+      val justificationPairs = scProof.imports.indices.map(justifiedImports).map(proven).map(_.head)
       val justifications = justificationPairs.map { case (justification, _) => justification }
-      val theorem = Theorem(this, sequent, scProof, justifications)
 
       val kernelJustifications = justificationPairs.map { case (_, kernelJustification) => kernelJustification }
       val kernelTheorem = runningTheory.proofToTheorem(s"t${proven.size}", scProof, kernelJustifications) match {
@@ -60,7 +66,8 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
         case InvalidJustification(_, _) => throw new Error // Should have been caught before
       }
 
-      proven.addOne((sequent, (theorem, kernelTheorem)))
+      val theorem = Theorem(this, sequent, scProof, justifications)
+      addOne(sequent, theorem, kernelTheorem) // TODO should we salvage existing theorems instead of creating new ones?
 
       theorem
     }
@@ -135,28 +142,43 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
   def reconstructSCProofForTheorem(theorem: Theorem): SCProof = {
     // Inefficient, no need to traverse/reconstruct the whole graph
     val environment = theorem.environment
-    val theorems = environment.proven.values.collect {
+    val theorems = environment.proven.values.flatMap(_.collect {
       case (theorem: Theorem, _) => theorem
-    }.toSeq
-    val axioms = environment.proven.values.collect {
+    }).toSeq
+    val axioms = environment.proven.values.flatMap(_.collect {
       case (axiom: Axiom, _) => axiom
-    }.toSet
+    }).toSet
     val sortedAxioms = axioms.map(_.sequent).toIndexedSeq
     val sequentToImport = sortedAxioms.zipWithIndex.toMap.view.mapValues(i => -(i + 1)).toMap
     val sorted = topologicalSort(theorems.map(theorem =>
-      (theorem, theorem.justifications.collect { case other: Theorem => other }.toSet)
+      (theorem, theorem.justifications.collect { case other: Theorem => other }.toSet) // This will have to be updated for definitions
     ).toMap.withDefaultValue(Set.empty)).reverse
+
     val index = sorted.indexOf(theorem)
     assert(index >= 0)
     val sortedUpTo = sorted.take(index + 1)
-    val sequentToIndex = sortedUpTo.map(_.sequent).zipWithIndex.toMap ++ sequentToImport
+    val sequentToIndex = sortedUpTo.map(_.sequent).zipWithIndex
+      .reverse // This step is important: in case of duplicate nodes, this ensures we have no forward references
+      .toMap ++ sequentToImport
+
+    assert(sortedUpTo.zipWithIndex.forall { case (thm, i) => thm.justifications.map(_.sequent).forall(s => sequentToIndex.get(s).exists(_ < i)) })
 
     val scProof = SCProof(sortedUpTo.map(theorem =>
       SCSubproof(theorem.proof, theorem.justifications.map(_.sequent).map(sequentToIndex))
     ).toIndexedSeq, sortedAxioms.map(sequentToKernel))
 
-    assert(SCProofChecker.checkSCProof(scProof).isValid)
     assert(scProof.conclusion == sequentToKernel(theorem.sequent))
+
+    val judgement = SCProofChecker.checkSCProof(scProof)
+    if(!judgement.isValid) {
+      throw new AssertionError(
+        Seq(
+          "Error: the reconstructed proof was found to be invalid; this could indicate a bug in the implementation of this very method",
+          "The reconstructed proof is shown below for reference:",
+          Printer.prettySCProof(scProof, judgement)
+        ).mkString("\n")
+      )
+    }
 
     scProof
   }

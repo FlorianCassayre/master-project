@@ -315,6 +315,24 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     }
   )
 
+  case object RuleIntroductionLeftExistsSchema extends RuleBase(
+    *(p(t)) |- **,
+    *(exists(x, p(x))) |- **,
+    (bot, ctx) => {
+      ctx(t) match {
+        case FunctionTerm(pl: SchematicFunctionLabel[?], Seq()) =>
+          val vx = VariableTerm(ctx(x))
+          val (px, pt) = (ctx(p)(vx), ctx(p)(ctx(t)))
+          val cBot = bot -< exists(ctx(x), px)
+          IndexedSeq(
+            InstFunSchema(cBot +< px, -1, Map(toKernel(pl) -> LambdaFunction(vx))),
+            LeftExists(bot, 0, px, vx.label),
+          )
+        case e => throw new MatchError(e)
+      }
+    }
+  )
+
   case object RuleEliminationLeftSubstEq extends RuleBase(
     (*(p(s)) |- **) +: (** |- *(s === t)),
     *(p(t)) |- **,
