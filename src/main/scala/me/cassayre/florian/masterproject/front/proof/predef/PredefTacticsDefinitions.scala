@@ -126,11 +126,11 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
       theorem.environment.mkTheorem(replaced, scProof, IndexedSeq(theorem))
     }
 
-    def rewrite(rewritten: Sequent): Option[Theorem] =
+    def rewrite(rewritten: Sequent): Theorem =
       TacticRewriteSequent(theorem.sequent).apply(rewritten).map { case (_, reconstruct) =>
         val scProof = SCProof(reconstruct(), IndexedSeq(sequentToKernel(theorem.sequent)))
         theorem.environment.mkTheorem(rewritten, scProof, IndexedSeq(theorem))
-      }
+      }.get
   }
 
 }

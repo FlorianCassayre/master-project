@@ -2,7 +2,7 @@ package me.cassayre.florian.masterproject.front.proof.state
 
 import lisa.kernel.proof.SCProof
 import me.cassayre.florian.masterproject.front.fol.FOL.*
-import lisa.kernel.proof.SequentCalculus.{Rewrite, SCProofStep}
+import lisa.kernel.proof.SequentCalculus.{Rewrite, SCProofStep, SCSubproof}
 import me.cassayre.florian.masterproject.util.SCUtils
 import me.cassayre.florian.masterproject.front.proof.sequent.{SequentDefinitions, SequentOps}
 
@@ -191,20 +191,16 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
         val nReplacedGoals = snapshotAfter.nextId - snapshotBefore.nextId // TODO do not rely on the ids for that
         val id = applied.id // TODO
         val updatedGoal = snapshotBefore.proofState.goals.head
-        // We need to "fix" the indexing of these proof steps
-        def premiseMapping(p: Int): Int = {
-          if(p < 0) {
-            val i = Math.abs(p) - 1
-            assert(i < nReplacedGoals)
-            val selectedGoalId = snapshotAfter.shadowProofState(i)
-            translation(selectedGoalId)
-          } else {
-            assert(p < reconstructedSteps.size - 1)
-            proof.steps.size + p
-          }
-        }
-        val reconstructedAndRemappedSteps = reconstructedSteps.map(SCUtils.mapPremises(_, premiseMapping))
-        val newProof = proof.withNewSteps(reconstructedAndRemappedSteps)
+        val premises = (0 until nReplacedGoals).map(i => translation(snapshotAfter.shadowProofState(i)))
+        val reconstructedAndRemappedStep =
+          if(reconstructedSteps.nonEmpty)
+            Some(SCSubproof(
+              SCProof(reconstructedSteps, premises.map(proof.getSequent)),
+              premises,
+            ))
+          else
+            None
+        val newProof = proof.withNewSteps(reconstructedAndRemappedStep.toIndexedSeq)
         // We return the expanded proof, along with the information to recover the last (= current) step as a premise
         if(isTheorem) {
           val importId = newProof.imports.size
@@ -224,7 +220,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
         }
     }
 
-    (finalProof, finalTheorems)
+    (SCUtils.flattenProof(finalProof), finalTheorems)
   }
 
   // The final conclusion is given the id 0, although it will never be referenced as a premise

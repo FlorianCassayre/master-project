@@ -5,6 +5,7 @@ import lisa.kernel.proof.{RunningTheory, SCProof, SCProofChecker}
 import lisa.kernel.proof.RunningTheoryJudgement.*
 import lisa.kernel.proof.SequentCalculus.{SCSubproof, sequentToFormula}
 import me.cassayre.florian.masterproject.front.fol.FOL.*
+import me.cassayre.florian.masterproject.util.SCUtils
 
 trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
 
@@ -111,33 +112,27 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
   }
 
 
-  private def topologicalSort[U](adjacency: Map[U, Set[U]]): Seq[U] = {
-    def dfs(stack: Seq[(U, Set[U])], marks: Map[U, Boolean], remaining: Set[U], sorted: Seq[U]): (Map[U, Boolean], Set[U], Seq[U]) = {
+  private def topologicalSort[U](start: U, adjacency: Map[U, Set[U]]): Seq[U] = {
+    def dfs(stack: Seq[(U, Set[U])], marks: Map[U, Boolean], sorted: Seq[U]): (Map[U, Boolean], Seq[U]) = {
       stack match {
         case (u, adjacent) +: tail =>
           adjacent.headOption match {
             case Some(v) =>
               marks.get(v) match {
                 case Some(false) => throw new Exception // Cycle
-                case Some(true) => dfs((u, adjacent.tail) +: tail, marks, remaining, sorted)
-                case None => dfs((v, adjacency.getOrElse(v, Set.empty[U])) +: (u, adjacent.tail) +: tail, marks + (v -> false), remaining, sorted)
+                case Some(true) => dfs((u, adjacent.tail) +: tail, marks, sorted)
+                case None => dfs((v, adjacency.getOrElse(v, Set.empty[U])) +: (u, adjacent.tail) +: tail, marks + (v -> false), sorted)
               }
-            case None => dfs(tail, marks + (u -> true), remaining - u, u +: sorted)
+            case None => dfs(tail, marks + (u -> true), u +: sorted)
           }
-        case _ => (marks, remaining, sorted)
+        case _ => (marks, sorted)
       }
     }
-    def iterate(marks: Map[U, Boolean], remaining: Set[U], sorted: Seq[U]): Seq[U] = {
-      if(remaining.nonEmpty) {
-        val u = remaining.head
-        val (newMarks, newRemaining, newSorted) = dfs(Seq((u, adjacency.getOrElse(u, Set.empty[U]))), marks + (u -> false), remaining - u, sorted)
-        iterate(newMarks, newRemaining, newSorted)
-      } else {
-        sorted
-      }
-    }
-    iterate(Map.empty, adjacency.keySet ++ adjacency.values.flatten, Seq.empty)
+    val (_, sorted) = dfs(Seq((start, adjacency.getOrElse(start, Set.empty[U]))), Map(start -> false), Seq.empty)
+    sorted
   }
+
+  def reconstructPartialSCProofForTheorem(theorem: Theorem): SCProof = theorem.proof // (that's it)
 
   def reconstructSCProofForTheorem(theorem: Theorem): SCProof = {
     // Inefficient, no need to traverse/reconstruct the whole graph
@@ -145,25 +140,22 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
     val theorems = environment.proven.values.flatMap(_.collect {
       case (theorem: Theorem, _) => theorem
     }).toSeq
-    val axioms = environment.proven.values.flatMap(_.collect {
-      case (axiom: Axiom, _) => axiom
-    }).toSet
-    val sortedAxioms = axioms.map(_.sequent).toIndexedSeq
-    val sequentToImport = sortedAxioms.zipWithIndex.toMap.view.mapValues(i => -(i + 1)).toMap
-    val sorted = topologicalSort(theorems.map(theorem =>
+    val sortedTheorems = topologicalSort(theorem, theorems.map(theorem =>
       (theorem, theorem.justifications.collect { case other: Theorem => other }.toSet) // This will have to be updated for definitions
     ).toMap.withDefaultValue(Set.empty)).reverse
+    val sortedAxioms = sortedTheorems
+      .flatMap(_.justifications.collect { case ax: Axiom => ax }).toSet
+      .map(_.sequent).toIndexedSeq.sortBy(_.toString)
+    val sequentToImport = sortedAxioms.zipWithIndex.toMap.view.mapValues(i => -(i + 1)).toMap
 
-    val index = sorted.indexOf(theorem)
-    assert(index >= 0)
-    val sortedUpTo = sorted.take(index + 1)
-    val sequentToIndex = sortedUpTo.map(_.sequent).zipWithIndex
+    assert(sortedTheorems.lastOption.contains(theorem))
+    val sequentToIndex = sortedTheorems.map(_.sequent).zipWithIndex
       .reverse // This step is important: in case of duplicate nodes, this ensures we have no forward references
       .toMap ++ sequentToImport
 
-    assert(sortedUpTo.zipWithIndex.forall { case (thm, i) => thm.justifications.map(_.sequent).forall(s => sequentToIndex.get(s).exists(_ < i)) })
+    assert(sortedTheorems.zipWithIndex.forall { case (thm, i) => thm.justifications.map(_.sequent).forall(s => sequentToIndex.get(s).exists(_ < i)) })
 
-    val scProof = SCProof(sortedUpTo.map(theorem =>
+    val scProof = SCProof(sortedTheorems.map(theorem =>
       SCSubproof(theorem.proof, theorem.justifications.map(_.sequent).map(sequentToIndex))
     ).toIndexedSeq, sortedAxioms.map(sequentToKernel))
 
@@ -180,7 +172,7 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
       )
     }
 
-    scProof
+    SCUtils.flattenProof(scProof)
   }
 
 }

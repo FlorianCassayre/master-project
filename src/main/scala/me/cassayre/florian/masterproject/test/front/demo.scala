@@ -19,7 +19,7 @@ import me.cassayre.florian.masterproject.front.{*, given}
   p1.apply(introHypo)
   val thm = p1.asTheorem()
 
-  val thm2 = thm.rewrite(a |- b ==> (b /\ a)).get.display()
+  val thm2 = thm.rewrite(a |- b ==> (b /\ a)).display()
   val thm3 = thm2(AssignedPredicate(a, b())).display()
 
   def autoProp = (introHypo

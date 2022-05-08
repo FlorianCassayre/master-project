@@ -77,7 +77,7 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     ))
 
     focus(1)
-    val _ = thmUnionSchema(AssignedFunction(t, emptySet)).rewrite(state.goals.head).get.display()
+    val _ = thmUnionSchema(AssignedFunction(t, emptySet)).rewrite(state.goals.head).display()
     apply(justification)
 
     apply(introRIff)
@@ -138,7 +138,7 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     focus(1)
 
     val _ = thmExtSchema(AssignedFunction(Notations.t, unionSet(powerSet(s))))(AssignedFunction(Notations.u, s))
-      .rewrite(sequent"|- (forall z. (z in U(P(?s))) <=> (z in ?s)) <=> (U(P(?s)) = ?s)").get
+      .rewrite(sequent"|- (forall z. (z in U(P(?s))) <=> (z in ?s)) <=> (U(P(?s)) = ?s)")
       .display()
     apply(justification)
 

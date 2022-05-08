@@ -304,10 +304,13 @@ trait PredefRulesDefinitions extends RuleDefinitions {
       ctx(t) match {
         case FunctionTerm(pl: SchematicFunctionLabel[?], Seq()) =>
           val vx = VariableTerm(ctx(x))
-          val (px, pt) = (ctx(p)(vx), ctx(p)(ctx(t)))
+          val px = ctx(p)(vx)
           val cBot = bot -> forall(ctx(x), px)
+          val pBot = cBot +> px
+          require(!(bot.left ++ bot.right).flatMap(_.freeVariables).contains(ctx(x)))
+          require(!(pBot.left ++ pBot.right).flatMap(_.schematicFunctions).contains(pl))
           IndexedSeq(
-            InstFunSchema(cBot +> px, -1, Map(toKernel(pl) -> LambdaFunction(vx))),
+            InstFunSchema(pBot, -1, Map(toKernel(pl) -> LambdaFunction(vx))),
             RightForall(bot, 0, px, vx.label),
           )
         case e => throw new MatchError(e)
@@ -322,10 +325,13 @@ trait PredefRulesDefinitions extends RuleDefinitions {
       ctx(t) match {
         case FunctionTerm(pl: SchematicFunctionLabel[?], Seq()) =>
           val vx = VariableTerm(ctx(x))
-          val (px, pt) = (ctx(p)(vx), ctx(p)(ctx(t)))
+          val px = ctx(p)(vx)
           val cBot = bot -< exists(ctx(x), px)
+          val pBot = cBot +< px
+          require(!(bot.left ++ bot.right).flatMap(_.freeVariables).contains(ctx(x)))
+          require(!(pBot.left ++ pBot.right).flatMap(_.schematicFunctions).contains(pl))
           IndexedSeq(
-            InstFunSchema(cBot +< px, -1, Map(toKernel(pl) -> LambdaFunction(vx))),
+            InstFunSchema(pBot, -1, Map(toKernel(pl) -> LambdaFunction(vx))),
             LeftExists(bot, 0, px, vx.label),
           )
         case e => throw new MatchError(e)

@@ -84,7 +84,7 @@ import me.cassayre.florian.masterproject.front.{*, given}
     asTheorem()
   }
 
-  thmOrComm.rewrite(((x \/ y) /\ z) |- ((y \/ x) /\ z)).get.display()
+  thmOrComm.rewrite(((x \/ y) /\ z) |- ((y \/ x) /\ z)).display()
 
   val thmForallRefl = {
     val proofMode = ProofMode(() |- forall(v, v === v))
