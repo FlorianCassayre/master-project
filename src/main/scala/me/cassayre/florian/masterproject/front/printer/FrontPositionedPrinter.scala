@@ -76,7 +76,7 @@ object FrontPositionedPrinter {
     if(dropParentheses && args.isEmpty)
       FrontBranch(name)
     else
-      FrontBranch(FrontLeaf(s"$name${p.s.ParenthesisOpen}") +: mkSep(args: _*)(commaSeparator) :+ FrontLeaf(p.s.ParenthesisClose))
+      FrontBranch(FrontLeaf(s"$name${p.s.ParenthesisOpen}") +: mkSep(args*)(commaSeparator) :+ FrontLeaf(p.s.ParenthesisClose))
   }
 
   private def positionedInfix(operator: String, left: FrontPrintNode, right: FrontPrintNode)(using Parameters): FrontBranch =
@@ -282,13 +282,13 @@ object FrontPositionedPrinter {
     def sortedFormulas(seq: IndexedSeq[Formula]): IndexedSeq[FrontPrintNode] =
       seq.map(positionedFormulaInternal(_, true)).sortBy(_.print)
     val (lhs, rhs) = (
-      mkSep((positionedEllipsis(partialLeft) ++ sortedFormulas(sequent.left)): _*)(commaSeparator(p.s.Semicolon)),
-      mkSep((sortedFormulas(sequent.right) ++ positionedEllipsis(partialRight)): _*)(commaSeparator(p.s.Semicolon))
+      mkSep((positionedEllipsis(partialLeft) ++ sortedFormulas(sequent.left))*)(commaSeparator(p.s.Semicolon)),
+      mkSep((sortedFormulas(sequent.right) ++ positionedEllipsis(partialRight))*)(commaSeparator(p.s.Semicolon))
     )
     def spaceFor(seq: IndexedSeq[FrontPrintNode]): Seq[FrontPrintNode] = if(seq.nonEmpty) Seq(spaceSeparator) else Seq.empty
     val expression = FrontBranch((
         lhs ++ spaceFor(lhs) ++ Seq(FrontLeaf(p.s.Turnstile)) ++ spaceFor(rhs) ++ rhs
-      ): _*)
+      )*)
     val freeVariables = freeVariablesOfSequent(sequent)
     require(sequent.formulas.forall(isFormulaPrintable(_, freeVariables)))
     positionedExpression(freeVariables, expression)

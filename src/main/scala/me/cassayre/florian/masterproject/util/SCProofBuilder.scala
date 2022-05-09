@@ -12,10 +12,10 @@ object SCProofBuilder {
   case class SCExplicitProofStep(step: SCProofStep) extends SCHighLevelProofStep
 
   implicit class SequentBy(s: Sequent) {
-    def by(premises: Int*): SCImplicitProofStep = SCImplicitProofStep(s, premises, Seq.empty)
-    def by(step: SCProofStep): SCExplicitProofStep = SCExplicitProofStep(step)
-    def justifiedBy(sequents: Sequent*): SCImplicitProofStep = SCImplicitProofStep(s, Seq.empty, sequents)
-    def justifiedBy(axiom: Axiom): SCImplicitProofStep = SCImplicitProofStep(s, Seq.empty, Seq(Sequent(Set.empty, Set(axiom))))
+    infix def by(premises: Int*): SCImplicitProofStep = SCImplicitProofStep(s, premises, Seq.empty)
+    infix def by(step: SCProofStep): SCExplicitProofStep = SCExplicitProofStep(step)
+    infix def justifiedBy(sequents: Sequent*): SCImplicitProofStep = SCImplicitProofStep(s, Seq.empty, sequents)
+    infix def justifiedBy(axiom: Axiom): SCImplicitProofStep = SCImplicitProofStep(s, Seq.empty, Seq(Sequent(Set.empty, Set(axiom))))
     def justified: SCImplicitProofStep = SCImplicitProofStep(s, Seq.empty, Seq(s))
   }
   implicit def sequentToCoreProofStep(s: Sequent): SCImplicitProofStep = SCImplicitProofStep(s, Seq.empty, Seq.empty)

@@ -39,7 +39,7 @@ trait ProofInterfaceDefinitions extends ProofEnvironmentDefinitions {
     def asTheorem(): Theorem = {
       require(state.goals.isEmpty, "The proof is incomplete and thus cannot be converted into a theorem")
       val env = currentState.environment
-      val theorem = env.mkTheorem(Proof(proving.goals: _*)(currentState.tactics: _*))
+      val theorem = env.mkTheorem(Proof(proving.goals*)(currentState.tactics*))
       theorem.display()
     }
     override def toString: String =
@@ -47,7 +47,7 @@ trait ProofInterfaceDefinitions extends ProofEnvironmentDefinitions {
   }
   object ProofMode {
     def apply(goals: Sequent*)(using environment: ProofEnvironment): ProofMode = {
-      val initial = ProofMode(initialProofModeState(goals: _*)(environment))
+      val initial = ProofMode(initialProofModeState(goals*)(environment))
       println("Entering proof mode")
       println()
       println(prettyFrame(initial.state.toString))

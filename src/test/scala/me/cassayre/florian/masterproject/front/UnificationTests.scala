@@ -1,5 +1,7 @@
 package me.cassayre.florian.masterproject.front
 
+import scala.language.adhocExtensions
+
 import me.cassayre.florian.masterproject.front.fol.FOL.{LabelType, WithArityType}
 import me.cassayre.florian.masterproject.front.{*, given}
 import org.scalatest.funsuite.AnyFunSuite

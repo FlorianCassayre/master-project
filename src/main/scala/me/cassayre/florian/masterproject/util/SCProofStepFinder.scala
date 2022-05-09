@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.util
 
-import lisa.kernel.fol.FOL._
+import lisa.kernel.fol.FOL.*
 import lisa.kernel.proof.SequentCalculus.*
 import lisa.kernel.proof.{SCProof, SCProofChecker}
 import lisa.kernel.Printer
@@ -40,9 +40,9 @@ object SCProofStepFinder {
           def collect[L <: FormulaLabel, A](f: PartialFunction[Formula, (L, A)])(formulas: Set[Formula]): Map[L, Set[A]] =
             formulas.collect(f).groupBy(_._1).view.mapValues(_.map(_._2)).toMap.withDefaultValue(Set.empty)
 
-          val binaryConnectorCollector = collect { case f@ConnectorFormula(label, Seq(l, r)) => label -> (l, r) } _
+          val binaryConnectorCollector = collect { case f@ConnectorFormula(label, Seq(l, r)) => label -> (l, r) }(_)
           val (leftBinaryConnectors, rightBinaryConnectors) = (binaryConnectorCollector(left), binaryConnectorCollector(right))
-          val binderCollector = collect { case f@BinderFormula(label, _, _) => label -> f } _
+          val binderCollector = collect { case f@BinderFormula(label, _, _) => label -> f }(_)
           val (leftBinders, rightBinders) = (binderCollector(left), binderCollector(right))
           val (leftNegConnectors, rightNegConnectors) =
             (left.collect { case f@ConnectorFormula(`Neg`, Seq(u)) => u }, right.collect { case f@ConnectorFormula(`Neg`, Seq(u)) => u })

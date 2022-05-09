@@ -1,5 +1,7 @@
 package me.cassayre.florian.masterproject.util
 
+import scala.language.adhocExtensions
+
 import lisa.KernelHelpers.*
 import lisa.kernel.Printer
 import lisa.kernel.fol.FOL.*
@@ -19,8 +21,8 @@ class MonadicSCProofBuilderTests extends AnyFunSuite {
   private val (x, y, z, w, xp, yp, zp, wp) = (variable("x"), variable("y"), variable("z"), variable("w"), variable("x'"), variable("y'"), variable("z'"), variable("w'"))
 
   // Shorthands
-  private def withForallInstantiation(ts: Term*): SCProof => SCProof = p => instantiateForall(p, ts: _*)
-  private def withForallGeneralization(xs: VariableTerm*): SCProof => SCProof = p => generalizeToForall(p, xs.map(_.label): _*)
+  private def withForallInstantiation(ts: Term*): SCProof => SCProof = p => instantiateForall(p, ts*)
+  private def withForallGeneralization(xs: VariableTerm*): SCProof => SCProof = p => generalizeToForall(p, xs.map(_.label)*)
 
   test("monadic proof builder") {
 

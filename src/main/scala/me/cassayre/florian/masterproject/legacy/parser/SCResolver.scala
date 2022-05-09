@@ -101,7 +101,7 @@ private[parser] object SCResolver {
   }
 
   def resolveProof(tree: ParsedProof): SCProof = {
-    val stepsMetadata: Map[String, (Int, Class[_])] = Map(
+    val stepsMetadata: Map[String, (Int, Class[?])] = Map(
       "Rewrite" -> (1, classOf[Rewrite]),
       "Hypo." -> (0, classOf[Hypothesis]),
       "Cut" -> (2, classOf[Cut]),

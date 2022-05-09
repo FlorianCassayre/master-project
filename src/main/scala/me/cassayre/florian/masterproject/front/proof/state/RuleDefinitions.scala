@@ -151,7 +151,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
       RuleTactic(this, parameters)
 
     final def apply(justification0: Justified, rest: Justified*): Option[Theorem] =
-      apply(RuleParameters())((justification0 +: rest): _*)(using justification0.environment)
+      apply(RuleParameters())((justification0 +: rest)*)(using justification0.environment)
     /*final def apply(parameters: RuleParameters)(justification0: Justified, rest: Justified*): Option[Theorem] = {
       val env = justification0.environment
       val justifications = justification0 +: rest
@@ -174,7 +174,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     }
   }
 
-  class RuleBase(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
+  open class RuleBase(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
 
   given Conversion[Rule, RuleTactic] = _()
 

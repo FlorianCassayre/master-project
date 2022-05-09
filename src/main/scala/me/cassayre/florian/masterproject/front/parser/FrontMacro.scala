@@ -36,10 +36,14 @@ object FrontMacro {
   object SIParts {
     def scMacro[SI[_ <: Tuple]](sc: Expr[StringContext])(using Quotes, Type[SI]): Expr[Any] = {
       import quotes.reflect.*
-      val '{StringContext(${Varargs(args)}*)} = sc
+      val args = sc match {
+        case '{StringContext(${Varargs(args)}*)} => args
+      }
       val tplExpr = Expr.ofTupleFromSeq(args)
       val tplTpe = tplExpr.asTerm.tpe
-      val AppliedType(siTpe, _) = TypeRepr.of[SI[Tuple]]
+      val siTpe = TypeRepr.of[SI[Tuple]].asInstanceOf[TypeRepr & Matchable] match {
+        case AppliedType(siTpe, _) => siTpe
+      }
       val siSym = siTpe.typeSymbol
       val siTree =
         New(TypeTree.of[SI[Tuple]])
@@ -72,14 +76,14 @@ object FrontMacro {
   }
 
   private def toTokens[P <: Tuple](parts: Expr[P], args: Expr[Seq[Any]])(using Quotes, Type[P]): Interpolator = {
-    import quotes.reflect.{Term => _, *}
+    import quotes.reflect.{Term as _, *}
 
     // throw new Error(s"illegal interpolation variable: ${TypeTree.of[other]}")
     // TypeTree[ConstantType(Constant({))]
     def evaluateParts[Q <: Tuple](scrutiny: Type[Q], acc: Seq[String]): Seq[String] = scrutiny match {
       case '[ EmptyTuple ] => acc
       case '[ head *: tail ] =>
-        val string = TypeTree.of[head].tpe match {
+        val string = TypeTree.of[head].tpe.asInstanceOf[TypeRepr & Matchable] match {
           case ConstantType(cst) => cst.value.asInstanceOf[String] // Should always match and succeed
         }
         evaluateParts(Type.of[tail], string +: acc)
@@ -101,7 +105,7 @@ object FrontMacro {
     // TODO raise warning when using infix notation
 
     def resolveArity[N <: Arity](expr: Expr[LabelType & WithArityType[N]])(using Type[N]): Int =
-      TypeTree.of[N].tpe match {
+      TypeTree.of[N].tpe.asInstanceOf[TypeRepr & Matchable] match {
         case ConstantType(cst) => cst.value.asInstanceOf[Int]
         case _ => report.errorAndAbort(s"loosely typed label variable, the arity must be known at compile time: ${Type.show[N]}", expr)
       }

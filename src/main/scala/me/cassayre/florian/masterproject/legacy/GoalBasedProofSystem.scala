@@ -307,7 +307,7 @@ object GoalBasedProofSystem {
                 SCImplicitProofStep(conclusion, premises.map(_ + indicesOffset), imports) // TODO
               case SCExplicitProofStep(step) => SCExplicitProofStep(SCUtils.mapPremises(step, _ + indicesOffset))
             }
-            val newProofWithNewStep = recursiveProof.withNewSteps(reconstructedStepsWithCorrectIndices: _*)
+            val newProofWithNewStep = recursiveProof.withNewSteps(reconstructedStepsWithCorrectIndices*)
             (newProofWithNewStep, recursiveTranslation + (id -> (newProofWithNewStep.steps.size - 1)))
           case ProofStateDiffReorder(goalIndex) =>
             val newShadow = requeue(shadow, goalIndex)

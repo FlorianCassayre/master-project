@@ -98,13 +98,13 @@ object Unifier {
       } else {
         UnificationFailure(s"Bound variables do not match, expected ${expectedVariable.id} got ${targetLabel.id}")
       }
-    case (FunctionTerm(patternLabel: ConstantFunctionLabel[_], patternArgs), FunctionTerm(targetLabel: ConstantFunctionLabel[_], targetArgs)) =>
+    case (FunctionTerm(patternLabel: ConstantFunctionLabel[?], patternArgs), FunctionTerm(targetLabel: ConstantFunctionLabel[?], targetArgs)) =>
       if(patternLabel == targetLabel) {
         unifyZip(unifyTerms(_, _, _), patternArgs, targetArgs, ctx)
       } else {
         UnificationFailure(s"Function labels do not match, expected ${patternLabel.id} got ${targetLabel.id}")
       }
-    case (FunctionTerm(patternSchematic: SchematicFunctionLabel[_], patternArgs), _) =>
+    case (FunctionTerm(patternSchematic: SchematicFunctionLabel[?], patternArgs), _) =>
       patternSchematic match {
         case SchematicFunctionLabel(_, 0) =>
           val nullaryLabel = patternSchematic.asInstanceOf[SchematicFunctionLabel[0]]
@@ -129,13 +129,13 @@ object Unifier {
       UnificationFailure(s"Types do not match, expected ${typeName(pattern).toLowerCase} got ${typeName(target).toLowerCase}")
   }
   private def unifyFormulas(pattern: Formula, target: Formula, ctx: UnificationContext)(implicit scopedCtx: ScopedUnificationContext): UnificationResult = (pattern, target) match {
-    case (PredicateFormula(patternLabel: ConstantPredicateLabel[_], patternArgs), PredicateFormula(targetLabel: ConstantPredicateLabel[_], targetArgs)) =>
+    case (PredicateFormula(patternLabel: ConstantPredicateLabel[?], patternArgs), PredicateFormula(targetLabel: ConstantPredicateLabel[?], targetArgs)) =>
       if(patternLabel == targetLabel) {
         unifyZip(unifyTerms(_, _, _), patternArgs, targetArgs, ctx)
       } else {
         UnificationFailure(s"Predicate labels do not match, expected ${patternLabel.id} got ${targetLabel.id}")
       }
-    case (PredicateFormula(patternSchematic: SchematicPredicateLabel[_], patternArgs), _) =>
+    case (PredicateFormula(patternSchematic: SchematicPredicateLabel[?], patternArgs), _) =>
       patternSchematic match {
         case SchematicPredicateLabel(_, 0) =>
           val nullaryLabel = patternSchematic.asInstanceOf[SchematicPredicateLabel[0]]

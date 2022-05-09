@@ -23,7 +23,7 @@ object GoalBasedProofSystemREPL {
     string
   }
 
-  val availableTactics: Map[String, PartialFunction[Seq[Any], Tactic]] = Map(
+  val availableTactics: Map[String, PartialFunction[Seq[Matchable], Tactic]] = Map(
     "assume" -> { case Seq() => TacticAssume },
     "weaken_hypothesis" -> { case Seq(hypothesisIndex: Int) => TacticWeakenHypothesis(hypothesisIndex) },
     "eliminate" -> { case Seq() => TacticEliminate },
@@ -95,7 +95,7 @@ object GoalBasedProofSystemREPL {
         val parts = input.split("\\s+", 2).toIndexedSeq
         val tacticName = parts.head
         val remaining = parts.tail.mkString
-        val argsOpt =
+        val argsOpt: Option[Seq[Matchable]] =
           if(remaining.trim.isEmpty) {
             Some(Seq.empty)
           } else if(remaining.forall(_.isDigit)) {

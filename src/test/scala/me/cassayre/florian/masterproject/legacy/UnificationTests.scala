@@ -1,5 +1,7 @@
 package me.cassayre.florian.masterproject.legacy
 
+import scala.language.adhocExtensions
+
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 import me.cassayre.florian.masterproject.legacy.unification.Unifier.*
 import org.scalatest.funsuite.AnyFunSuite

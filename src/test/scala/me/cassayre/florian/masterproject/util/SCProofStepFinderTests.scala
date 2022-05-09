@@ -1,5 +1,7 @@
 package me.cassayre.florian.masterproject.util
 
+import scala.language.adhocExtensions
+
 import lisa.KernelHelpers.*
 import lisa.kernel.Printer
 import lisa.kernel.fol.FOL.*

@@ -48,7 +48,7 @@ trait TermUtils extends TermDefinitions with TermConversionsTo with CommonOps {
     }
 
   protected abstract class LambdaDefinition[N <: Arity, S <: SchematicLabel & WithArity[?], T <: LabeledTree[?]] extends WithArity[N] {
-    type U <: LabeledTree[_ >: S]
+    type U <: LabeledTree[? >: S]
 
     val parameters: Seq[S]
     val body: T
@@ -66,7 +66,7 @@ trait TermUtils extends TermDefinitions with TermConversionsTo with CommonOps {
     require(parameters.distinct.size == parameters.size)
   }
   protected abstract class AssignedSchema[R <: SchematicLabel & WithArity[?], S <: SchematicLabel & WithArity[?]] {
-    type L <: LambdaDefinition[?, S, _ <: LabeledTree[_ >: R]]
+    type L <: LambdaDefinition[?, S, ? <: LabeledTree[? >: R]]
 
     val schema: R
     val lambda: L
