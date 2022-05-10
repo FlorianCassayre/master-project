@@ -8,7 +8,7 @@ import me.cassayre.florian.masterproject.front.parser.FrontSymbols
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.RegexParsers
 
-private[parser] trait FrontLexer extends RegexParsers {
+private trait FrontLexer extends RegexParsers {
 
   override def skipWhitespace: Boolean = true
   override protected val whiteSpace: Regex = "[ \t\f]+".r
@@ -75,6 +75,9 @@ private[parser] trait FrontLexer extends RegexParsers {
     }
 }
 
+/**
+ * The lexer converts a sequence of characters into low-level tokens ([[FrontToken]]), for instance identifiers, symbols, separators.
+ */
 object FrontLexer {
 
   private trait FrontLexerAscii extends FrontLexer {

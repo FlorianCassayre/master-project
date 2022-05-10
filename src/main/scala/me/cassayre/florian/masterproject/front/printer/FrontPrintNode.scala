@@ -1,5 +1,9 @@
 package me.cassayre.florian.masterproject.front.printer
 
+/**
+ * Represents the result of printing expressed as a tree.
+ * This allows to extract positional information.
+ */
 sealed abstract class FrontPrintNode {
   import FrontPrintNode.*
 

@@ -1,12 +1,7 @@
 package me.cassayre.florian.masterproject.front
 
-import me.cassayre.florian.masterproject.front.fol.FOL
-import me.cassayre.florian.masterproject.front.proof.Proof
-import me.cassayre.florian.masterproject.front.parser
-import me.cassayre.florian.masterproject.front.printer
-
-export FOL.{*, given}
-export Proof.{*, given}
-export parser.FrontReader.*
-export parser.FrontMacro.{*, given}
-export printer.FrontPositionedPrinter.*
+export me.cassayre.florian.masterproject.front.fol.FOL.{*, given}
+export me.cassayre.florian.masterproject.front.proof.Proof.{*, given}
+export me.cassayre.florian.masterproject.front.parser.FrontReader.*
+export me.cassayre.florian.masterproject.front.parser.FrontMacro.{*, given}
+export me.cassayre.florian.masterproject.front.printer.FrontPositionedPrinter.*

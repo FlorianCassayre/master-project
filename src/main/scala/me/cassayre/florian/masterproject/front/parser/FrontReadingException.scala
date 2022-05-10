@@ -2,6 +2,9 @@ package me.cassayre.florian.masterproject.front.parser
 
 import scala.util.parsing.input.Position
 
+/**
+ * An exception that can occur during reading.
+ */
 sealed abstract class FrontReadingException extends Exception {
   val message: String
   val position: Position

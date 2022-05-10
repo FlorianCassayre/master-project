@@ -9,13 +9,28 @@ trait FormulaConversionsFrom extends FormulaDefinitions with TermConversionsFrom
     predicatesFrom.getOrElse(label, ConstantPredicateLabel.unsafe(label.id, label.arity))
   def fromKernel(label: lisa.kernel.fol.FOL.SchematicPredicateLabel): SchematicPredicateLabel[?] =
     SchematicPredicateLabel.unsafe(label.id, label.arity)
+  /**
+   * Lifts a predicate label from the kernel to the front.
+   * @param label the label in the kernel
+   * @return the label in the front
+   */
   def fromKernel(label: lisa.kernel.fol.FOL.PredicateLabel): PredicateLabel[?] = label match {
     case constant: lisa.kernel.fol.FOL.ConstantPredicateLabel => fromKernel(constant)
     case schematic: lisa.kernel.fol.FOL.SchematicPredicateLabel => fromKernel(schematic)
   }
 
+  /**
+   * Lifts a connector label from the kernel to the front.
+   * @param label the label in the kernel
+   * @return the label in the front
+   */
   def fromKernel(label: lisa.kernel.fol.FOL.ConnectorLabel): ConstantConnectorLabel[?] = connectorsFrom(label)
 
+  /**
+   * Lifts a formula from the kernel to the front.
+   * @param formula the formula in the kernel
+   * @return the formula in the front
+   */
   def fromKernel(formula: lisa.kernel.fol.FOL.Formula): Formula = formula match {
     case lisa.kernel.fol.FOL.PredicateFormula(label, args) => PredicateFormula.unsafe(fromKernel(label), args.map(fromKernel))
     case lisa.kernel.fol.FOL.ConnectorFormula(label, args) => ConnectorFormula.unsafe(fromKernel(label), args.map(fromKernel))

@@ -93,6 +93,12 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
     lisa.kernel.fol.FOL.LambdaFormulaFormula(lambda.parameters.map(toKernel), lambda.body)
   given Conversion[LambdaConnector[?], lisa.kernel.fol.FOL.LambdaFormulaFormula] = toKernel
 
+  /**
+   * A simple procedure to handle the fact that the kernel does not support schematic connectors.
+   * These will be converted into fresh constant connectors, which can be considered equivalent when used in some context (e.g. equivalence checking).
+   * @param formulas the formulas to be adapted
+   * @return new formulas that have been adapted
+   */
   def adaptConnectorSchemas(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] = {
     def recursive(formula: Formula, predicates: Set[SchematicPredicateLabel[?]], translation: Map[ConnectorFormula, SchematicPredicateLabel[?]]):
     (Formula, Set[SchematicPredicateLabel[?]], Map[ConnectorFormula, SchematicPredicateLabel[?]]) = formula match {
@@ -128,6 +134,7 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
     translatedFormulas
   }
 
+  /** @see [[lisa.kernel.fol.FOL.isSame]] */
   def isSame(f1: Formula, f2: Formula): Boolean =
     adaptConnectorSchemas(IndexedSeq(f1, f2)) match {
       case IndexedSeq(af1, af2) =>
@@ -135,6 +142,7 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
       case e => throw new MatchError(e)
     }
 
+  /** @see [[lisa.kernel.fol.FOL.Formula#freeVariables]] */
   def freeVariablesOf(formula: Formula): Set[VariableLabel] = formula match {
     case PredicateFormula(_, args) => args.flatMap(freeVariablesOf).toSet
     case ConnectorFormula(_, args) => args.flatMap(freeVariablesOf).toSet
@@ -147,6 +155,7 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
     case BinderFormula(_, _, inner) => functionsOf(inner)
   }
 
+  /** @see [[lisa.kernel.fol.FOL.Formula#schematicFunctions]] */
   def schematicFunctionsOf(formula: Formula): Set[SchematicFunctionLabel[?]] =
     functionsOf(formula).collect { case schematic: SchematicFunctionLabel[?] => schematic }
 
@@ -156,6 +165,7 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
     case BinderFormula(_, _, inner) => predicatesOf(inner)
   }
 
+  /** @see [[lisa.kernel.fol.FOL.Formula#schematicPredicates]] */
   def schematicPredicatesOf(formula: Formula): Set[SchematicPredicateLabel[?]] =
     predicatesOf(formula).collect { case schematic: SchematicPredicateLabel[?] => schematic }
 
@@ -171,19 +181,17 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
   }
 
   def declaredBoundVariablesOf(formula: Formula): Set[VariableLabel] = formula match {
-    case PredicateFormula(_, args) => Set.empty
+    case PredicateFormula(_, _) => Set.empty
     case ConnectorFormula(_, args) => args.flatMap(declaredBoundVariablesOf).toSet
     case BinderFormula(_, bound, inner) => declaredBoundVariablesOf(inner) + bound
   }
 
 
   protected def isFormulaWellFormed(formula: Formula)(using ctx: Scope): Boolean = formula match {
-    case PredicateFormula(label, args) =>
-      (label.arity == -1 || label.arity == args.size) && args.forall(isWellFormed)
+    case PredicateFormula(label, args) => args.forall(isWellFormed)
     case ConnectorFormula(_: SchematicConnectorLabel[?], Seq()) => false // Use nullary predicates instead
-    case ConnectorFormula(label, args) =>
-      (label.arity == -1 || label.arity == args.size) && args.forall(isFormulaWellFormed)
-    case BinderFormula(label, bound, inner) =>
+    case ConnectorFormula(label, args) => args.forall(isFormulaWellFormed)
+    case BinderFormula(_, bound, inner) =>
       !ctx.boundVariables.contains(bound) && isFormulaWellFormed(inner)(using ctx.copy(boundVariables = ctx.boundVariables + bound))
   }
 
@@ -239,19 +247,6 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
     case BinderFormula(label, bound, inner) =>
       val newBound = map.getOrElse(bound, bound)
       BinderFormula(label, newBound, unsafeRenameVariables(inner, map))
-  }
-
-  def fillTupleParametersPredicate[N <: Arity](n: N, f: FillArgs[VariableLabel, N] => Formula): (FillArgs[VariableLabel, N], Formula) = {
-    val dummyVariable = VariableLabel("")
-    val dummyFormula = fillTupleParameters(_ => dummyVariable, n, f)._2
-    val taken = (freeVariablesOf(dummyFormula) ++ declaredBoundVariablesOf(dummyFormula)).map(_.id)
-    fillTupleParameters(VariableLabel.apply, n, f, taken)
-  }
-
-  def fillTupleParametersConnector[N <: Arity](n: N, f: FillArgs[SchematicPredicateLabel[0], N] => Formula): (FillArgs[SchematicPredicateLabel[0], N], Formula) = {
-    val dummyPredicate = SchematicPredicateLabel[0]("")
-    val taken = schematicPredicatesOf(fillTupleParameters(_ => dummyPredicate, n, f)._2).map(_.id)
-    fillTupleParameters(SchematicPredicateLabel[0](_), n, f, taken)
   }
 
 }

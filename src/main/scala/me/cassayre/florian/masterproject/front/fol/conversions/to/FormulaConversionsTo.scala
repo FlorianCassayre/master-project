@@ -25,6 +25,11 @@ trait FormulaConversionsTo extends FormulaDefinitions with TermConversionsTo wit
 
   def toKernel(label: BinderLabel): lisa.kernel.fol.FOL.BinderLabel = bindersTo(label)
 
+  /**
+   * Translates a label from the front to the kernel.
+   * @param label the label in the front
+   * @return the label in the kernel
+   */
   def toKernel(label: FormulaLabel): lisa.kernel.fol.FOL.FormulaLabel = label match {
     case predicate: PredicateLabel[?] => toKernel(predicate)
     case connector: ConnectorLabel[?] => toKernel(connector)
@@ -40,6 +45,11 @@ trait FormulaConversionsTo extends FormulaDefinitions with TermConversionsTo wit
   def toKernel(formula: BinderFormula): lisa.kernel.fol.FOL.BinderFormula =
     lisa.kernel.fol.FOL.BinderFormula(toKernel(formula.label), toKernel(formula.bound), toKernel(formula.inner))
 
+  /**
+   * Translates a formula from the front to the kernel.
+   * @param formula the formula in the front
+   * @return the formula in the kernel
+   */
   def toKernel(formula: Formula): lisa.kernel.fol.FOL.Formula = formula match {
     case predicate: PredicateFormula => toKernel(predicate)
     case connector: ConnectorFormula => toKernel(connector)

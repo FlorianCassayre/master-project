@@ -4,6 +4,10 @@ import me.cassayre.florian.masterproject.front.parser.FrontResolver
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 import me.cassayre.florian.masterproject.front.proof.Proof.*
 
+/**
+ * The reading API; parses string into first order logic or sequent elements.
+ * Reading exceptions can be found in [[FrontReadingException]].
+ */
 object FrontReader {
 
   private def lexing(str: String, ascii: Boolean, multiline: Boolean): Seq[FrontToken] = {

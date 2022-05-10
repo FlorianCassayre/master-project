@@ -9,7 +9,7 @@ import lisa.kernel.proof.{RunningTheory, SCProof, SCProofChecker}
 import lisa.settheory.AxiomaticSetTheory
 import me.cassayre.florian.masterproject.util.SCUtils
 import me.cassayre.florian.masterproject.util.SCProofBuilder
-import me.cassayre.florian.masterproject.util.SCProofBuilder.{SCExplicitProofStep, SCHighLevelProofStep, SCImplicitProofStep}
+import me.cassayre.florian.masterproject.util.SCProofBuilder.{*, given}
 import proven.tactics.SimplePropositionalSolver
 
 object GoalBasedProofSystem {

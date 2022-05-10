@@ -7,6 +7,13 @@ import me.cassayre.florian.masterproject.front.printer.FrontPositionedPrinter
 // Note: on Intellij you may want to disable syntax highlighting for this file
 // ("File Types" => "Text" => "Ignored Files and Folders", add "FrontMacro.scala")
 
+/**
+ * Macros to enable compile-time string interpolation. For instance:
+ * <pre>
+ * val f: Formula = ...
+ * formula"|- (a /\ $f); ?c"
+ * </pre>
+ */
 object FrontMacro {
   import scala.quoted.*
 

@@ -8,6 +8,9 @@ import me.cassayre.florian.masterproject.front.parser.FrontParsed.*
 
 import scala.util.parsing.combinator.Parsers
 
+/**
+ * The parser convert low-level tokens into the [[FrontParsed]] intermediate representation.
+ */
 private[parser] object FrontParser extends Parsers {
 
   override type Elem = FrontToken
@@ -21,16 +24,6 @@ private[parser] object FrontParser extends Parsers {
 
   private def identifierOrSchematic: Parser[Identifier | SchematicIdentifier | SchematicConnectorIdentifier] =
     positioned((identifier: Parser[Identifier | SchematicIdentifier | SchematicConnectorIdentifier]) | schematicIdentifier | schematicConnectorIdentifier)
-
-  private def integerLiteral: Parser[IntegerLiteral] =
-    positioned(accept("integer literal", { case lit: IntegerLiteral => lit }))
-  private def ruleName: Parser[RuleName] =
-    positioned(accept("rule", { case rule: RuleName => rule }))
-
-  private def indentation: Parser[Indentation] =
-    positioned(accept("indentation", { case indentation: Indentation => indentation }))
-  private def newLine: Parser[NewLine] =
-    positioned(accept("new line", { case line: NewLine => line }))
 
   private def binder: Parser[ParsedTermOrFormula] = positioned(
     (Forall() ^^^ ParsedForall.apply | Exists() ^^^ ParsedExists.apply | ExistsOne() ^^^ ParsedExistsOne.apply) ~

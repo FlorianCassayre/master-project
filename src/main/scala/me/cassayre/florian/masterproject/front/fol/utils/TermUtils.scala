@@ -6,37 +6,7 @@ import me.cassayre.florian.masterproject.front.fol.ops.CommonOps
 
 import scala.annotation.targetName
 
-trait TermUtils extends TermDefinitions with TermConversionsTo with CommonOps {
-
-  def freshId(taken: Set[String], base: String = "x"): String = {
-    def findFirst(i: Int): String = {
-      val id = s"${base}_$i"
-      if(taken.contains(id)) findFirst(i + 1) else id
-    }
-    findFirst(0)
-  }
-
-  def freshIds(taken: Set[String], n: Int, base: String = "x"): Seq[String] = {
-    require(n >= 0)
-    def findMany(i: Int, n: Int, taken: Set[String], acc: Seq[String]): Seq[String] = {
-      if(n > 0) {
-        val id = s"${base}_$i"
-        if(taken.contains(id)) findMany(i + 1, n, taken, acc) else findMany(i + 1, n - 1, taken + id, id +: acc)
-      } else {
-        acc
-      }
-    }
-    findMany(0, n, taken, Seq.empty).reverse
-  }
-
-  case class RenamedLabel[L <: Label & WithArity[?], A <: L & SchematicLabel, B <: L] private(from: A, to: B)
-  object RenamedLabel {
-    @targetName("applySafe")
-    def apply[N <: Arity, L <: Label & WithArity[N], A <: L & SchematicLabel, B <: L](from: A, to: B): RenamedLabel[L, A, B] = new RenamedLabel(from, to)
-    def unsafe[L <: Label & WithArity[?], A <: L & SchematicLabel, B <: L](from: A, to: B): RenamedLabel[L, A, B] = new RenamedLabel(from, to)
-  }
-  extension [L <: Label & WithArity[?], A <: L & SchematicLabel](renamed: RenamedLabel[L, A, A])
-    def swap: RenamedLabel[L, A, A] = RenamedLabel.unsafe(renamed.to, renamed.from)
+trait TermUtils extends TermDefinitions with TermConversionsTo with CommonOps with CommonUtils {
 
   type RenamedFunction[B <: FunctionLabel[?]] = RenamedLabel[FunctionLabel[?], SchematicFunctionLabel[?], B]
   type RenamedFunctionSchema = RenamedFunction[SchematicFunctionLabel[?]]
@@ -46,33 +16,6 @@ trait TermUtils extends TermDefinitions with TermConversionsTo with CommonOps {
       val parameters = freshIds(Set.empty, renamed.from.arity).map(SchematicFunctionLabel.apply[0])
       AssignedFunction.unsafe(renamed.from, LambdaFunction.unsafe(parameters, FunctionTerm.unsafe(renamed.to, parameters.map(FunctionTerm.unsafe(_, Seq.empty)))))
     }
-
-  protected abstract class LambdaDefinition[N <: Arity, S <: SchematicLabel & WithArity[?], T <: LabeledTree[?]] extends WithArity[N] {
-    type U <: LabeledTree[? >: S]
-
-    val parameters: Seq[S]
-    val body: T
-
-    def apply(args: FillArgs[U, N]): T = unsafe(args.toSeq)
-    def unsafe(args: Seq[U]): T = {
-      require(args.size == arity)
-      instantiate(args)
-    }
-    protected def instantiate(args: Seq[U]): T
-
-    override val arity: N = parameters.size.asInstanceOf[N]
-
-    require(parameters.forall(_.arity == 0))
-    require(parameters.distinct.size == parameters.size)
-  }
-  protected abstract class AssignedSchema[R <: SchematicLabel & WithArity[?], S <: SchematicLabel & WithArity[?]] {
-    type L <: LambdaDefinition[?, S, ? <: LabeledTree[? >: R]]
-
-    val schema: R
-    val lambda: L
-
-    require(schema.arity == lambda.arity)
-  }
 
   def toKernel(lambda: LambdaFunction[?]): lisa.kernel.fol.FOL.LambdaTermTerm =
     lisa.kernel.fol.FOL.LambdaTermTerm(lambda.parameters.map(toKernel), lambda.body)
@@ -110,10 +53,11 @@ trait TermUtils extends TermDefinitions with TermConversionsTo with CommonOps {
   given lambdaToLambdaFunction1: Conversion[SchematicFunctionLabel[0] => Term, LambdaFunction[1]] = LambdaFunction.apply
   given lambdaToLambdaFunction2: Conversion[((SchematicFunctionLabel[0], SchematicFunctionLabel[0])) => Term, LambdaFunction[2]] = LambdaFunction.apply
 
-
+  /** @see [[lisa.kernel.fol.FOL.isSame]] */
   def isSame(t1: Term, t2: Term): Boolean =
     lisa.kernel.fol.FOL.isSame(t1, t2)
 
+  /** @see [[lisa.kernel.fol.FOL.Term#freeVariables]] */
   def freeVariablesOf(term: Term): Set[VariableLabel] = term match {
     case VariableTerm(label) => Set(label)
     case FunctionTerm(label, args) => args.flatMap(freeVariablesOf).toSet
@@ -124,17 +68,18 @@ trait TermUtils extends TermDefinitions with TermConversionsTo with CommonOps {
     case FunctionTerm(label, args) => args.flatMap(functionsOf).toSet + label
   }
 
+  /** @see [[lisa.kernel.fol.FOL.Term#schematicFunctions]] */
   def schematicFunctionsOf(term: Term): Set[SchematicFunctionLabel[?]] =
     functionsOf(term).collect { case schematic: SchematicFunctionLabel[?] => schematic }
 
   protected case class Scope(boundVariables: Set[VariableLabel] = Set.empty)
 
-  def isWellFormed(term: Term): Boolean = term match {
-    case VariableTerm(label) => true
-    case FunctionTerm(label, args) =>
-      (label.arity == -1 || label.arity == args.size) && args.forall(isWellFormed)
-  }
-
+  /**
+   * Checks whether a term is well-formed. Currently returns <code>true</code> at all times.
+   * @param term the term to check
+   * @return if it is well-formed
+   */
+  def isWellFormed(term: Term): Boolean = true
 
   def substituteVariables(term: Term, map: Map[VariableLabel, Term]): Term = term match {
     case VariableTerm(label) => map.getOrElse(label, term)
@@ -157,11 +102,5 @@ trait TermUtils extends TermDefinitions with TermConversionsTo with CommonOps {
 
   def unsafeRenameVariables(term: Term, map: Map[VariableLabel, VariableLabel]): Term =
     substituteVariables(term, map.view.mapValues(VariableTerm.apply).toMap)
-
-  def fillTupleParametersFunction[N <: Arity](n: N, f: FillArgs[VariableLabel, N] => Term): (FillArgs[VariableLabel, N], Term) = {
-    val dummyVariable = VariableLabel("") // Used to identify the existing free variables, doesn't matter if this name collides
-    val taken = freeVariablesOf(fillTupleParameters(_ => dummyVariable, n, f)._2).map(_.id)
-    fillTupleParameters(VariableLabel.apply, n, f, taken)
-  }
 
 }

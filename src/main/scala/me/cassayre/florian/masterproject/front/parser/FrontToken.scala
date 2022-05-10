@@ -2,13 +2,14 @@ package me.cassayre.florian.masterproject.front.parser
 
 import scala.util.parsing.input.Positional
 
+/**
+ * Low-level tokens used by the lexer ([[FrontLexer]]).
+ */
 private[parser] enum FrontToken extends Positional {
 
   case Identifier(identifier: String)
   case SchematicIdentifier(identifier: String)
   case SchematicConnectorIdentifier(identifier: String)
-
-  case IntegerLiteral(value: Int)
 
   case Indentation(spaces: Int)
 
@@ -44,8 +45,6 @@ private[parser] enum FrontToken extends Positional {
   case Dot()
   case Comma()
   case Semicolon()
-
-  case RuleName(name: String)
 
   case NewLine()
 

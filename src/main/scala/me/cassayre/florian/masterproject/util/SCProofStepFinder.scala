@@ -14,13 +14,23 @@ object SCProofStepFinder {
 
   final case class NoProofStepFound(message: String) extends Exception(message)
 
+  /**
+   * Find a lazy list of possible proof steps that would correspond to this conclusion and premises.
+   * The found step may only use a subset of the provided premises. This procedure is by nature incomplete;
+   * substitutions in particular may not be detected systematically. Operators supporting variable arity
+   * will not be detected if the arity used is more than 2. This procedure is polynomial in terms of the
+   * conclusion and the number of premises.
+   * @param proof the current proof
+   * @param conclusion the new conclusion
+   * @param premises the premises to be used
+   * @return a lazy list of possible proof steps
+   */
   def findPossibleProofSteps(proof: SCProof, conclusion: Sequent, premises: Seq[Int] = Seq.empty): View[SCProofStep] = {
     require(premises.forall(i => proof.steps.indices.contains(i) || proof.imports.indices.contains(-(i + 1))))
 
     val checker = SCProofChecker.checkSingleSCStep
     val Sequent(left, right) = conclusion
 
-    val SCProof(steps, _) = proof
     val searchedSteps = premises.map(i => (proof.getSequent(i), i))
 
     if (right.isEmpty) {
@@ -40,13 +50,13 @@ object SCProofStepFinder {
           def collect[L <: FormulaLabel, A](f: PartialFunction[Formula, (L, A)])(formulas: Set[Formula]): Map[L, Set[A]] =
             formulas.collect(f).groupBy(_._1).view.mapValues(_.map(_._2)).toMap.withDefaultValue(Set.empty)
 
-          val binaryConnectorCollector = collect { case f@ConnectorFormula(label, Seq(l, r)) => label -> (l, r) }(_)
+          val binaryConnectorCollector = collect { case ConnectorFormula(label, Seq(l, r)) => label -> (l, r) }(_)
           val (leftBinaryConnectors, rightBinaryConnectors) = (binaryConnectorCollector(left), binaryConnectorCollector(right))
           val binderCollector = collect { case f@BinderFormula(label, _, _) => label -> f }(_)
           val (leftBinders, rightBinders) = (binderCollector(left), binderCollector(right))
           val (leftNegConnectors, rightNegConnectors) =
-            (left.collect { case f@ConnectorFormula(`Neg`, Seq(u)) => u }, right.collect { case f@ConnectorFormula(`Neg`, Seq(u)) => u })
-          val leftEquals = left.collect { case f@PredicateFormula(`equality`, Seq(a, b)) => (a, b) }
+            (left.collect { case ConnectorFormula(`Neg`, Seq(u)) => u }, right.collect { case f@ConnectorFormula(`Neg`, Seq(u)) => u })
+          val leftEquals = left.collect { case PredicateFormula(`equality`, Seq(a, b)) => (a, b) }
 
           def collectExistsOneDef(s: Set[Formula]): View[(VariableLabel, Formula)] = s.view.collect {
             case BinderFormula(`Exists`, y, BinderFormula(`Forall`, x,
@@ -98,7 +108,7 @@ object SCProofStepFinder {
 
           def inverseFormulaSubstitution(f: Formula, g: Formula, l: SchematicPredicateLabel): Formula = f match {
             case _ if isSame(f, g) => PredicateFormula(l, Seq.empty)
-            case PredicateFormula(label, args) => f
+            case PredicateFormula(_, _) => f
             case ConnectorFormula(label, args) => ConnectorFormula(label, args.map(inverseFormulaSubstitution(_, g, l)))
             case BinderFormula(label, bound, inner) => BinderFormula(label, bound, inverseFormulaSubstitution(inner, g, l))
           }
@@ -204,11 +214,6 @@ object SCProofStepFinder {
    * @param filter     an optional filter on the steps found
    * @return a new proof with the given conclusion
    */
-  def proofStepFinder(proof: SCProof, conclusion: Sequent, premises: Seq[Int] = Seq.empty, filter: SCProofStep => Boolean = _ => true): SCProof = {
-    val candidates = findPossibleProofSteps(proof, conclusion, premises)
-    candidates.find(filter) match {
-      case Some(step) => proof.withNewSteps(IndexedSeq(step))
-      case None => throw NoProofStepFound("")
-    }
-  }
+  def proofStepFinder(proof: SCProof, conclusion: Sequent, premises: Seq[Int] = Seq.empty, filter: SCProofStep => Boolean = _ => true): Option[SCProof] =
+    findPossibleProofSteps(proof, conclusion, premises).find(filter).map(step => proof.withNewSteps(IndexedSeq(step)))
 }

@@ -1,5 +1,9 @@
 package me.cassayre.florian.masterproject.front.parser
 
+/**
+ * Symbols to be used by the parser and printer.
+ * There exists two variants, [[FrontSymbols.FrontAsciiSymbols]] and [[FrontSymbols.FrontUnicodeSymbols]].
+ */
 private[front] sealed abstract class FrontSymbols {
   val Forall: String
   val Exists: String

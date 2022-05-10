@@ -7,6 +7,9 @@ import me.cassayre.florian.masterproject.front.fol.ops.*
 import me.cassayre.florian.masterproject.front.fol.utils.*
 import me.cassayre.florian.masterproject.front.printer.FrontPositionedPrinter
 
+/**
+ * The package containing all the definitions and utilities to work with first order logic (FOL).
+ */
 object FOL extends FormulaDefinitions
   with TermConversionsTo with FormulaConversionsTo
   with TermConversionsFrom with FormulaConversionsFrom

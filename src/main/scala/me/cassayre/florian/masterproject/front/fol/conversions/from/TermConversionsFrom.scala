@@ -8,11 +8,21 @@ trait TermConversionsFrom extends TermDefinitions {
     ConstantFunctionLabel.unsafe(label.id, label.arity)
   def fromKernel(label: lisa.kernel.fol.FOL.SchematicFunctionLabel): SchematicFunctionLabel[?] =
     SchematicFunctionLabel.unsafe(label.id, label.arity)
+  /**
+   * Lifts a function label from the kernel to the front.
+   * @param label the label in the kernel
+   * @return the label in the front
+   */
   def fromKernel(label: lisa.kernel.fol.FOL.FunctionLabel): FunctionLabel[?] = label match {
     case constant: lisa.kernel.fol.FOL.ConstantFunctionLabel => fromKernel(constant)
     case schematic: lisa.kernel.fol.FOL.SchematicFunctionLabel => fromKernel(schematic)
   }
 
+  /**
+   * Lifts a term from the kernel to the front.
+   * @param term the term in the kernel
+   * @return the term in the front
+   */
   def fromKernel(term: lisa.kernel.fol.FOL.Term): Term = term match {
     case lisa.kernel.fol.FOL.VariableTerm(label) => VariableTerm(VariableLabel(label.id))
     case lisa.kernel.fol.FOL.FunctionTerm(label, args) => FunctionTerm.unsafe(fromKernel(label), args.map(fromKernel))

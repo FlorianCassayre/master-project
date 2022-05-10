@@ -5,16 +5,26 @@ import lisa.settheory.AxiomaticSetTheory
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 import me.cassayre.florian.masterproject.front.proof.Proof.*
 
+/**
+ * The set theory package. See [[lisa.settheory.AxiomaticSetTheory]].
+ */
 object SetTheory {
 
   // The purpose of this file is simply to lift the definitions from the kernel to the front
 
+  /**
+   * A safe type representing a formula that is considered as an axiom in this theory.
+   */
   opaque type AxiomaticFormula <: Formula = Formula
 
+  /**
+   * Creates a new environment with axioms and symbols of set theory.
+   * @return a new environment
+   */
   def newSetTheoryEnvironment(): ProofEnvironment = {
     val runningTheory = new RunningTheory()
     val additionalAxioms: Seq[(String, AxiomaticFormula)] = Seq(
-      "def_sub" -> definitionSubset,
+      "def_sub" -> definitionSubset, // Temporary
     )
     AxiomaticSetTheory.functions.foreach(runningTheory.addSymbol)
     AxiomaticSetTheory.predicates.foreach(runningTheory.addSymbol)
@@ -51,9 +61,9 @@ object SetTheory {
   }
 
   extension (term: Term) {
-    def in(other: Term): Formula = membership(term, other)
+    infix def in(other: Term): Formula = membership(term, other)
     def subsetOf(other: Term): Formula = subset(term, other)
-    def ~(other: Term): Formula = sameCardinality(term, other)
+    infix def ~(other: Term): Formula = sameCardinality(term, other)
   }
 
   extension (formula: AxiomaticFormula) {

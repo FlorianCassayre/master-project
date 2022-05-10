@@ -10,6 +10,9 @@ import scala.util.{Failure, Success, Try}
 import scala.util.parsing.input.{Position, Positional}
 import scala.collection.View
 
+/**
+ * Resolves the intermediate representation ([[FrontParsed]]) into actual first order logic or sequent elements.
+ */
 private[parser] object FrontResolver {
 
   // Free variables must appear in the context, otherwise they will be treated as

@@ -9,8 +9,8 @@ import lisa.kernel.proof.*
 import lisa.kernel.proof.SequentCalculus.*
 import lisa.settheory.AxiomaticSetTheory.*
 import org.scalatest.funsuite.AnyFunSuite
-import me.cassayre.florian.masterproject.util.SCProofBuilder.*
-import me.cassayre.florian.masterproject.util.MonadicSCProofBuilder.*
+import me.cassayre.florian.masterproject.util.SCProofBuilder.{*, given}
+import me.cassayre.florian.masterproject.util.MonadicSCProofBuilder.{*, given}
 import proven.tactics.ProofTactics.*
 
 import util.chaining.*

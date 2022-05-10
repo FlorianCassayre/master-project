@@ -4,6 +4,9 @@ import scala.util.parsing.input.{Position, Positional}
 
 sealed abstract class FrontParsed extends Positional
 
+/**
+ * The intermediate representation for first order logic and sequents.
+ */
 private[parser] object FrontParsed {
 
   case class ParsedSequent(freeVariables: Seq[String], left: Seq[ParsedTermOrFormula], right: Seq[ParsedTermOrFormula]) extends FrontParsed

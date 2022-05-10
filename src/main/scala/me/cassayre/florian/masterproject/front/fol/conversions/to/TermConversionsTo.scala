@@ -17,6 +17,11 @@ trait TermConversionsTo extends TermDefinitions {
     case schematic: SchematicFunctionLabel[?] => toKernel(schematic)
   }
 
+  /**
+   * Translates a label from the front to the kernel.
+   * @param label the label in the front
+   * @return the label in the kernel
+   */
   def toKernel(label: TermLabel): lisa.kernel.fol.FOL.TermLabel = label match {
     case variable: VariableLabel => toKernel(variable)
     case function: FunctionLabel[?] => toKernel(function)
@@ -28,6 +33,11 @@ trait TermConversionsTo extends TermDefinitions {
   def toKernel(term: FunctionTerm): lisa.kernel.fol.FOL.FunctionTerm =
     lisa.kernel.fol.FOL.FunctionTerm(toKernel(term.label), term.args.map(toKernel))
 
+  /**
+   * Translates a term from the front to the kernel.
+   * @param term the term in the front
+   * @return the term in the kernel
+   */
   def toKernel(term: Term): lisa.kernel.fol.FOL.Term = term match {
     case variable: VariableTerm => toKernel(variable)
     case function: FunctionTerm => toKernel(function)
