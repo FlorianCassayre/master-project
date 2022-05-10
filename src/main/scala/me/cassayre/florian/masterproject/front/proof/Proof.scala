@@ -54,8 +54,9 @@ object Proof
 
   val justification: TacticApplyJustification.type = TacticApplyJustification
 
-  extension (tactic: Tactic)
+  extension (tactic: Tactic) {
     infix def + : TacticRepeat = TacticRepeat(tactic)
     infix def |(other: Tactic): TacticFallback = TacticFallback(Seq(tactic, other))
-
+  }
+    
 }

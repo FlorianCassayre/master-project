@@ -56,10 +56,11 @@ trait CommonOps extends CommonDefinitions {
     else
       (0 until n).foldRight(EmptyTuple: Tuple)((i, acc) => f(i) *: acc).asInstanceOf[FillArgs[T, N]]
 
-  extension [T <: Matchable, N <: Arity](tuple: FillArgs[T, N])
+  extension [T <: Matchable, N <: Arity](tuple: FillArgs[T, N]) {
     /**
      * Converts a tuple into a sequence of value. Loses all typing information, but simplifies the usage.
      */
     def toSeq: Seq[T] = tuple2seq(tuple)
+  }
 
 }

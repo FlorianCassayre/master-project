@@ -11,11 +11,12 @@ trait TermUtils extends TermDefinitions with TermConversionsTo with CommonOps wi
   type RenamedFunction[B <: FunctionLabel[?]] = RenamedLabel[FunctionLabel[?], SchematicFunctionLabel[?], B]
   type RenamedFunctionSchema = RenamedFunction[SchematicFunctionLabel[?]]
 
-  extension [L <: FunctionLabel[?]](renamed: RenamedFunction[L])
+  extension [L <: FunctionLabel[?]](renamed: RenamedFunction[L]) {
     def toAssignment: AssignedFunction = {
       val parameters = freshIds(Set.empty, renamed.from.arity).map(SchematicFunctionLabel.apply[0])
       AssignedFunction.unsafe(renamed.from, LambdaFunction.unsafe(parameters, FunctionTerm.unsafe(renamed.to, parameters.map(FunctionTerm.unsafe(_, Seq.empty)))))
     }
+  }
 
   def toKernel(lambda: LambdaFunction[?]): lisa.kernel.fol.FOL.LambdaTermTerm =
     lisa.kernel.fol.FOL.LambdaTermTerm(lambda.parameters.map(toKernel), lambda.body)

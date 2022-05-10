@@ -90,7 +90,7 @@ object FrontLexer {
   }
   private object FrontLexerStandardUnicode extends FrontLexerUnicode
 
-  private def postProcessor(lines: Boolean, indentation: Boolean)(tokens: Seq[FrontToken]): Seq[FrontToken] =
+  private def postProcessor(lines: Boolean, indentation: Boolean)(tokens: Seq[FrontToken]): Seq[FrontToken] = {
     val tokensWithEnd = tokens :+ End()
     tokensWithEnd.flatMap {
       case token @ NewLineWithIndentation(n) =>
@@ -110,6 +110,7 @@ object FrontLexer {
         if(indentation) Seq(newToken) else Seq.empty
       case other => Seq(other)
     }
+  }
 
   def lexingAscii(str: String, lines: Boolean = false, indentation: Boolean = false): Seq[FrontToken] =
     postProcessor(lines, indentation)(FrontLexerStandardAscii(str))

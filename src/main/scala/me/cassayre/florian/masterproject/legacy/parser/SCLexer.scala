@@ -158,7 +158,7 @@ object SCLexer {
   private object SCLexerStandardUnicode extends SCLexerUnicode
   private object SCLexerExtendedUnicode extends SCLexerExtended with SCLexerUnicode
 
-  private def postProcessor(lines: Boolean, indentation: Boolean)(tokens: Seq[SCToken]): Seq[SCToken] =
+  private def postProcessor(lines: Boolean, indentation: Boolean)(tokens: Seq[SCToken]): Seq[SCToken] = {
     val tokensWithEnd = tokens :+ End()
     tokensWithEnd.flatMap {
       case token @ NewLineWithIndentation(n) =>
@@ -178,6 +178,7 @@ object SCLexer {
         if(indentation) Seq(newToken) else Seq.empty
       case other => Seq(other)
     }
+  }
 
   def lexingStandardAscii(str: String, lines: Boolean = false, indentation: Boolean = false): Seq[SCToken] =
     postProcessor(lines, indentation)(SCLexerStandardAscii(str))

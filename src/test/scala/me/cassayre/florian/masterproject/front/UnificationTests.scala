@@ -72,9 +72,10 @@ class UnificationTests extends AnyFunSuite {
   }
 
   def checkUnifiesAs(pattern: Formula, target: Formula, partial: UnificationContext, ctx: UnificationContext): Unit = {
-    unify(pattern, target, partial) match
+    unify(pattern, target, partial) match {
       case Some((_, resultCtx)) => assert(contextsEqual(resultCtx, ctx), resultCtx)
       case None => throw new AssertionError("It did not unify")
+    }
   }
 
   def checkUnifiesAs(pattern: Formula, target: Formula, ctx: UnificationContext): Unit =

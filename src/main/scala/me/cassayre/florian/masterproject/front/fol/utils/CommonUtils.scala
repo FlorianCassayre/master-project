@@ -51,8 +51,9 @@ trait CommonUtils extends CommonDefinitions with CommonOps {
     def apply[N <: Arity, L <: Label & WithArity[N], A <: L & SchematicLabel, B <: L](from: A, to: B): RenamedLabel[L, A, B] = new RenamedLabel(from, to)
     def unsafe[L <: Label & WithArity[?], A <: L & SchematicLabel, B <: L](from: A, to: B): RenamedLabel[L, A, B] = new RenamedLabel(from, to)
   }
-  extension [L <: Label & WithArity[?], A <: L & SchematicLabel](renamed: RenamedLabel[L, A, A])
+  extension [L <: Label & WithArity[?], A <: L & SchematicLabel](renamed: RenamedLabel[L, A, A]) {
     def swap: RenamedLabel[L, A, A] = RenamedLabel.unsafe(renamed.to, renamed.from)
+  }
 
   /**
    * A lambda definition, namely an anonymous function taking some arguments and returning a result.

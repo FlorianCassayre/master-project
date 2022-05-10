@@ -233,9 +233,10 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
           } else if(isSame(value, lambda.unsafe(args.map(instantiateTermPartial)))) {
             Some(Some((IndexedSeq.empty, partialAssignment)))
           } else {
-            collectRecursiveTerm(lambda.unsafe(args), value, valueFunctions, valueVariables)(using ctx) match
+            collectRecursiveTerm(lambda.unsafe(args), value, valueFunctions, valueVariables)(using ctx) match {
               case Some(addedConstraints) => Some(Some(addedConstraints, partialAssignment))
               case None => Some(None)
+            }
           }
         case SchematicFunction(label, args, value, ctx) if args.forall(isSolvableTerm(_)(using ctx.map(_._1))) =>
           // TODO are all bound variables already instantiated?
@@ -255,9 +256,10 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
           } else if(isSame(value, lambda.unsafe(args.map(instantiateTermPartial)))) {
             Some(Some((IndexedSeq.empty, partialAssignment)))
           } else {
-            collectRecursiveFormula(lambda.unsafe(args), value, valueFunctions, valuePredicates, valueConnectors, valueVariables)(using ctx) match
+            collectRecursiveFormula(lambda.unsafe(args), value, valueFunctions, valuePredicates, valueConnectors, valueVariables)(using ctx) match {
               case Some(addedConstraints) => Some(Some(addedConstraints, partialAssignment))
               case None => Some(None)
+            }
           }
         case SchematicPredicate(label, args, value, ctx) if args.forall(isSolvableTerm(_)(using ctx.map(_._1))) =>
           // Analogous to the above
@@ -276,9 +278,10 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
           } else if(isSame(value, lambda.unsafe(args.map(instantiateFormulaPartial)))) {
             Some(Some((IndexedSeq.empty, partialAssignment)))
           } else {
-            collectRecursiveFormula(lambda.unsafe(args), value, valueFunctions, valuePredicates, valueConnectors, valueVariables)(using ctx) match
+            collectRecursiveFormula(lambda.unsafe(args), value, valueFunctions, valuePredicates, valueConnectors, valueVariables)(using ctx) match {
               case Some(addedConstraints) => Some(Some(addedConstraints, partialAssignment))
               case None => Some(None)
+            }
           }
         case SchematicConnector(label, args, value, ctx) if args.forall(isSolvableFormula(_)(using ctx.map(_._1))) =>
           val valueArgs = args.map(unsafeRenameVariables(_, ctx.toMap))

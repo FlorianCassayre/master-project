@@ -8,18 +8,20 @@ trait FormulaUtils extends TermUtils with FormulaDefinitions with FormulaConvers
 
   type RenamedPredicate[B <: PredicateLabel[?]] = RenamedLabel[PredicateLabel[?], SchematicPredicateLabel[?], B]
   type RenamedPredicateSchema = RenamedPredicate[SchematicPredicateLabel[?]]
-  extension [L <: PredicateLabel[?]](renamed: RenamedPredicate[L])
+  extension [L <: PredicateLabel[?]](renamed: RenamedPredicate[L]) {
     def toAssignment: AssignedPredicate = {
       val parameters = freshIds(Set.empty, renamed.from.arity).map(SchematicFunctionLabel.apply[0])
       AssignedPredicate.unsafe(renamed.from, LambdaPredicate.unsafe(parameters, PredicateFormula.unsafe(renamed.to, parameters.map(FunctionTerm.unsafe(_, Seq.empty)))))
     }
+  }
   type RenamedConnector[B <: ConnectorLabel[?]] = RenamedLabel[ConnectorLabel[?], SchematicConnectorLabel[?], B]
   type RenamedConnectorSchema = RenamedConnector[SchematicConnectorLabel[?]]
-  extension [L <: ConnectorLabel[?]](renamed: RenamedConnector[L])
+  extension [L <: ConnectorLabel[?]](renamed: RenamedConnector[L]) {
     def toAssignment: AssignedConnector = {
       val parameters = freshIds(Set.empty, renamed.from.arity).map(SchematicPredicateLabel.apply[0])
       AssignedConnector.unsafe(renamed.from, LambdaConnector.unsafe(parameters, ConnectorFormula.unsafe(renamed.to, parameters.map(PredicateFormula.unsafe(_, Seq.empty)))))
     }
+  }
 
   case class LambdaPredicate[N <: Arity] private(parameters: Seq[SchematicFunctionLabel[0]], body: Formula) extends LambdaDefinition[N, SchematicFunctionLabel[0], Formula] {
     override type U = Term

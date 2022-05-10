@@ -19,11 +19,12 @@ object FrontMacro {
 
   // https://github.com/lampepfl/dotty/issues/8577#issuecomment-1014729373
 
-  extension (inline sc: StringContext)
+  extension (inline sc: StringContext) {
     transparent inline def term: Any = ${ SIParts.scMacro[TermParts]('sc) }
     transparent inline def formula: Any = ${ SIParts.scMacro[FormulaParts]('sc) }
     transparent inline def sequent: Any = ${ SIParts.scMacro[SequentParts]('sc) }
     transparent inline def partial: Any = ${ SIParts.scMacro[PartialSequentParts]('sc) }
+  }
 
   class TermParts[P <: Tuple](parts: P) {
     transparent inline def apply(inline args: Any*): Term = ${ termApplyMacro('parts, 'args) }
@@ -334,31 +335,38 @@ object FrontMacro {
 
     // TODO support the generic type conversion (it's harder than it looks)
 
-    given ToExpr[SchematicFunctionLabel[?]] with
+    given ToExpr[SchematicFunctionLabel[?]] with {
       def apply(f: SchematicFunctionLabel[?])(using Quotes): Expr[SchematicFunctionLabel[?]] =
         '{ SchematicFunctionLabel.unsafe(${Expr(f.id)}, ${Expr(f.arity.asInstanceOf[Int])}) }
-    given ToExpr[ConstantFunctionLabel[?]] with
+    }
+    given ToExpr[ConstantFunctionLabel[?]] with {
       def apply(f: ConstantFunctionLabel[?])(using Quotes): Expr[ConstantFunctionLabel[?]] =
         '{ ConstantFunctionLabel.unsafe(${Expr(f.id)}, ${Expr(f.arity.asInstanceOf[Int])}) }
-    given ToExpr[SchematicPredicateLabel[?]] with
+    }
+    given ToExpr[SchematicPredicateLabel[?]] with {
       def apply(f: SchematicPredicateLabel[?])(using Quotes) =
         '{ SchematicPredicateLabel.unsafe(${Expr(f.id)}, ${Expr(f.arity.asInstanceOf[Int])}) }
-    given ToExpr[ConstantPredicateLabel[?]] with
+    }
+    given ToExpr[ConstantPredicateLabel[?]] with {
       def apply(f: ConstantPredicateLabel[?])(using Quotes): Expr[ConstantPredicateLabel[?]] =
         '{ ConstantPredicateLabel.unsafe(${Expr(f.id)}, ${Expr(f.arity.asInstanceOf[Int])}) }
-    given ToExpr[SchematicConnectorLabel[?]] with
+    }
+    given ToExpr[SchematicConnectorLabel[?]] with {
       def apply(f: SchematicConnectorLabel[?])(using Quotes) =
         '{ SchematicConnectorLabel.unsafe(${Expr(f.id)}, ${Expr(f.arity.asInstanceOf[Int])}) }
-    given ToExpr[VariableLabel] with
+    }
+    given ToExpr[VariableLabel] with {
       def apply(l: VariableLabel)(using Quotes) =
         '{ VariableLabel(${Expr(l.id)}) }
-    given ToExpr[BinderLabel] with
+    }
+    given ToExpr[BinderLabel] with {
       def apply(l: BinderLabel)(using Quotes) =
         l match {
           case `forall` => '{ forall }
           case `exists` => '{ exists }
           case `existsOne` => '{ existsOne }
         }
+    }
 
     // FIXME "hack" otherwise the two givens would clash
     val toExprFunction0: ToExpr[SchematicFunctionLabel[0]] = new {
@@ -370,17 +378,19 @@ object FrontMacro {
         '{ SchematicPredicateLabel[0](${Expr(f.id)}) }
     }
 
-    given ToExpr[FunctionLabel[?]] with
+    given ToExpr[FunctionLabel[?]] with {
       def apply(f: FunctionLabel[?])(using Quotes): Expr[FunctionLabel[?]] = f match {
         case constant: ConstantFunctionLabel[?] => Expr(constant)(using summon[ToExpr[ConstantFunctionLabel[?]]])
         case schematic: SchematicFunctionLabel[?] => Expr(schematic)(using summon[ToExpr[SchematicFunctionLabel[?]]])
       }
-    given ToExpr[PredicateLabel[?]] with
+    }
+    given ToExpr[PredicateLabel[?]] with {
       def apply(f: PredicateLabel[?])(using Quotes): Expr[PredicateLabel[?]] = f match {
         case constant: ConstantPredicateLabel[?] => Expr(constant)(using summon[ToExpr[ConstantPredicateLabel[?]]])
         case schematic: SchematicPredicateLabel[?] => Expr(schematic)(using summon[ToExpr[SchematicPredicateLabel[?]]])
       }
-    given ToExpr[ConnectorLabel[?]] with
+    }
+    given ToExpr[ConnectorLabel[?]] with {
       def apply(f: ConnectorLabel[?])(using Quotes): Expr[ConnectorLabel[?]] = f match {
         case constant: ConstantConnectorLabel[?] => constant match {
           case `neg` => '{ neg }
@@ -391,18 +401,21 @@ object FrontMacro {
         }
         case schematic: SchematicConnectorLabel[?] => Expr(schematic)(using summon[ToExpr[SchematicConnectorLabel[?]]])
       }
+    }
 
-    given ToExpr[Term] with
+    given ToExpr[Term] with {
       def apply(t: Term)(using Quotes): Expr[Term] = t match {
         case VariableTerm(label) => '{ VariableTerm(${Expr(label)}) }
         case FunctionTerm(label, args) => '{ FunctionTerm.unsafe(${Expr(label)}, ${liftSeq(args.map(Expr.apply(_)))}) }
       }
-    given ToExpr[Formula] with
+    }
+    given ToExpr[Formula] with {
       def apply(f: Formula)(using Quotes): Expr[Formula] = f match {
         case PredicateFormula(label, args) => '{ PredicateFormula.unsafe(${Expr(label)}, ${liftSeq(args.map(Expr.apply(_)))}) }
         case ConnectorFormula(label, args) => '{ ConnectorFormula.unsafe(${Expr(label)}, ${liftSeq(args.map(Expr.apply(_)))}) }
         case BinderFormula(label, bound, inner) => '{ BinderFormula(${Expr(label)}, ${Expr(bound)}, ${Expr(inner)}) }
       }
+    }
   }
 
 }
