@@ -17,7 +17,7 @@ trait ProofInterfaceDefinitions extends ProofEnvironmentDefinitions {
     def proving: ProofState = currentState.proving
     def apply(mutator: ProofModeStateMutator): Boolean = {
       print(s"Trying to apply '${mutator.getClass.getSimpleName}'...")
-      val result = applyMutator(currentState, mutator) match {
+      val result = mutator.applyMutator(currentState) match {
         case Some(newState) =>
           println(" [ok]")
           currentState = newState
