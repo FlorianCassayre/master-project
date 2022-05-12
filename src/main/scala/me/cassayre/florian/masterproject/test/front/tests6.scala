@@ -65,8 +65,9 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     ))
 
     focus(1)
-    val _ = thmExtSchema(AssignedFunction(Notations.s, unionSet(emptySet)))(AssignedFunction(Notations.t, emptySet)).display()
-    apply(justification) // Uses the previously proved theorem
+    apply(justification(
+      thmExtSchema(AssignedFunction(Notations.s, unionSet(emptySet)))(AssignedFunction(Notations.t, emptySet)).display()
+    ))
 
     apply(introRForallS(RuleParameters(AssignedFunction(Notations.t, s))))
 
@@ -77,8 +78,9 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     ))
 
     focus(1)
-    val _ = thmUnionSchema(AssignedFunction(t, emptySet)).rewrite(state.goals.head).display()
-    apply(justification)
+    apply(justification(
+      thmUnionSchema(AssignedFunction(t, emptySet)).rewrite(state.goals.head).display()
+    ))
 
     apply(introRIff)
     apply(introRImp)
@@ -86,13 +88,14 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     apply(introLAnd)
     apply(weaken(left = Set(0), right = Set(0)))
     apply(elimRNot)
-    val _ = thmEmptySchema(AssignedFunction(s, me.cassayre.florian.masterproject.front.fol.FOL.VariableTerm(y))).display()
-    apply(justification)
+    apply(justification(
+      thmEmptySchema(AssignedFunction(s, me.cassayre.florian.masterproject.front.fol.FOL.VariableTerm(y))).display()
+    ))
 
     apply(introRImp)
     apply(weaken(right = Set(0)))
     apply(elimRNot)
-    apply(justification)
+    apply(justification(thmEmptySchema))
 
     asTheorem() // |- U({}) = {}
   }
@@ -110,8 +113,9 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     ))
     focus(1)
     apply(rewrite(sequent"|- (?s sub ?s) <=> (forall z. (z in ?s) => (z in ?s))"))
-    val _ = thmSubsetSchema(AssignedFunction(t, s)).display()
-    apply(justification)
+    apply(justification(
+      thmSubsetSchema(AssignedFunction(t, s)).display()
+    ))
     apply(introRIff)
     apply(introRImp)
     apply(introLForall(RuleParameters(AssignedFunction(Notations.t, t))))
@@ -137,10 +141,11 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     ))
     focus(1)
 
-    val _ = thmExtSchema(AssignedFunction(Notations.t, unionSet(powerSet(s))))(AssignedFunction(Notations.u, s))
-      .rewrite(sequent"|- (forall z. (z in U(P(?s))) <=> (z in ?s)) <=> (U(P(?s)) = ?s)")
-      .display()
-    apply(justification)
+    apply(justification(
+      thmExtSchema(AssignedFunction(Notations.t, unionSet(powerSet(s))))(AssignedFunction(Notations.u, s))
+        .rewrite(sequent"|- (forall z. (z in U(P(?s))) <=> (z in ?s)) <=> (U(P(?s)) = ?s)")
+        .display()
+    ))
 
     apply(introRForallS(RuleParameters(AssignedFunction(Notations.t, t))))
 
@@ -152,8 +157,9 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     ))
 
     // TODO: avoid using a temporary variable here
-    val _ = thmUnionSchema(AssignedFunction(s, u))(AssignedFunction(t, powerSet(s)))(AssignedFunction(u, t)).display()
-    apply(justification)
+    apply(justification(
+      thmUnionSchema(AssignedFunction(s, u))(AssignedFunction(t, powerSet(s)))(AssignedFunction(u, t)).display()
+    ))
 
     apply(introRIff)
     apply(introRImp)
@@ -169,8 +175,9 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     focus(1)
     apply(weaken(left = Set(0), right = Set(0)))
     apply(rewrite(sequent"|- (?u in P(?s)) <=> (?u sub ?s)"))
-    val _ = thmPowerSchema(AssignedFunction(s, u))(AssignedFunction(t, s)).display()
-    apply(justification)
+    apply(justification(
+      thmPowerSchema(AssignedFunction(s, u))(AssignedFunction(t, s)).display()
+    ))
 
     apply(elimLSubstIff(
       RuleParameters()
@@ -181,8 +188,9 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     focus(1)
     apply(weaken(left = Set(0), right = Set(0)))
     apply(rewrite(sequent"|- (?u sub ?s) <=> (forall z. (z in ?u) => (z in ?s))"))
-    val _ = thmSubsetSchema(AssignedFunction(s, u))(AssignedFunction(t, s)).display()
-    apply(justification)
+    apply(justification(
+      thmSubsetSchema(AssignedFunction(s, u))(AssignedFunction(t, s)).display()
+    ))
 
     apply(introLForall(RuleParameters(AssignedFunction(Notations.t, t))))
     apply(solveProp)
@@ -198,8 +206,9 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     focus(1)
     apply(weaken(left = Set(0)))
     apply(rewrite(sequent"|- (?s in P(?s)) <=> (?s sub ?s)"))
-    val _ = thmPowerSchema(AssignedFunction(t, s)).display()
-    apply(justification)
+    apply(justification(
+      thmPowerSchema(AssignedFunction(t, s)).display()
+    ))
 
     apply(elimRSubstIff(
       RuleParameters()
@@ -209,8 +218,9 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     focus(1)
     apply(weaken(left = Set(0)))
     apply(rewrite(sequent"|- (?s sub ?s) <=> ((?t in ?s) => (?t in ?s))"))
-    lemmaSubsetRefl.display()
-    apply(justification)
+    apply(justification(
+      lemmaSubsetRefl.display()
+    ))
     apply(solveProp)
 
     asTheorem()

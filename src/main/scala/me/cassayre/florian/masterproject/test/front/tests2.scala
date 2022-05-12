@@ -44,7 +44,7 @@ import me.cassayre.florian.masterproject.front.{*, given}
           .withConnector(Notations.f, identity)
       ),
       RuleHypothesis(),
-      TacticApplyJustification,
+      TacticApplyJustification(thm1),
     )
   )
 

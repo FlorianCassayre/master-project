@@ -31,8 +31,9 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
   case class TacticFocusGoal(goal: Int) extends Tactic
   case class TacticRepeat(tactic: Tactic) extends Tactic
   case class TacticFallback(tactics: Seq[Tactic]) extends Tactic
+  case class TacticCombine(tactics: Seq[Tactic]) extends Tactic
   sealed abstract class TacticGoal extends Tactic
-  case object TacticApplyJustification extends TacticGoal
+  case class TacticApplyJustification(justified: ReadableJustified) extends TacticGoal
 
   type ReconstructSteps = () => IndexedSeq[SCProofStep]
 
@@ -50,6 +51,12 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
   }
 
   type ProofEnvironment <: ReadableProofEnvironment
+
+  trait ReadableJustified {
+    private[proof] def environment: ProofEnvironment
+    def sequent: Sequent
+  }
+  type Justified <: ReadableJustified
 
   private case class ProofStateSnapshot(
     proofState: ProofState,
@@ -93,8 +100,10 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
           (proofState.goals, shadowProofState) match {
             case (proofGoal +: tailGoals, id +: tailShadowProofState) =>
               tacticCurrentGoal match {
-                case TacticApplyJustification =>
-                  if(proofModeState.environment.contains(proofGoal)) {
+                case TacticApplyJustification(justified) =>
+                  if(justified.environment == proofModeState.environment
+                    && justified.sequent == proofGoal
+                    && proofModeState.environment.contains(proofGoal)) {
                     Some(proofModeState.withNewStep(
                       AppliedTactic(id, tactic, () => IndexedSeq.empty, true), ProofStateSnapshot(ProofState(tailGoals), tailShadowProofState, nextId)
                     ))
@@ -102,7 +111,7 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
                     None
                   }
                 case general: TacticGoalFunctional =>
-                  general(proofGoal).map { case (steps, f) => (steps, f) }.map { case (newGoals, reconstruct) =>
+                  general(proofGoal).map { case (newGoals, reconstruct) =>
                     // We prepend the newly created goals
                     val newProofState = ProofState(newGoals ++ tailGoals)
                     // Number of goals that have been created (or updated), possibly zero
@@ -137,6 +146,16 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
             case _ => None
           }
           iteratedTry(tactics)
+        case TacticCombine(tactics) =>
+          def iterated(remaining: Seq[Tactic], currentProofModeState: ProofModeState): Option[ProofModeState] = remaining match {
+            case tactic +: tail =>
+              applyMutator(currentProofModeState, tactic) match {
+                case Some(newProofModeState) => iterated(tail, newProofModeState)
+                case None => None
+              }
+            case _ => Some(currentProofModeState)
+          }
+          iterated(tactics, proofModeState)
         case TacticFocusGoal(goal) =>
           if(proofState.goals.indices.contains(goal)) {
             // This function moves the element of index `goal` to the front

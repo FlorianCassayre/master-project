@@ -79,10 +79,10 @@ import me.cassayre.florian.masterproject.front.{*, given}
     import proofMode.*
 
     // Bring these facts in context
-    thmEqSym(AssignedFunction(s, VariableTerm(x)))(AssignedFunction(t, VariableTerm(y)))
-    thmEqSym(AssignedFunction(s, VariableTerm(y)))(AssignedFunction(t, VariableTerm(x)))
+    val thm1 = thmEqSym(AssignedFunction(s, VariableTerm(x)))(AssignedFunction(t, VariableTerm(y)))
+    val thm2 = thmEqSym(AssignedFunction(s, VariableTerm(y)))(AssignedFunction(t, VariableTerm(x)))
 
-    apply((introRIff | introRImp | justification).+)
+    apply((introRIff | introRImp | justification(thm1) | justification(thm2)).+)
 
     asTheorem()
   }

@@ -92,7 +92,7 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
 
   def newEmptyEnvironment(): ProofEnvironment = new ProofEnvironment(new RunningTheory)
 
-  sealed abstract class Justified {
+  sealed abstract class Justified extends ReadableJustified {
     private[proof] val environment: ProofEnvironment
     def sequent: Sequent
     final def sequentAsKernel: lisa.kernel.proof.SequentCalculus.Sequent = sequentToKernel(sequent)
