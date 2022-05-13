@@ -74,33 +74,45 @@ object SCUtils {
 
   /**
    * Flattens a proof recursively; in other words it removes all occurrences of [[SCSubproof]].
-   * The order of proof steps is preserved, indices of premises are adapted to reflect the new ordering.
+   * Because subproofs imports can be rewritten, [[Rewrite]] steps may be inserted where that is necessary.
+   * The order of proof steps is preserved, indices of premises are adapted to reflect the new sequence.
    * Assumes that the provided proof is well-formed (but not necessarily valid).
    * If the provided proof is valid, then the resulting proof will also be valid.
    * @param proof the proof to be flattened
    * @return the flattened proof
    */
   def flattenProof(proof: SCProof): SCProof = {
-    def flattenProofRecursive(steps: IndexedSeq[SCProofStep], topPremises: IndexedSeq[Int], offset: Int): IndexedSeq[SCProofStep] = {
-      val (finalAcc, _) = steps.foldLeft((IndexedSeq.empty[SCProofStep], IndexedSeq.empty[Int])) { case ((acc, localToGlobal), step) =>
-        def resolve(i: Int): Int = if(i >= 0) localToGlobal(i) else topPremises(-i - 1)
+    def flattenProofRecursive(steps: IndexedSeq[SCProofStep], topPremises: IndexedSeq[(Int, Sequent)], offset: Int): IndexedSeq[SCProofStep] = {
+      val (finalAcc, _) = steps.foldLeft((IndexedSeq.empty[SCProofStep], IndexedSeq.empty[(Int, Sequent)])) { case ((acc, localToGlobal), step) =>
+        def resolve(i: Int): (Int, Sequent) = if(i >= 0) localToGlobal(i) else topPremises(-i - 1)
         val newAcc = step match {
           case SCSubproof(subProof, subPremises, _) =>
-            acc ++ flattenProofRecursive(subProof.steps, subPremises.map(resolve).toIndexedSeq, acc.size)
+            val (rewrittenPremises, rewrittenSeq) = subPremises.zipWithIndex.flatMap { case (i, j) =>
+              val (k, sequent) = resolve(i)
+              val imported = subProof.imports(j)
+              if(sequent != imported) {
+                Some((Rewrite(imported, k), -(j - 1) -> imported))
+              } else {
+                None
+              }
+            }.unzip
+            val rewrittenMap = rewrittenSeq.zipWithIndex.map { case ((i, sequent), j) => i -> (offset + acc.size + j, sequent) }.toMap
+            val childTopPremises = subPremises.map(i => rewrittenMap.getOrElse(i, resolve(i))).toIndexedSeq
+            acc ++ rewrittenPremises ++ flattenProofRecursive(subProof.steps, childTopPremises, offset + acc.size + rewrittenPremises.size)
           case _ =>
-            acc :+ mapPremises(step, resolve)
+            acc :+ mapPremises(step, i => resolve(i)._1)
         }
-        (newAcc, localToGlobal :+ (offset + newAcc.size - 1))
+        (newAcc, localToGlobal :+ (offset + newAcc.size - 1, step.bot))
       }
       finalAcc
     }
-    SCProof(flattenProofRecursive(proof.steps, proof.imports.indices.map(-_ - 1), 0), proof.imports)
+    SCProof(flattenProofRecursive(proof.steps, proof.imports.zipWithIndex.map { case (imported, i) => (-i - 1, imported) }, 0), proof.imports)
   }
 
   /**
    * Eliminates all steps that are not indirectly referenced by the conclusion (last step) of the proof.
    * This procedure is applied recursively on all subproofs. The elimination of unused top-level imports can be configured.
-   * The order of proof steps is preserved, indices of premises are adapted to reflect the new ordering.
+   * The order of proof steps is preserved, indices of premises are adapted to reflect the new sequence.
    * Assumes that the provided proof is well-formed (but not necessarily valid).
    * If the provided proof is valid, then the resulting proof will also be valid.
    * @param proof the proof to be simplified
