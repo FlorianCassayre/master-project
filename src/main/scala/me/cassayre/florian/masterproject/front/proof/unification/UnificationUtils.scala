@@ -3,6 +3,8 @@ package me.cassayre.florian.masterproject.front.proof.unification
 import me.cassayre.florian.masterproject.front.proof.sequent.SequentDefinitions
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 
+import scala.collection.View
+
 trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
 
   def isLegalPatterns(patterns: IndexedSeq[PartialSequent]): Boolean = {
@@ -475,6 +477,52 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
       }
     } else {
       None
+    }
+  }
+
+  type SequentSelector = (IndexedSeq[Int], IndexedSeq[Int])
+
+  def matchIndices(map: Map[Int, SequentSelector], patterns: IndexedSeq[PartialSequent], values: IndexedSeq[Sequent]): View[IndexedSeq[SequentSelector]] = {
+    require(patterns.size == values.size)
+    // Normally `pattern` shouldn't be empty, but this function works regardless
+    if(map.keySet.forall(patterns.indices.contains)) {
+      val selectors = patterns.indices.map(map.getOrElse(_, (IndexedSeq.empty, IndexedSeq.empty)))
+      selectors.zip(patterns.zip(values)).map { case ((leftSelector, rightSelector), (pattern, value)) =>
+        def enumerate(selectorSide: IndexedSeq[Int], patternSideSize: Int, isPatternPartial: Boolean, valueSide: Range): View[IndexedSeq[Int]] = {
+          // TODO remove the partial parameter as it is not needed in this direction
+          if(selectorSide.isEmpty) { // If empty we consider all permutations
+            // If `valueSide` is empty then it will produce an empty array
+            valueSide.combinations(patternSideSize).flatMap(_.permutations).toSeq.view
+          } else {
+            if(selectorSide.size == patternSideSize) {
+              if(selectorSide.forall(valueSide.contains)) {
+                // We return exactly what was selected
+                View(selectorSide)
+              } else {
+                // An index value is out of range
+                View.empty
+              }
+            } else {
+              // Number of args does not match the pattern's
+              View.empty
+            }
+          }
+        }
+        val leftSide = enumerate(leftSelector, pattern.left.size, pattern.partialLeft, value.left.indices)
+        val rightSide = enumerate(rightSelector, pattern.right.size, pattern.partialRight, value.right.indices)
+        for {
+          l <- leftSide
+            r <- rightSide
+        } yield IndexedSeq((l, r))
+      }.fold(View(IndexedSeq.empty[(IndexedSeq[Int], IndexedSeq[Int])])) { case (v1, v2) =>
+        for {
+          first <- v1
+            second <- v2
+        } yield first ++ second
+      }
+    } else {
+      // Map contains values outside the range
+      View.empty
     }
   }
 

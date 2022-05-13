@@ -174,7 +174,9 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
       )
     }
 
-    SCUtils.flattenProof(scProof)
+    val flat = SCUtils.flattenProof(scProof)
+    assert(SCProofChecker.checkSCProof(flat).isValid) // Bug in `flattenProof`
+    flat
   }
 
 }

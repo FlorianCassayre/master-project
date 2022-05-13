@@ -56,4 +56,15 @@ trait SequentDefinitions {
   def isSameSequent(s1: Sequent, s2: Sequent): Boolean =
     lisa.kernel.proof.SequentCalculus.isSameSequent(s1, s2)
 
+  def instantiateSequentSchemas(
+    sequent: Sequent,
+    functions: Seq[AssignedFunction] = Seq.empty,
+    predicates: Seq[AssignedPredicate] = Seq.empty,
+    connectors: Seq[AssignedConnector] = Seq.empty,
+  ): Sequent = {
+    def instantiate(formulas: IndexedSeq[Formula]): IndexedSeq[Formula] =
+      formulas.map(instantiateFormulaSchemas(_, functions, predicates, connectors))
+    Sequent(instantiate(sequent.left), instantiate(sequent.right))
+  }
+
 }

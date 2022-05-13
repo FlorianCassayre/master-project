@@ -54,6 +54,7 @@ object Proof
   val combine: TacticCombine.type = TacticCombine
 
   val justification: TacticApplyJustification.type = TacticApplyJustification
+  val justificationInst: TacticInstantiateApplyJustification.type = TacticInstantiateApplyJustification
 
   extension (tactic: Tactic) {
     infix def + : TacticRepeat = TacticRepeat(tactic)

@@ -9,7 +9,6 @@ import scala.collection.View
 trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils {
 
   type ReconstructRule = PartialFunction[(lisa.kernel.proof.SequentCalculus.Sequent, UnificationContext), IndexedSeq[SCProofStep]]
-  type SequentSelector = (IndexedSeq[Int], IndexedSeq[Int])
 
   case class RuleParameters(
     selectors: Map[Int, SequentSelector] = Map.empty,
@@ -56,50 +55,6 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
       })
   }
 
-  protected def matchIndices(map: Map[Int, SequentSelector], patterns: IndexedSeq[PartialSequent], values: IndexedSeq[Sequent]): View[IndexedSeq[SequentSelector]] = {
-    require(patterns.size == values.size)
-    // Normally `pattern` shouldn't be empty, but this function works regardless
-    if(map.keySet.forall(patterns.indices.contains)) {
-      val selectors = patterns.indices.map(map.getOrElse(_, (IndexedSeq.empty, IndexedSeq.empty)))
-      selectors.zip(patterns.zip(values)).map { case ((leftSelector, rightSelector), (pattern, value)) =>
-        def enumerate(selectorSide: IndexedSeq[Int], patternSideSize: Int, isPatternPartial: Boolean, valueSide: Range): View[IndexedSeq[Int]] = {
-          // TODO remove the partial parameter as it is not needed in this direction
-          if(selectorSide.isEmpty) { // If empty we consider all permutations
-            // If `valueSide` is empty then it will produce an empty array
-            valueSide.combinations(patternSideSize).flatMap(_.permutations).toSeq.view
-          } else {
-            if(selectorSide.size == patternSideSize) {
-              if(selectorSide.forall(valueSide.contains)) {
-                // We return exactly what was selected
-                View(selectorSide)
-              } else {
-                // An index value is out of range
-                View.empty
-              }
-            } else {
-              // Number of args does not match the pattern's
-              View.empty
-            }
-          }
-        }
-        val leftSide = enumerate(leftSelector, pattern.left.size, pattern.partialLeft, value.left.indices)
-        val rightSide = enumerate(rightSelector, pattern.right.size, pattern.partialRight, value.right.indices)
-        for {
-          l <- leftSide
-            r <- rightSide
-        } yield IndexedSeq((l, r))
-      }.fold(View(IndexedSeq.empty[(IndexedSeq[Int], IndexedSeq[Int])])) { case (v1, v2) =>
-        for {
-          first <- v1
-            second <- v2
-        } yield first ++ second
-      }
-    } else {
-      // Map contains values outside the range
-      View.empty
-    }
-  }
-
   protected def applyRuleInference(
     parameters: RuleParameters,
     patternsFrom: IndexedSeq[PartialSequent],
@@ -128,15 +83,7 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
       }
     }
 
-    override def toString: String = {
-      val top = rule.hypotheses.map(_.toString).mkString(" " * 6)
-      val bottom = rule.conclusion.toString
-      val length = Math.max(top.length, bottom.length)
-
-      def pad(s: String): String = " " * ((length - s.length) / 2) + s
-
-      Seq(pad(top), "=" * length, pad(bottom)).mkString("\n")
-    }
+    override def toString: String = s"${rule.getClass.getSimpleName}(...)"
   }
 
   sealed abstract class Rule {
@@ -171,6 +118,16 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
           }
         case _ => throw new Error
       }
+    }
+
+    override def toString: String = {
+      val top = hypotheses.map(_.toString).mkString(" " * 6)
+      val bottom = conclusion.toString
+      val length = Math.max(top.length, bottom.length)
+
+      def pad(s: String): String = " " * ((length - s.length) / 2) + s
+
+      Seq(pad(top), "=" * length, pad(bottom)).mkString("\n")
     }
   }
 

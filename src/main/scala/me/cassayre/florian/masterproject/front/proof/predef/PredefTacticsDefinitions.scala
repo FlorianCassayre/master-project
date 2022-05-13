@@ -5,8 +5,9 @@ import me.cassayre.florian.masterproject.front.fol.FOL.*
 import lisa.kernel.proof.SequentCalculus.*
 import proven.tactics.SimplePropositionalSolver
 import me.cassayre.florian.masterproject.front.proof.state.ProofEnvironmentDefinitions
+import me.cassayre.florian.masterproject.front.proof.unification.UnificationUtils
 
-trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
+trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions with UnificationUtils {
 
   case object TacticSolverNative extends TacticGoalFunctional {
     import Notations.*
@@ -131,6 +132,36 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions {
         val scProof = SCProof(reconstruct(), IndexedSeq(sequentToKernel(theorem.sequent)))
         theorem.environment.mkTheorem(rewritten, scProof, IndexedSeq(theorem))
       }.get
+  }
+
+  case class TacticInstantiateApplyJustification(justified: Justified) extends TacticGoalFunctionalPruning {
+    def apply(proofGoal: Sequent): Option[(IndexedSeq[Either[Sequent, Justified]], ReconstructSteps)] = {
+      val patterns = IndexedSeq(PartialSequent(justified.sequent.left, justified.sequent.right))
+      val values = IndexedSeq(proofGoal)
+      matchIndices(Map.empty, patterns, values).flatMap { selector =>
+        // TODO we should instantiate to temporary schemas first otherwise we risk clashing names
+        unifyAndResolve(patterns, values, patterns, UnificationContext(), selector).map { case (IndexedSeq(resolved), ctx) =>
+          val withFunctions = instantiateSequentSchemas(justified.sequent, ctx.assignedFunctions, Seq.empty, Seq.empty)
+          val withFunctionsAndPredicates = instantiateSequentSchemas(withFunctions, Seq.empty, ctx.assignedPredicates, Seq.empty)
+          (
+            IndexedSeq(Right(justified)),
+            () => IndexedSeq(
+              InstFunSchema(
+                sequentToKernel(withFunctions),
+                -1,
+                ctx.assignedFunctions.map(assigned => toKernel(assigned.schema) -> toKernel(assigned.lambda)).toMap,
+              ),
+              InstPredSchema(
+                sequentToKernel(withFunctionsAndPredicates),
+                0,
+                ctx.assignedPredicates.map(assigned => toKernel(assigned.schema) -> toKernel(assigned.lambda)).toMap,
+              ),
+              Rewrite(sequentToKernel(proofGoal), 1),
+            ),
+          )
+        }
+      }.headOption
+    }
   }
 
 }
