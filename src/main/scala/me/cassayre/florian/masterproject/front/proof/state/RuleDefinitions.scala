@@ -1,5 +1,6 @@
 package me.cassayre.florian.masterproject.front.proof.state
 
+import lisa.kernel.proof.SCProof
 import lisa.kernel.proof.SequentCalculus.{SCProofStep, SCSubproof}
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 import me.cassayre.florian.masterproject.front.proof.unification.UnificationUtils
@@ -16,6 +17,8 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     predicates: Seq[AssignedPredicate] = Seq.empty,
     connectors: Seq[AssignedConnector] = Seq.empty,
     variables: Map[VariableLabel, VariableLabel] = Map.empty,
+    resolutions: Map[Int, Either[Sequent, Justified]] = Map.empty,
+    resolutionsSelectors: Map[Int, (IndexedSeq[Int], IndexedSeq[Int])] = Map.empty,
   ) {
     def withIndices(i: Int)(left: Int*)(right: Int*): RuleParameters = {
       val pair = (left.toIndexedSeq, right.toIndexedSeq)
@@ -44,6 +47,11 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
 
     def withVariable(label: VariableLabel, value: VariableLabel): RuleParameters =
       copy(variables = variables + (label -> value))
+
+    def withResolution(i: Int, sequent: Sequent): RuleParameters =
+      copy(resolutions = resolutions + (i -> Left(sequent)))
+    def withResolution(i: Int, justified: Justified): RuleParameters =
+      copy(resolutions = resolutions + (i -> Right(justified)))
   }
   object RuleParameters {
     def apply(args: (AssignedFunction | AssignedPredicate | AssignedConnector | (VariableLabel, VariableLabel))*): RuleParameters =
@@ -60,26 +68,76 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     patternsFrom: IndexedSeq[PartialSequent],
     patternsTo: IndexedSeq[PartialSequent],
     valuesFrom: IndexedSeq[Sequent],
+    valuesTo: IndexedSeq[Option[Sequent]],
   ): Option[(IndexedSeq[Sequent], UnificationContext)] = {
-    def parametersView: View[IndexedSeq[SequentSelector]] =
-      if(patternsFrom.size == valuesFrom.size) {
-        matchIndices(parameters.selectors, patternsFrom, valuesFrom)
+    def parametersView: View[(IndexedSeq[SequentSelector], IndexedSeq[Option[SequentSelector]])] =
+      if(patternsFrom.size == valuesFrom.size && patternsTo.size == valuesTo.size) {
+        matchIndices(parameters.selectors, parameters.resolutionsSelectors, patternsFrom, patternsTo, valuesFrom, valuesTo)
       } else {
         View.empty
       }
 
-    parametersView.flatMap { selectors =>
-      val ctx = UnificationContext(parameters.predicates.map(r => r.schema -> r.lambda).toMap, parameters.functions.map(r => r.schema -> r.lambda).toMap, parameters.connectors.map(r => r.schema -> r.lambda).toMap, parameters.variables)
-      unifyAndResolve(patternsFrom, valuesFrom, patternsTo, ctx, selectors)
+    lazy val ctx = UnificationContext(
+      parameters.predicates.map(r => r.schema -> r.lambda).toMap,
+      parameters.functions.map(r => r.schema -> r.lambda).toMap,
+      parameters.connectors.map(r => r.schema -> r.lambda).toMap,
+      parameters.variables
+    )
+
+    lazy val (newPatternsFrom, newValuesFrom, nonEmptyValuesTo) = {
+      val (nonEmptyValuesTo, indices) = valuesTo.zipWithIndex.collect { case (Some(value), i) => (value, i) }.unzip
+      (patternsFrom ++ indices.map(patternsTo),
+        valuesFrom ++ nonEmptyValuesTo,
+        nonEmptyValuesTo)
+    }
+
+    parametersView.flatMap { case (selectorsFrom, selectorsTo) =>
+      val newSelectors = selectorsFrom ++ selectorsTo.flatten
+      unifyAndResolve(newPatternsFrom, newValuesFrom, patternsTo, ctx, newSelectors).flatMap {
+        case (solvedValues, resultCtx) =>
+          val (actualValuesTo, rightValues) = solvedValues.splitAt(valuesTo.size)
+          if(rightValues.zip(nonEmptyValuesTo).forall { case (unified, target) => isSameSequent(unified, target) }) {
+            Some((actualValuesTo, resultCtx))
+          } else {
+            None
+          }
+      }
     }.headOption
   }
 
-  case class RuleTactic private[RuleDefinitions](rule: Rule, parameters: RuleParameters) extends TacticGoalFunctional {
-    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
-      applyRuleInference(parameters, IndexedSeq(rule.conclusion), rule.hypotheses, IndexedSeq(proofGoal)).flatMap {
-        case (newGoals, ctx) =>
-          val stepsOption = rule.reconstruct.andThen(Some.apply).applyOrElse((proofGoal, ctx), _ => None)
-          stepsOption.map(steps => (newGoals, () => steps))
+  case class RuleTactic private[RuleDefinitions](rule: Rule, parameters: RuleParameters) extends TacticGoalFunctionalPruning {
+    override def apply(proofGoal: Sequent): Option[(IndexedSeq[Either[Sequent, Justified]], ReconstructSteps)] = {
+      if(parameters.resolutions.keySet.subsetOf(rule.hypotheses.indices.toSet)) {
+        val resolutions = parameters.resolutions.view.mapValues {
+          case Left(sequent) => sequent
+          case Right(justified) => justified.sequent
+        }.toMap
+        val knownHypotheses = rule.hypotheses.indices.map(resolutions.get)
+        applyRuleInference(parameters, IndexedSeq(rule.conclusion), rule.hypotheses, IndexedSeq(proofGoal), knownHypotheses).flatMap {
+          case (newGoals, ctx) =>
+            val stepsOption = rule.reconstruct.andThen(Some.apply).applyOrElse((proofGoal, ctx), _ => None)
+            val rewrites = resolutions.exists { case (i, sequent) => sequent != newGoals(i) }
+            stepsOption.map { steps =>
+              val reconstruction =
+                if(rewrites) {
+                  val indices = newGoals.indices.map(-_ - 1)
+                  () => IndexedSeq(SCSubproof( // TODO one level is normally sufficient
+                    SCProof(
+                      IndexedSeq(SCSubproof(
+                        SCProof(steps, newGoals.map(sequentToKernel)),
+                        indices,
+                      )),
+                      newGoals.indices.map(i => resolutions.getOrElse(i, newGoals(i))).map(sequentToKernel)),
+                    indices,
+                  ))
+                } else {
+                  () => steps
+                }
+              (newGoals.indices.map(i => parameters.resolutions.getOrElse(i, Left(newGoals(i)))), reconstruction)
+            }
+        }
+      } else {
+        None
       }
     }
 
@@ -110,7 +168,12 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     final def apply(parameters: RuleParameters)(justifications: Justified*)(using env: ProofEnvironment): Option[Theorem] = {
       val justificationsSeq = justifications.toIndexedSeq
       val topSequents = justificationsSeq.map(_.sequent)
-      applyRuleInference(parameters, hypotheses, IndexedSeq(conclusion), topSequents).flatMap {
+      require(parameters.resolutions.keySet.forall(_ == 0))
+      val resolutionOpt = parameters.resolutions.get(0).map {
+        case Left(sequent) => sequent
+        case Right(justified) => justified.sequent // Why would anyone do that? Anyway, we should support it
+      }
+      applyRuleInference(parameters, hypotheses, IndexedSeq(conclusion), topSequents, IndexedSeq(resolutionOpt)).flatMap {
         case (IndexedSeq(newSequent), ctx) =>
           reconstruct.andThen(Some.apply).applyOrElse((newSequent, ctx), _ => None).map { scSteps =>
             val scProof = lisa.kernel.proof.SCProof(scSteps, justificationsSeq.map(_.sequentAsKernel))

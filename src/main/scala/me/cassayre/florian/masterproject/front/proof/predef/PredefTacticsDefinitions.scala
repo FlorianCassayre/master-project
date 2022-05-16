@@ -138,7 +138,7 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions with Unificat
     def apply(proofGoal: Sequent): Option[(IndexedSeq[Either[Sequent, Justified]], ReconstructSteps)] = {
       val patterns = IndexedSeq(PartialSequent(justified.sequent.left, justified.sequent.right))
       val values = IndexedSeq(proofGoal)
-      matchIndices(Map.empty, patterns, values).flatMap { selector =>
+      matchIndices(Map.empty, Map.empty, patterns, IndexedSeq.empty, values, IndexedSeq.empty).flatMap { case (selector, _) =>
         // TODO we should instantiate to temporary schemas first otherwise we risk clashing names
         unifyAndResolve(patterns, values, patterns, UnificationContext(), selector).map { case (IndexedSeq(resolved), ctx) =>
           val withFunctions = instantiateSequentSchemas(justified.sequent, ctx.assignedFunctions, Seq.empty, Seq.empty)

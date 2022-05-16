@@ -7,8 +7,12 @@ import me.cassayre.florian.masterproject.test.front.*
 
 class MainTests extends AnyFunSuite {
 
-  test("demo") {
+  test("demo1") {
     demo1()
+  }
+
+  test("demo2") {
+    demo2()
   }
 
   test("tests") {

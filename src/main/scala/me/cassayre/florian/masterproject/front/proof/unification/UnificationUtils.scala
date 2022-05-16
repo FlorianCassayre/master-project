@@ -482,44 +482,67 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
 
   type SequentSelector = (IndexedSeq[Int], IndexedSeq[Int])
 
-  def matchIndices(map: Map[Int, SequentSelector], patterns: IndexedSeq[PartialSequent], values: IndexedSeq[Sequent]): View[IndexedSeq[SequentSelector]] = {
-    require(patterns.size == values.size)
+  def matchIndices(
+    mapFrom: Map[Int, SequentSelector],
+    mapTo: Map[Int, SequentSelector],
+    patternsFrom: IndexedSeq[PartialSequent],
+    patternsTo: IndexedSeq[PartialSequent],
+    valuesFrom: IndexedSeq[Sequent],
+    valuesTo: IndexedSeq[Option[Sequent]]
+  ): View[(IndexedSeq[SequentSelector], IndexedSeq[Option[SequentSelector]])] = {
+    require(patternsFrom.size == valuesFrom.size && patternsTo.size == valuesTo.size)
     // Normally `pattern` shouldn't be empty, but this function works regardless
-    if(map.keySet.forall(patterns.indices.contains)) {
-      val selectors = patterns.indices.map(map.getOrElse(_, (IndexedSeq.empty, IndexedSeq.empty)))
-      selectors.zip(patterns.zip(values)).map { case ((leftSelector, rightSelector), (pattern, value)) =>
-        def enumerate(selectorSide: IndexedSeq[Int], patternSideSize: Int, isPatternPartial: Boolean, valueSide: Range): View[IndexedSeq[Int]] = {
-          // TODO remove the partial parameter as it is not needed in this direction
-          if(selectorSide.isEmpty) { // If empty we consider all permutations
-            // If `valueSide` is empty then it will produce an empty array
-            valueSide.combinations(patternSideSize).flatMap(_.permutations).toSeq.view
-          } else {
-            if(selectorSide.size == patternSideSize) {
-              if(selectorSide.forall(valueSide.contains)) {
-                // We return exactly what was selected
-                View(selectorSide)
+    if(mapFrom.keySet.forall(patternsFrom.indices.contains) && mapTo.keySet.forall(patternsTo.indices.contains)) {
+      def enumerateSide(map: Map[Int, SequentSelector], patterns: IndexedSeq[PartialSequent], values: IndexedSeq[Sequent]): View[IndexedSeq[SequentSelector]] = {
+        val selectors = patterns.indices.map(map.getOrElse(_, (IndexedSeq.empty, IndexedSeq.empty)))
+        selectors.zip(patterns.zip(values)).map { case ((leftSelector, rightSelector), (pattern, value)) =>
+          def enumerate(selectorSide: IndexedSeq[Int], patternSideSize: Int, isPatternPartial: Boolean, valueSide: Range): View[IndexedSeq[Int]] = {
+            // TODO remove the partial parameter as it is not needed in this direction
+            if(selectorSide.isEmpty) { // If empty we consider all permutations
+              // If `valueSide` is empty then it will produce an empty array
+              valueSide.combinations(patternSideSize).flatMap(_.permutations).toSeq.view
+            } else {
+              if(selectorSide.size == patternSideSize) {
+                if(selectorSide.forall(valueSide.contains)) {
+                  // We return exactly what was selected
+                  View(selectorSide)
+                } else {
+                  // An index value is out of range
+                  View.empty
+                }
               } else {
-                // An index value is out of range
+                // Number of args does not match the pattern's
                 View.empty
               }
-            } else {
-              // Number of args does not match the pattern's
-              View.empty
             }
           }
+          val leftSide = enumerate(leftSelector, pattern.left.size, pattern.partialLeft, value.left.indices)
+          val rightSide = enumerate(rightSelector, pattern.right.size, pattern.partialRight, value.right.indices)
+          for {
+            l <- leftSide
+              r <- rightSide
+          } yield IndexedSeq((l, r))
+        }.fold(View(IndexedSeq.empty[(IndexedSeq[Int], IndexedSeq[Int])])) { case (v1, v2) =>
+          for {
+            first <- v1
+              second <- v2
+          } yield first ++ second
         }
-        val leftSide = enumerate(leftSelector, pattern.left.size, pattern.partialLeft, value.left.indices)
-        val rightSide = enumerate(rightSelector, pattern.right.size, pattern.partialRight, value.right.indices)
-        for {
-          l <- leftSide
-            r <- rightSide
-        } yield IndexedSeq((l, r))
-      }.fold(View(IndexedSeq.empty[(IndexedSeq[Int], IndexedSeq[Int])])) { case (v1, v2) =>
-        for {
-          first <- v1
-            second <- v2
-        } yield first ++ second
       }
+
+      val viewFrom = enumerateSide(mapFrom, patternsFrom, valuesFrom)
+      val (viewTo, indices) = {
+        val ((patterns, values), indices) = {
+          val (pairs, indices) = patternsTo.zip(valuesTo).zipWithIndex.collect { case ((pattern, Some(value)), i) => ((pattern, value), i) }.unzip
+          (pairs.unzip, indices.zipWithIndex.toMap)
+        }
+        (enumerateSide(mapTo, patterns, values), indices)
+      }
+      for {
+        from <- viewFrom
+        to <- viewTo
+        toOptions = valuesTo.indices.map(i => indices.get(i).map(j => to(j)))
+      } yield (from, toOptions)
     } else {
       // Map contains values outside the range
       View.empty
