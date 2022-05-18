@@ -1,10 +1,14 @@
 package me.cassayre.florian.masterproject.util
 
+import lisa.kernel.Printer
+import lisa.kernel.fol.FOL.*
 import lisa.kernel.proof.SequentCalculus.*
 import lisa.kernel.proof.SCProof
 
 /**
  * Utilities to work with sequent-calculus proofs.
+ * All of these methods assume that the provided proof are well-formed but not necessarily valid.
+ * If the provided proofs are valid, then the resulting proofs will also be valid.
  */
 object SCUtils {
 
@@ -76,8 +80,6 @@ object SCUtils {
    * Flattens a proof recursively; in other words it removes all occurrences of [[SCSubproof]].
    * Because subproofs imports can be rewritten, [[Rewrite]] steps may be inserted where that is necessary.
    * The order of proof steps is preserved, indices of premises are adapted to reflect the new sequence.
-   * Assumes that the provided proof is well-formed (but not necessarily valid).
-   * If the provided proof is valid, then the resulting proof will also be valid.
    * @param proof the proof to be flattened
    * @return the flattened proof
    */
@@ -113,8 +115,6 @@ object SCUtils {
    * Eliminates all steps that are not indirectly referenced by the conclusion (last step) of the proof.
    * This procedure is applied recursively on all subproofs. The elimination of unused top-level imports can be configured.
    * The order of proof steps is preserved, indices of premises are adapted to reflect the new sequence.
-   * Assumes that the provided proof is well-formed (but not necessarily valid).
-   * If the provided proof is valid, then the resulting proof will also be valid.
    * @param proof the proof to be simplified
    * @param eliminateTopLevelDeadImports whether the unused top-level imports should be eliminated as well
    * @return the proof with dead steps eliminated
@@ -152,6 +152,128 @@ object SCUtils {
     }
     val (newProof, _) = deadStepsEliminationInternal(proof, eliminateTopLevelDeadImports)
     newProof
+  }
+
+  /**
+   * Removes proof steps that are identified to be redundant. The registered simplifications are the following:
+   * <ul>
+   * <li>Double/fruitless rewrites/weakening</li>
+   * <li>Fruitless instantiations</li>
+   * <li>Useless cut</li>
+   * </ul>
+   * This procedure may need to be called several times; it is guaranteed that a fixed point will eventually be reached.
+   * Imports will not change, dead branches will be preserved (but can still be simplified).
+   * @param proof the proof to be simplified
+   * @return the simplified proof
+   */
+  def simplifyProof(proof: SCProof): SCProof = {
+    def schematicPredicates(sequent: Sequent): Set[SchematicPredicateLabel] =
+      (sequent.left ++ sequent.right).flatMap(_.schematicPredicates)
+    def schematicFunctions(sequent: Sequent): Set[SchematicFunctionLabel] =
+      (sequent.left ++ sequent.right).flatMap(_.schematicFunctions)
+    val dependents = proof.steps.zipWithIndex.flatMap { case (step, i) => step.premises.map(_ -> i) }
+      .groupBy { case (i, _) => i }.view.mapValues(_.map { case (_, j) => j }.toSet).toMap.withDefaultValue(Set.empty)
+    val (newSteps, _) = proof.steps.zipWithIndex.foldLeft((IndexedSeq.empty[SCProofStep], IndexedSeq.empty[Int])) { case ((acc, map), (step, i)) =>
+      def resolveLocal(j: Int): Int = {
+        require(j < i)
+        if(j >= 0) map(j) else j
+      }
+      def getSequentLocal(j: Int): Sequent = {
+        require(j < i)
+        if(j >= 0) acc(j).bot else proof.getSequent(j)
+      }
+      val notLast = i != proof.steps.size - 1
+      val either: Either[SCProofStep, Int] = mapPremises(step, resolveLocal) match {
+        // Recursive
+        case SCSubproof(sp, premises, display) =>
+          Left(SCSubproof(simplifyProof(sp), premises, display))
+        // Double or fruitless rewrite
+        case Rewrite(bot, t1)
+          if (notLast || t1 == i - 1) && (
+            bot == getSequentLocal(t1) ||
+              dependents(i).toSeq.map(proof.steps).forall { case _: (Rewrite | Weakening) => true; case _ => false }) =>
+          Right(t1)
+        // Double or fruitless weakening
+        case Weakening(bot, t1)
+          if (notLast || t1 == i - 1) && (
+            bot == getSequentLocal(t1) ||
+              dependents(i).toSeq.map(proof.steps).forall { case _: Weakening => true; case _ => false }) =>
+          Right(t1)
+        case Weakening(bot, t1) if isSameSequent(bot, getSequentLocal(t1)) =>
+          Left(Rewrite(bot, t1))
+        // Hypothesis followed by weakening
+        case Weakening(bot, t1) if t1 >= 0 && (acc(t1) match { case _: Hypothesis => true; case _ => false }) =>
+          Left(Hypothesis(bot, acc(t1).asInstanceOf[Hypothesis].phi))
+        // Needless cut
+        case Cut(bot, _, t2, phi) if bot.left.contains(phi) =>
+          Left(Weakening(bot, t2))
+        case Cut(bot, t1, _, phi) if bot.right.contains(phi) =>
+          Left(Weakening(bot, t1))
+        // Fruitless instantiation
+        case InstPredSchema(bot, t1, _) if isSameSequent(bot, getSequentLocal(t1)) =>
+          Left(Rewrite(bot, t1))
+        case InstFunSchema(bot, t1, _) if isSameSequent(bot, getSequentLocal(t1)) =>
+          Left(Rewrite(bot, t1))
+        // Instantiation simplification
+        case InstPredSchema(bot, t1, insts) if !insts.keySet.subsetOf(schematicPredicates(getSequentLocal(t1))) =>
+          val newInsts = insts -- insts.keySet.diff(schematicPredicates(getSequentLocal(t1)))
+          Left(InstPredSchema(bot, t1, newInsts))
+        case InstFunSchema(bot, t1, insts) if !insts.keySet.subsetOf(schematicFunctions(getSequentLocal(t1))) =>
+          val newInsts = insts -- insts.keySet.diff(schematicFunctions(getSequentLocal(t1)))
+          Left(InstFunSchema(bot, t1, newInsts))
+        // No optimization found
+        case other => Left(other)
+      }
+      either match {
+        case Left(sequent) => (acc :+ sequent, map :+ acc.size)
+        case Right(index) => (acc, map :+ index)
+      }
+    }
+    SCProof(newSteps, proof.imports)
+  }
+
+  /**
+   * Attempts to factor the premises such that the first import of proven sequent is used.
+   * This procedure is greedy.
+   * Unused proof steps will not be removed. Use [[deadStepsElimination]] for that.
+   * @param proof the proof to be factored
+   * @return the factored proof
+   */
+  def factorProof(proof: SCProof): SCProof = {
+    val (initialMap, initialCache) = proof.imports.zipWithIndex.foldLeft((Map.empty[Int, Int], Map.empty[Sequent, Int])) { case ((map, cache), (sequent, i)) =>
+      val originalIndex = -(i + 1)
+      cache.get(sequent) match {
+        case Some(existingIndex) => (map + (originalIndex -> existingIndex), cache)
+        case None => (map + (originalIndex -> originalIndex), cache + (sequent -> originalIndex))
+      }
+    }
+    val (newSteps, _, _) = proof.steps.zipWithIndex.foldLeft((IndexedSeq.empty[SCProofStep], initialMap, initialCache)) { case ((acc, map, cache), (step, i)) =>
+      val sequent = step.bot
+      val mappedStep = mapPremises(step, map) match {
+        case SCSubproof(sp, premises, display) =>
+          SCSubproof(factorProof(sp), premises, display)
+        case other => other
+      }
+      val (newMap, newCache) = cache.get(sequent) match {
+        case Some(existingIndex) => (map + (i -> existingIndex), cache)
+        case None => (map + (i -> i), cache + (sequent -> i))
+      }
+      (acc :+ mappedStep, newMap, newCache)
+    }
+    SCProof(newSteps, proof.imports)
+  }
+
+  /**
+   * Optimizes a proof by applying all the available reduction rules until a fixed point is reached.
+   * @param proof the proof to be optimized
+   * @return the optimized proof
+   */
+  def optimizeProofIteratively(proof: SCProof): SCProof = {
+    def optimizeFixedPoint(proof: SCProof): SCProof = {
+      val optimized = deadStepsElimination(factorProof(simplifyProof(proof)))
+      if(optimized == proof) optimized else optimizeFixedPoint(optimized)
+    }
+    optimizeFixedPoint(flattenProof(proof))
   }
 
 }

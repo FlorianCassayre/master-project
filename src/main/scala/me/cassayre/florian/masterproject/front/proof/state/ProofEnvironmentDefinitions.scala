@@ -174,9 +174,9 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
       )
     }
 
-    val flat = SCUtils.flattenProof(scProof)
-    assert(SCProofChecker.checkSCProof(flat).isValid) // Bug in `flattenProof`
-    flat
+    val optimized = SCUtils.optimizeProofIteratively(scProof)
+    assert(SCProofChecker.checkSCProof(optimized).isValid) // Assertion failure means a bug in `SCUtils`
+    optimized
   }
 
 }
