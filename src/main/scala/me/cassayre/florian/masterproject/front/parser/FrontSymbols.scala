@@ -29,6 +29,8 @@ private[front] sealed abstract class FrontSymbols {
   val Comma: String = ","
   val Semicolon: String = ";"
   val QuestionMark: String = "?"
+  val PowerSet: String = "P"
+  val UnionSet: String = "U"
 }
 
 private[front] object FrontSymbols {
@@ -62,5 +64,27 @@ private[front] object FrontSymbols {
     override val Membership: String = "∈"
     override val Subset: String = "⊆"
     override val EmptySet: String = "∅"
+  }
+
+  object FrontLatexSymbols extends FrontSymbols {
+    override val Forall: String = raw"\forall"
+    override val Exists: String = raw"\exists"
+    override val ExistsOne: String = raw"\exists!"
+    override val Iff: String = raw"\Leftrightarrow"
+    override val Implies: String = raw"\Rightarrow"
+    override val Or: String = raw"\lor"
+    override val And: String = raw"\land"
+    override val Exclamation: String = raw"\neg"
+    override val Turnstile: String = raw"\vdash"
+    override val Ellipsis: String = raw"\ldots"
+    override val Membership: String = raw"\in"
+    override val Subset: String = raw"\subseteq"
+    override val EmptySet: String = raw"\varnothing"
+    override val Tilde: String = raw"\sim"
+    override val Backslash: String = raw"\setminus"
+    override val CurlyBracketOpen: String = raw"\{"
+    override val CurlyBracketClose: String = raw"\}"
+    override val PowerSet: String = raw"\mathcal{P}"
+    override val UnionSet: String = raw"\mathcal{U}"
   }
 }

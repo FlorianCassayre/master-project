@@ -3,7 +3,7 @@ package me.cassayre.florian.masterproject.front
 import scala.language.adhocExtensions
 
 import me.cassayre.florian.masterproject.front.parser.FrontReader
-import me.cassayre.florian.masterproject.front.printer.FrontPositionedPrinter
+import me.cassayre.florian.masterproject.front.printer.{FrontPositionedPrinter, FrontPrintStyle}
 import org.scalatest.funsuite.AnyFunSuite
 
 class ParserPrinterTests extends AnyFunSuite {
@@ -25,7 +25,7 @@ class ParserPrinterTests extends AnyFunSuite {
       "exists x. forall y. x = y"
     ).foreach { s =>
       val formula = FrontReader.readFormula(s)
-      val printed = FrontPositionedPrinter.prettyFormula(formula, ascii = true)
+      val printed = FrontPositionedPrinter.prettyFormula(formula, symbols = FrontPrintStyle.Ascii)
       println(printed)
       assert(printed == s) // actual == expected
     }
@@ -40,7 +40,7 @@ class ParserPrinterTests extends AnyFunSuite {
       raw"a /\ b; c \/ d |- e; f => g; h",
     ).foreach { s =>
       val sequent = FrontReader.readSequent(s)
-      val printed = FrontPositionedPrinter.prettySequent(sequent, ascii = true)
+      val printed = FrontPositionedPrinter.prettySequent(sequent, symbols = FrontPrintStyle.Ascii)
       println(printed)
       assert(printed == s)
     }
@@ -60,7 +60,7 @@ class ParserPrinterTests extends AnyFunSuite {
       "...; a; b |- b; c; ...",
     ).foreach { s =>
       val sequent = FrontReader.readPartialSequent(s)
-      val printed = FrontPositionedPrinter.prettyPartialSequent(sequent, ascii = true)
+      val printed = FrontPositionedPrinter.prettyPartialSequent(sequent, symbols = FrontPrintStyle.Ascii)
       println(printed)
       assert(printed == s)
     }

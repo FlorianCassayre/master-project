@@ -5,20 +5,12 @@ import me.cassayre.florian.masterproject.front.parser.FrontSymbols
 import me.cassayre.florian.masterproject.front.proof.Proof.*
 import me.cassayre.florian.masterproject.front.theory.SetTheory
 import me.cassayre.florian.masterproject.front.printer.FrontPrintNode.*
+import me.cassayre.florian.masterproject.front.printer.FrontPrintParameters
 
 /**
  * A set of methods to positioned-print kernel trees.
  */
 object FrontPositionedPrinter {
-
-  private case class Parameters(s: FrontSymbols, ascii: Boolean, compact: Boolean) {
-    //export S.*
-  }
-  private object Parameters {
-    def apply(ascii: Boolean, compact: Boolean): Parameters =
-      Parameters(if(ascii) FrontSymbols.FrontAsciiSymbols else FrontSymbols.FrontUnicodeSymbols, ascii, compact)
-  }
-
 
   private val rName = "[a-zA-Z_][a-zA-Z0-9_]*".r
   private def isNamePrintable(name: String): Boolean = rName.matches(name)
@@ -60,28 +52,35 @@ object FrontPositionedPrinter {
     nodes.toIndexedSeq
   }
 
-  private def spaceSeparator(using p: Parameters): String = if(p.compact) "" else " "
-  private def commaSeparator(separator: String)(using Parameters): String = s"$separator$spaceSeparator"
-  private def commaSeparator(using p: Parameters): String = commaSeparator(p.s.Comma)
+  private def spaceSeparator(using p: FrontPrintParameters): String = if(p.compact) "" else " "
+  private def commaSeparator(separator: String)(using FrontPrintParameters): String = s"$separator$spaceSeparator"
+  private def commaSeparator(using p: FrontPrintParameters): String = commaSeparator(p.s.Comma)
 
-  private def prettyLabel(label: LabelType, double: Boolean = false)(using p: Parameters): String = label match {
-    case _: SchematicLabelType => s"${if(double) p.s.QuestionMark else ""}${p.s.QuestionMark}${label.id}"
-    case _ => label.id
+  private def prettyName(name: String)(using p: FrontPrintParameters): String =
+    if(p.symbols == FrontPrintStyle.Latex && p.compact) s"{$name}" else name
+  private def prettyLabel(label: LabelType, double: Boolean = false)(using p: FrontPrintParameters): String = {
+    val (result, mustWrap) = label match {
+      case _: SchematicLabelType =>
+        val s = s"${if(double) p.s.QuestionMark else ""}${p.s.QuestionMark}${label.id}"
+        (s, true)
+      case _ => (label.id, false)
+    }
+    if((mustWrap && p.symbols == FrontPrintStyle.Latex) || (p.symbols == FrontPrintStyle.Latex && p.compact)) s"{$result}" else result
   }
 
-  private def positionedParentheses(content: FrontPrintNode)(using p: Parameters): IndexedSeq[FrontPrintNode] =
+  private def positionedParentheses(content: FrontPrintNode)(using p: FrontPrintParameters): IndexedSeq[FrontPrintNode] =
     IndexedSeq(p.s.ParenthesisOpen, content, p.s.ParenthesisClose)
 
-  private def positionedFunction(name: String, args: Seq[FrontBranch], dropParentheses: Boolean = true)(using p: Parameters): FrontBranch = {
+  private def positionedFunction(name: String, args: Seq[FrontBranch], dropParentheses: Boolean = true)(using p: FrontPrintParameters): FrontBranch = {
     if(dropParentheses && args.isEmpty)
       FrontBranch(name)
     else
       FrontBranch(FrontLeaf(s"$name${p.s.ParenthesisOpen}") +: mkSep(args*)(commaSeparator) :+ FrontLeaf(p.s.ParenthesisClose))
   }
 
-  private def positionedInfix(operator: String, left: FrontPrintNode, right: FrontPrintNode)(using Parameters): FrontBranch =
+  private def positionedInfix(operator: String, left: FrontPrintNode, right: FrontPrintNode)(using FrontPrintParameters): FrontBranch =
     FrontBranch(mkSep(left, operator, right)(spaceSeparator))
-  private def positionedInfix(operator: FrontPrintNode, left: IndexedSeq[FrontPrintNode], right: IndexedSeq[FrontPrintNode])(using Parameters): FrontBranch =
+  private def positionedInfix(operator: FrontPrintNode, left: IndexedSeq[FrontPrintNode], right: IndexedSeq[FrontPrintNode])(using FrontPrintParameters): FrontBranch =
     FrontBranch(left ++ Seq(FrontLeaf(spaceSeparator)) ++ IndexedSeq(operator) ++ Seq(FrontLeaf(spaceSeparator)) ++ right)
 
   // Special symbols that aren't defined in this theory
@@ -100,7 +99,7 @@ object FrontPositionedPrinter {
   )
   private val nonAtomicPredicates = Set[PredicateLabel[?]](equality, membership, subsetOf, sameCardinality) // Predicates which require parentheses (for readability)
 
-  private def positionedFormulaInternal(formula: Formula, isRightMost: Boolean)(using p: Parameters): FrontBranch = formula match {
+  private def positionedFormulaInternal(formula: Formula, isRightMost: Boolean)(using p: FrontPrintParameters): FrontBranch = formula match {
     case PredicateFormula(label, args) => label match {
       case `equality` => args match {
         case Seq(l, r) => positionedInfix(p.s.Equal, positionedTermInternal(l), positionedTermInternal(r))
@@ -185,15 +184,15 @@ object FrontPositionedPrinter {
       val (bounds, innerNested) = accumulateNested(inner, Seq(bound))
 
       val innerTree = FrontBranch(mkSep(
-        FrontLeaf(s"${symbols(label)}${if(p.ascii) " " else ""}${bounds.reverse.map(_.id).mkString(commaSeparator)}${p.s.Dot}"),
+        FrontLeaf(s"${symbols(label)}${if(p.symbols == FrontPrintStyle.Ascii || p.symbols == FrontPrintStyle.Latex) " " else ""}${bounds.reverse.map(_.id).mkString(commaSeparator)}${p.s.Dot}"),
         positionedFormulaInternal(innerNested, true),
       )(spaceSeparator))
       bounds.tail.foldLeft(innerTree)((acc, _) => FrontBranch(acc))
   }
 
-  private def positionedExpression(freeVariables: Set[VariableLabel], expression: FrontBranch)(using p: Parameters): FrontBranch = {
+  private def positionedExpression(freeVariables: Set[VariableLabel], expression: FrontBranch)(using p: FrontPrintParameters): FrontBranch = {
     if(freeVariables.nonEmpty)
-      FrontBranch(FrontLeaf(s"${p.s.Backslash}${freeVariables.map(_.id).mkString(commaSeparator)}${p.s.Dot}") +: FrontLeaf(spaceSeparator) +: expression.children)
+      FrontBranch(FrontLeaf(s"${p.s.Backslash}${if(p.symbols == FrontPrintStyle.Latex) " " else ""}${freeVariables.map(_.id).mkString(commaSeparator)}${p.s.Dot}") +: FrontLeaf(spaceSeparator) +: expression.children)
     else
       FrontBranch(expression.children)
   }
@@ -209,19 +208,21 @@ object FrontPositionedPrinter {
    * @param compact whether spaces should be omitted between tokens
    * @return the string representation of this formula
    */
-  def positionedFormula(formula: Formula, ascii: Boolean = false, compact: Boolean = false): FrontBranch = {
-    given Parameters = Parameters(ascii, compact)
+  def positionedFormula(formula: Formula, symbols: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, strict: Boolean = false): FrontBranch = {
+    given FrontPrintParameters = FrontPrintParameters(symbols, compact)
     val f = positionedFormulaInternal(formula, true)
     val freeVariables = freeVariablesOf(formula)
-    require(isFormulaPrintable(formula, freeVariables))
+    if(strict) {
+      require(isFormulaPrintable(formula, freeVariables))
+    }
     positionedExpression(freeVariables, f)
   }
 
-  def prettyFormula(formula: Formula, ascii: Boolean = false, compact: Boolean = false): String =
-    positionedFormula(formula, ascii, compact).print
+  def prettyFormula(formula: Formula, symbols: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false): String =
+    positionedFormula(formula, symbols, compact).print
 
-  private def positionedTermInternal(term: Term)(using p: Parameters): FrontBranch = term match {
-    case VariableTerm(label) => FrontBranch(label.id)
+  private def positionedTermInternal(term: Term)(using p: FrontPrintParameters): FrontBranch = term match {
+    case VariableTerm(label) => FrontBranch(prettyName(label.id))
     case FunctionTerm(label, args) =>
       label match {
         case `emptySet` => args match {
@@ -241,11 +242,11 @@ object FrontPositionedPrinter {
           case _ => throw new Error
         }
         case `powerSet` => args match {
-          case Seq(s) => positionedFunction("P", Seq(positionedTermInternal(s)))
+          case Seq(s) => positionedFunction(p.s.PowerSet, Seq(positionedTermInternal(s)))
           case _ => throw new Error
         }
         case `unionSet` => args match {
-          case Seq(s) => positionedFunction("U", Seq(positionedTermInternal(s)))
+          case Seq(s) => positionedFunction(p.s.UnionSet, Seq(positionedTermInternal(s)))
           case _ => throw new Error
         }
         case _ =>
@@ -264,16 +265,18 @@ object FrontPositionedPrinter {
    * @param compact whether spaces should be omitted between tokens
    * @return the string representation of this term
    */
-  def positionedTerm(term: Term, ascii: Boolean = false, compact: Boolean = false): FrontBranch = {
-    require(isTermPrintable(term, Set.empty)) // Trivially true
-    positionedTermInternal(term)(using Parameters(ascii, compact))
+  def positionedTerm(term: Term, symbols: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, strict: Boolean = false): FrontBranch = {
+    if(strict) {
+      require(isTermPrintable(term, Set.empty)) // Trivially true
+    }
+    positionedTermInternal(term)(using FrontPrintParameters(symbols, compact))
   }
 
-  def prettyTerm(term: Term, ascii: Boolean = false, compact: Boolean = false): String =
-    positionedTerm(term, compact).print
+  def prettyTerm(term: Term, symbols: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, strict: Boolean = false): String =
+    positionedTerm(term, symbols, compact, strict).print
 
-  private def positionedSequentBase(sequent: SequentBase, ascii: Boolean = false, compact: Boolean = false): FrontBranch = {
-    given p: Parameters = Parameters(ascii, compact)
+  private def positionedSequentBase(sequent: SequentBase, symbols: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, strict: Boolean = false): FrontBranch = {
+    given p: FrontPrintParameters = FrontPrintParameters(symbols, compact)
     val (partialLeft, partialRight) = sequent match {
       case _: Sequent => (false, false)
       case PartialSequent(_, _, partialLeft, partialRight) => (partialLeft, partialRight)
@@ -290,7 +293,9 @@ object FrontPositionedPrinter {
         lhs ++ spaceFor(lhs) ++ Seq(FrontLeaf(p.s.Turnstile)) ++ spaceFor(rhs) ++ rhs
       )*)
     val freeVariables = freeVariablesOfSequent(sequent)
-    require(sequent.formulas.forall(isFormulaPrintable(_, freeVariables)))
+    if(strict) {
+      require(sequent.formulas.forall(isFormulaPrintable(_, freeVariables)))
+    }
     positionedExpression(freeVariables, expression)
   }
 
@@ -305,15 +310,15 @@ object FrontPositionedPrinter {
    * @param compact whether spaces should be omitted between tokens
    * @return the string representation of this sequent
    */
-  def positionedSequent(sequent: Sequent, ascii: Boolean = false, compact: Boolean = false): FrontBranch =
-    positionedSequentBase(sequent, ascii, compact)
+  def positionedSequent(sequent: Sequent, symbols: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, strict: Boolean = false): FrontBranch =
+    positionedSequentBase(sequent, symbols, compact, strict)
 
-  def prettySequent(sequent: Sequent, ascii: Boolean = false, compact: Boolean = false): String =
-    positionedSequent(sequent, ascii, compact).print
+  def prettySequent(sequent: Sequent, symbols: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, strict: Boolean = false): String =
+    positionedSequent(sequent, symbols, compact, strict).print
 
-  def positionedPartialSequent(sequent: PartialSequent, ascii: Boolean = false, compact: Boolean = false): FrontBranch =
-    positionedSequentBase(sequent, ascii, compact)
+  def positionedPartialSequent(sequent: PartialSequent, symbols: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, strict: Boolean = false): FrontBranch =
+    positionedSequentBase(sequent, symbols, compact, strict)
 
-  def prettyPartialSequent(sequent: PartialSequent, ascii: Boolean = false, compact: Boolean = false): String =
-    positionedPartialSequent(sequent, ascii, compact).print
+  def prettyPartialSequent(sequent: PartialSequent, symbols: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, strict: Boolean = false): String =
+    positionedPartialSequent(sequent, symbols, compact, strict).print
 }
