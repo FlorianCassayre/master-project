@@ -1,0 +1,11 @@
+\section{Preliminary Work}
+\label{sec:preliminary-work}
+
+\subsection{LCF-like framework}
+
+In 2020 I worked on designing a LCF-like framework in Scala that relied used the Von Neumann-Bernays-Gödel set theory as a foundation \cite{Cassayre2020}. This project allowed me to explore different areas in theorem proving such as the representation of proofs and tableaux solving strategies. One of the particularity of that framework was that formulas and more generally theorems were strongly typed. In the lines of the Curry-Howard Correspondence, this meant that the soundness could be enforced by the type checker alone. Naturally this feature get in the way when working with higher-order rules (e.g. induction) and automated strategies (e.g. tableaux). It also demonstrated that the LCF style restricted the expressiveness of proofs, and that to provide more flexibility an extra layer would be needed.
+
+\subsection{Work on LISA}
+
+Before starting this thesis I contributed to the design of LISA late 2021, notably by maintaining the codebase, reviewing and testing the proof checker, and exploring the design of third-party tools for LISA.
+

@@ -1,29 +1,57 @@
 \documentclass[11pt]{article}
+\usepackage[a4paper, total={140mm, 160mm}]{geometry}
 \usepackage[utf8]{inputenc}
-
 \usepackage{booktabs}
 \usepackage{multicol}
 \usepackage{graphicx}
 \usepackage{svg}
 \usepackage{fancyhdr}
 \usepackage{lipsum}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{environ}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{arrows,positioning,calc}
+\usepackage{float}
+\usepackage{subfig}
+\usepackage{ebproof}
+\usepackage[english,french,main=english]{babel}
+\usepackage{listings}
+\usepackage{csquotes} % Required by babel
+\usepackage[T1]{fontenc} % ditto, for French
+\usepackage[stable]{footmisc}
+\usepackage[nounderscore]{syntax}
+\usepackage{framed}
 \usepackage[style=numeric-comp]{biblatex}
 \addbibresource{bibliography.bib}
-\setlength{\columnsep}{4cm} %adjust base on your name length
+\setlength{\columnsep}{4cm} % Adjust base on your name length
+
+\let\oldemptyset\emptyset
+\let\emptyset\varnothing
+
+\newcommand{\code}{\texttt}
+
+\hypersetup{hidelinks}
+
 
 \begin{document}
 
+\newtheorem{definition}{Definition}[section]
+\newtheorem{theorem}{Theorem}
+
 \pagenumbering{gobble}
 \input{cover}
-
 \newpage
+
+\newgeometry{total={170mm, 250mm}}
+\setlength{\headheight}{1.5cm}
+\addtolength{\topmargin}{-0.5cm}
 
 \pagenumbering{arabic}
 \newpage
 
-\begin{abstract}
-    \lipsum[1]
-\end{abstract}
+\input{abstract}
 \newpage
 
 \tableofcontents
@@ -32,8 +60,14 @@
 \newpage
 
 \pagestyle{fancy}
-\input{chapters/1_introduction}
-
+\input{chapters/1-introduction}
+\input{chapters/2-preliminary-work}
+\input{chapters/3-proof-framework}
+\input{chapters/4-synthesis}
+\input{chapters/5-matching}
+\input{chapters/6-parsing-printing}
+\input{chapters/7-future-work}
+\input{chapters/8-conclusion}
 
 \printbibliography
 

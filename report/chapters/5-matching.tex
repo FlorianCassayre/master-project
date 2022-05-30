@@ -1,0 +1,90 @@
+\section{Matching}
+\label{sec:matching}
+
+Matching is the process of finding an assignment for a pattern such that when this pattern is instantiated with that assignment, the result equals the target value. Matching can be seen as a special case of unification because the patterns only appear in one side.
+
+Most programming languages that implement pattern matching, such as Scala, disallow the reuse of pattern variables. These kinds of patterns are referred to as linear. On the other hand, non-linear patterns allow variables to appear multiple times. In that case the usually implied semantic is that all the occurrences of the same variable should be pairwise equal.
+
+In this framework we relax the notion of equality for non-linear pattern variables by allowing them to be equivalent with respect to OCBSL. This leads to an ambiguity in the assignment because by construction a variable can only be assigned a single value; thus not only will the resulting assignment may not lead to an instantiation that is structurally equal to the target, but it is also unclear which assigned value to choose. To address these ambiguities, we define deterministic rules that are not necessarily practical but are required to exhibit consistent behavior over different execution contexts.
+
+\subsection{Definitions}
+
+Formally, a matching is characterized by the following components:
+
+\begin{itemize}
+\item Pattern variable: a typed hole represented as a schema or a bound/free variable.
+\item Constants: a term or a formula that is free of pattern variables.
+\item Pattern: a tree made from pattern variables and constants.
+\item Value: a tree containing only constants. Schemas and bound/free variables are interpreted as constants and shouldn't clash with pattern variables.
+\item Solution: an assignment mapping pattern variables to values, such that when the pattern is instantiated it becomes equivalent to the value.
+\end{itemize}
+
+The matching procedure takes three arguments: a sequence of patterns, a sequence of values and a partial assignment. It returns a solution or fails. The partial assignment corresponds to a partial solution that the procedure should complete.
+
+Patterns are referred to as the left hand side, and values as the right hand side.
+
+\subsection{Specification}
+
+The goal is to find an assignment for the sequence of patterns such that when it is instantiated it becomes equivalent to the sequence of values. Each pattern is matched against the value located at the same index in the sequence. The matching is successful if all the patterns can be resolved without reaching a contradiction. The matching fails if a contradiction is reached, or if the problem is under-constrained (solution space is infinite). If a solution is returned, then it should always be a superset of the provided partial assignment. By default the partial assignment equals the empty set.
+
+Because the procedure can also be used to rename bound variables, the pattern should not declare a bound variable more than once. Moreover, no free variable can reuse the name of a bound variable, regardless the scope. Apart from these restrictions, all pattern variables can appear any number of times in the pattern. In addition, pattern variables can appear as arguments of other pattern variables (without any limitation on the depth).
+
+If a pattern variable can take more than one equivalent form, we should select the one that appears first with respect to the pre-order of that tree.
+
+\subsection{Algorithm\texorpdfstring{\footnote{An implementation of this algorithm can be found in the file \href{https://github.com/FlorianCassayre/master-project/blob/master/src/main/scala/me/cassayre/florian/masterproject/front/proof/unification/UnificationUtils.scala}{\code{UnificationUtils.scala}}.}}{Lg}}
+
+\subsubsection{Preliminary checks}
+
+We should initially check that the inputs are well-formed. For instance the pattern should satisfy the above requirement. Since the patterns and values are matched sequentially, we should check that the lengths of the two sequences correspond. Other relatively basic checks on the parameters should be performed but are not described in details.
+
+\subsubsection{Fresh names}
+
+Schemas and variables have a different meaning depending whether they appear in the pattern or in the value. One of the requirements was to avoid extending the first order logic package with new datatypes. To disambiguate both meanings there are two options. The first one consists of defining a new intermediate representation. The alternative approach is to rename schemas and variable in such a way that we can distinguish them from each other. The second option was chosen as the implementation is significantly shorter.
+
+The first step of the algorithm is therefore to list all schemas and variables on both sides, and then to rename all schemas and pattern variables to freshly generated identifiers. The mapping should be kept because we must restore the original names at the end. Moreover it also allows us to know which names are patterns variables.
+
+\subsubsection{Constraints collection}
+
+Pattern variables can appear as arguments of other pattern variables, therefore we cannot solve the constraints in a single traversal. Instead, we enumerate the cons
+
+A constraint consists of a pattern variable, its arguments and a target value.
+
+This step consists of traversing the pattern and the values trees in parallel.
+
+\subsubsection{Constraints resolution}
+
+The constraints are processed in the order they appear. However, not all constraints can be immediately solved: sometimes the resolution of a constraint may unlock another constraint. While there remains constraints, the procedure picks the first constraints that can be solved. If none exists, that means the problem is under-constrained and the procedure returns a failure. The resolution of a constraint may produce additional constraints. In that case the new constraints are inserted at the same position in the sequence.
+
+A constraint can be solved if and only if all the pattern variables in the pattern's arguments have been assigned a value with respect to the current context. As a consequence, all constraints represented by nullary schemas or variables can be solved.
+
+Once a constraint satisfying the above condition has been located, we can proceed with the resolution. Firstly, each argument is instantiated (thus becoming values). Then, there are two cases to consider.
+
+If the pattern variable is already assigned a value, then we instantiate this assignment with the instantiated arguments and compare it against the value for equivalence. If they can't be proven equivalent then we return a failure, otherwise we don't do anything and carry on.
+
+If the pattern variable does not have an assigned value, we should find one. We associate fresh schemas to each argument. We then apply a greedy factoring algorithm to replace all occurrences of the instantiated arguments by their associated schema. Again, we traverse the tree in pre-order to satisfy the specification, and then find the first instantiated argument that is equivalent to this node. This procedure cannot fail: an edge case would be that no value is factored, which is still a valid solution.
+
+\subsubsection{Conclusion}
+
+If all the constraints have been solved, we can return that solution after restoring the original pattern variable names.
+
+\subsection{Analysis}
+
+The above procedure is polynomial but could be implemented more efficiently by avoiding recomputing substitutions. As for soundness, the weak version states that any assignment returned by the procedure should make the pattern equivalent to the value after instantiation. The stronger version states that the equivalence class is in fact OCBSL's. The argument in either case is by construction and depends on two properties of equivalence (noted $\approx$):
+
+\begin{gather}
+  {x \approx y \land y \approx z} \implies {x \approx z} \tag{\textsc{Transitivity}} \\[1em]
+  {a \approx b} \implies {x[a \mapsto b] \approx x} \tag{\textsc{Substitution}}
+\end{gather}
+
+It is easy to see that these properties hold for logical equivalence. For the substitution property of OCBSL equivalence, because $a \approx b$, both $a$ and $b$ reduce to a common normal form $n$. Therefore $x[a \mapsto b] \approx x$ is the same problem as $x[a \mapsto b][\{a, b\} \mapsto n] \approx x[\{a, b\} \mapsto n]$ which is a tautology. For transitivity we have that $\{x, y\}$ have a normal form $n_1$, $\{y, z\}$ a normal form $n_2$, $\{x, z\}$ a normal form $n_3$. Because $y$ has a normal form equal to $n_1$ and $n_2$ it must be the case that $n_1 = n_2$; therefore $n_1 = n_2 = n_3$.
+It should be noted that in any case, $x \approx y \implies x \Leftrightarrow y$. Therefore, even though a resolved pattern may not be checked for equivalence (e.g. if a weaker or alternative checker is used), it is still expected to be logically equivalent.
+
+\subsection{Limitations and extensions}
+
+The procedure is by design incomplete, i.e. there are problem instances where a matching (as we defined it) exists but would not be found. For instance, the pattern ${?a} \land b$ matches the value $b \land a$ but despite being OCBSL equivalent, it would not be detected by the algorithm. This issue could be solved relatively easily at an exponential cost by enumerating all the equivalent formulas and calling matching on them. We suspect this problem to be solvable in polynomial time, as an extension of OCBSL.
+
+\subsection{Rules}
+
+The first application of matching is to automatically infer arguments of rules. This reduces the burden of applying rules. Because rules are defined in a general way, it is particularly desirable to solve that problem using the same procedure.
+
+While introduction rules can usually be applied backwards without ambiguity, other rules may need some parameters to be specified explicitly. This motivates the introduction of an additional parameter: an optional partial assignment that constrains the solution space. It can also be used as a hint when the framework picked the "wrong" solution. It is guaranteed that the partial assignment will be subset of the returned solution, if there is any. In general, if a pattern variable appears at the target side but not at the source, then it must be specified.

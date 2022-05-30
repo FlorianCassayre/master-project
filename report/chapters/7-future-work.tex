@@ -1,0 +1,14 @@
+\section{Future Work}
+\label{sec:future-work}
+
+% simplification
+% dedicate language
+% even better matching
+% export/import proofs
+% proof search
+% theorem search (repertoire)
+% 
+
+\subsection{Theorem search}
+
+One highly desirable feature would be to perform search on proven statements, usually theorems. Such a feature could automatically eliminate goals, improving the usability of the system. For instance, one is usually not interested in knowing if the theorem $\vdash {?s} = {?s}$ exists with that specific name ${?s}$, but rather to find a theorem of the form $\vdash \_ = \_$ such that both underscores can be instantiated to a term. While the matcher can already solve this task, it is perhaps too powerful to be reduced to a sub-linear querying algorithm and would have to be run on every candidate. Instead, we would be interested in a weaker version that provides a simple pattern matching language to efficiently find theorems that match a pattern.

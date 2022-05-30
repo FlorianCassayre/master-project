@@ -1,0 +1,149 @@
+\section{Parsing and printing}
+\label{sec:parsing-printing}
+
+\subsection{Grammar}
+
+As of now, LISA does not have a formalized grammar for its language but rather a simple printer that is used to display proofs in a more readable way. In this project I defined a grammar for the first-order logic language with sequents of the front-end (figure \ref{fig:grammar}). The grammar is designed to be unambiguous so that we could use it for serialization/persistence later on, and is as close as possible to the original printer of LISA. The main challenge in designing a grammar for our language is due to the fact that the distinction between terms and formulas is made early on, in other words it is not possible to construct ill-typed trees. This subtlety opens the door to potential ambiguities where it is unclear if a node should be interpreted as a term or a formula. The front-end avoids thanks to a carefully designed grammar and a type checker that serves at the same time as a resolver.
+
+\begin{figure}[H]
+  \centering
+  \begin{framed}
+  \grammarindent6.2cm
+  \begin{grammar}
+  <char-alpha> ::= `a'-`z' | `A'-`Z' | `_'
+  
+  <char-alphanumeric> ::= <char-alpha> | `0'-`9'
+  
+  <identifier> ::= <char-alpha> <char-alphanumeric>*
+  
+  <schematic-identifier> ::= `?' <identifier>
+  
+  <schematic-connector-identifier> ::= `??' <identifier>
+  
+  <label-identifier> ::= <identifier>
+  \alt <schematic-identifier>
+  \alt <schematic-connector-identifier>
+  
+  <infix-label> ::= `\(\Leftrightarrow\)' | `\(\Rightarrow\)' | `\(\lor\)' | `\(\land\)' | `\(=\)'
+  
+  <prefix-label> ::= `\(\neg\)'
+  
+  <binder-label> ::= `\(\forall\)' | `\(\exists\)' | `\(\exists!\)'
+  
+  <term> ::= <term> <infix-label> <term>
+  \alt <prefix-label> <term>
+  \alt <binder-label> <identifier> `.' <term>
+  \alt <label-identifier>
+  \alt <label-identifier> `(' <term> (`,' <term>)* `)'
+  \alt `(' <term> `)'
+  
+  <context> ::= `\\' <identifier> (`,' <identifier>)* `.'
+  
+  <top-term> ::= <context>? <term>
+  
+  <terms> ::= <term> (`;' <term>)*
+  
+  <sequent> ::= <context>? <terms>? `\(\vdash\)' <terms>?
+  
+  <partial-sequent> ::= <context>? ((`...' (`;' <term>)*) | <terms>) `\(\vdash\)' \\
+  (((<term> `;')* `...') | <terms>)
+  \end{grammar}
+  \end{framed}
+  \caption[BNF grammar]{BNF grammar for the front. The current system uses an extended syntax which simply adds convenient aliases for common symbols in set theory (empty, singleton and pair sets, constants, etc.).}
+  \label{fig:grammar}
+\end{figure}
+
+\subsection{Parsing}
+
+A parser for this grammar was written using the library \code{scala-parser-combinators}\footnote{A DSL implementing a recursive-descent parser.}. The parser alone is not sufficient to generate the final trees; an intermediate phase called \textbf{resolution} performs type checking and resolves the intermediate representation into its final form. The procedure is dictated by the rules shown in figure \ref{fig:typing-rules}. Given the type of the top-level term, we can recover all the remaining types in the tree and thus reconstruct the final representation of the tree.
+
+\begin{figure}[H]
+  \centering
+  \begin{framed}
+  \begin{gather}
+  \frac{\Gamma, x_1, ..., x_n \vdash t_{l1}: \mathcal{F} \quad ... \quad \Gamma, x_1, ..., x_n \vdash t_{rm}: \mathcal{F}}{\Gamma \vdash \backslash x_1, ..., x_n. t_{l1}, ..., t_{ln} ``\vdash" t_{r1}, ..., t_{rm}: \mathcal{S}} \tag{\textsc{(partial) Sequent}} \\[1em]
+  \frac{\Gamma, x_1, ..., x_n \vdash t: \mathcal{F}}{\Gamma \vdash \backslash x_1, ..., x_n. t: \mathcal{F}} \tag{\textsc{Top-Level Formula}} \\[1em]
+  \frac{\Gamma, x \vdash t: \mathcal{F}}{\Gamma \vdash B x. t: \mathcal{F}} \mkern3mu B \in \{\forall, \exists, \exists!\} \tag{\textsc{Binder}} \\[1em]
+  \frac{\Gamma \vdash t: \mathcal{F}}{\Gamma \vdash !t: \mathcal{F}} \quad\quad
+  \frac{\Gamma \vdash t_1: \mathcal{F} \quad \Gamma \vdash t_2: \mathcal{F}}{\Gamma \vdash t_1 \ast t_2 : \mathcal{F}} \mkern3mu \ast \in \{\Leftrightarrow, \Rightarrow, \lor, \land\}
+  \tag{$\textsc{Connector}_{1,2}$} \\[1em]
+  \frac{\Gamma \vdash t_1: \mathcal{F} \quad ... \quad \Gamma \vdash t_n: \mathcal{F}}{\Gamma \vdash {??x}(t_1, ..., t_n) : \mathcal{F}} \quad\quad
+  \frac{}{\Gamma \vdash {??x}: \mathcal{F}}
+  \tag{$\textsc{Connector}_{3,4}$} \\[1em]
+  \frac{\Gamma \vdash t_1: \mathcal{T} \quad ... \quad \Gamma \vdash t_n: \mathcal{T}}{\Gamma \vdash (?)x(t_1, ..., t_n): \mathcal{T}} \quad\quad
+  \frac{}{\Gamma \vdash {?x}: \mathcal{T}} \quad\quad
+  \frac{}{\Gamma \vdash x: \mathcal{T}} \mkern3mu x \notin \Gamma
+  \tag{$\textsc{Function}_{1,2,3}$} \\[1em]
+  \frac{\Gamma \vdash t_1: \mathcal{T} \quad \Gamma \vdash t_2: \mathcal{T}}{\Gamma \vdash t_1 \ast t_2: \mathcal{F}} \mkern3mu \ast \in \{=\} \quad\quad
+  \frac{\Gamma \vdash t_1: \mathcal{T} \quad ... \quad \Gamma \vdash t_n: \mathcal{T}}{\Gamma \vdash (?)x(t_1, ..., t_n): \mathcal{F}}
+  \tag{$\textsc{Predicate}_{1,2}$} \\[1em]
+  \frac{}{\Gamma \vdash (?)x: \mathcal{F}} \tag{$\textsc{Predicate}_3$} \\[1em]
+  \frac{}{\Gamma, x \vdash x: \mathcal{T}} \tag{\textsc{Variable}}
+  \end{gather}
+  \end{framed}
+  \caption[Type inference rules]{Type inference rules. $\mathcal{T}$, $\mathcal{F}$ and $\mathcal{S}$ represent term, formula and sequent types respectively. The metasymbol $x$ represents identifiers, while $t$ represents parsed terms. An optional question mark symbol can precede identifiers. It can be shown that given a top-level formula, it is always possible to unambiguously type all the children terms.}
+  \label{fig:typing-rules}
+\end{figure}
+
+\subsection{Compile-time string interpolation}
+
+While the parser was originally designed for runtime usage, it can also be used by the compiler at compilation-time. This is possible thanks to the fact that the Scala 3 allows multi-stage metaprogramming. That enables the user to manipulate values (\code{T}), expressions for these values (\code{Expr[T]}) or even expressions of expressions for these values (\code{Expr[Expr[T]]}); all within the same program.
+
+The idea was to exploit this mechanism to guarantee safe parsing at compile-time. Thus, if the user attempts to parse an invalid string literal, the compiler would raise an error. The implementation of that feature is relatively straight forward and is done within a macro. First we extract the string literal value from the expression, then we call our parser on it and finally convert the resulting tree to an expression (that is, in the meta-level converting \code{T} to \code{Expr[T]}). The last step requires defining conversion methods for all ADT members.
+
+It turns out we can do better than that. Scala offers a feature called string interpolators which additionally allows variables to be inserted within the string literal (figure \ref{fig:string-interpolation-general}). Moreover, it only works on string literals thus guaranteeing the recovery of the value at compile-time.
+
+\begin{figure}[H]
+  \centering
+  \begin{lstlisting}[language=Scala]
+  val s1: String = "world"
+  val s2: String = s"Hello $s1!" // Hello world!
+  \end{lstlisting}
+  \caption[String interpolation general example]{Simple demonstration of the string interpolation mechanism in Scala. The \code{s} interpolator simply calls \code{toString} on each variable passed and concatenates all the parts together.}
+  \label{fig:string-interpolation-general}
+\end{figure}
+
+This feature has a nice application in our case: not only can we enforce interpolated variables to be terms or formulas but we can also check their type with respect to the context they appear in. For instance, in the expression \code{formula"\$a /\textbackslash\ b"}, the variable \code{a} cannot be a term (more specifically, it must be a formula). In addition to terms and formulas, we may also allow the interpolation of labels which is very useful to express names dynamically, e.g. \code{formula"\$p(s)"}. Notice that the previous expression is structurally different from \code{formula"\${p(term"s")}"}, although it leads to the same formula.
+
+\begin{figure}[H]
+  \centering
+  \subfloat[\centering Runtime parsing \label{fig:parsing-runtime}]{
+  % Runtime
+  \begin{tikzpicture}[auto, on grid, node distance=1.5cm and 2cm, block/.style = {draw, fill=white, rectangle, minimum height=1cm, minimum width=2cm}, none/.style = {draw=none}]
+  \node [none] (input) {$\small\code{String}\normalsize$};
+  \node [block, below = of input] (lexer) {Lexer};
+  \node [block, below = of lexer] (parser) {Parser};
+  \node [block, below = of parser] (typer1) {Typer 1};
+  \node [none, below = of typer1, draw=none] (output) {$\small\code{T}\normalsize$};
+  \draw [->] (input) -- (lexer);
+  \draw [->] (lexer) -- (parser);
+  \draw [->] (parser) -- (typer1);
+  \draw [->] (typer1) -- (output);
+  \end{tikzpicture}
+  }%
+  \qquad\qquad
+  \subfloat[\centering Compile-time parsing, with variable interpolation \label{fig:parsing-compile-time}]{
+  % Compile-time
+  \begin{tikzpicture}[auto, on grid, node distance=1.5cm and 2cm, block/.style = {draw, fill=white, rectangle, minimum height=1cm, minimum width=2cm}, none/.style = {draw=none}]
+  \node [none] (input) {$\small\code{Expr[StringContext]}\normalsize$};
+  \node [block, below left = of input] (lexer) {Lexer};
+  \node [block, below right = of lexer] (parser) {Parser};
+  \node [block, below = of parser] (typer1) {Typer 1};
+  \node [block, below = of typer1] (typer2) {Typer 2};
+  \node [block, below = of typer2] (converter) {Converter};
+  \node [none, below = of converter, draw=none] (output) {$\small\code{Expr[T]}\normalsize$};
+  \draw [->] (input) -| (lexer);
+  \draw [->] (lexer) |- (parser);
+  \draw [->] (input) -- (parser);
+  \draw [->] (parser) -- (typer1);
+  \draw [->] (typer1) -- (typer2);
+  \draw [->] (input) -- ++(2cm, 0) -- ++(0, -6cm) -- (typer2);
+  \draw [->] (typer2) -- (converter);
+  \draw [->] (converter) -- (output);
+  \end{tikzpicture}
+  }%
+  \caption[Parsing phases]{Phases for regular runtime parsing (\ref{fig:parsing-compile-time}) and compile-time string interpolation (\ref{fig:parsing-runtime}). \code{T} is one of \code{Sequent}, \code{Formula} or \code{Term}, depending on the interpolator that was called.}
+  \label{fig:multi-stage-parsing}
+\end{figure}
+
+To implement this feature, we must execute the different parsing phases separately (figure \ref{fig:multi-stage-parsing}). One can observe that in a well-formed interpolator, tokens cannot possibly overlap different string parts. That property let us to do lexing on each string part independently. We can then list all the potentially taken identifiers allowing us to safely create fresh ones. Then, all the variables are replaced by fresh schemas; still represented as tokens at this point. Finally, we can proceed to the parsing and type checking phases. The first type checking phase will assign types to all of our fresh schemas, while the second will ensure that these assigned types agree with the types of the variables that were interpolated. A disagreement is then mapped to a positioned type error. Finally all that is left to do is substitute those schemas by their actual value, and convert the value into an expression. Notice that we cannot do that at compilation-time as we don't have access to the variables values, only their type. But this makes sense: variables can have different values throughout the execution (e.g. function arguments or mutable variables). Therefore the tree should be constructed at compilation-time but the substitution must happen at runtime.

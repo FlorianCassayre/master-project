@@ -1,0 +1,19 @@
+% https://tex.stackexchange.com/a/70818
+% Assumes that the two abstracts fit in one page
+\newenvironment{abstractpage}
+  {\cleardoublepage\vspace*{\fill}\thispagestyle{empty}}
+  {\vfill\cleardoublepage}
+\newenvironment{i18nabstract}[1]
+  {\bigskip\selectlanguage{#1}%
+   \begin{center}\bfseries\abstractname\end{center}}
+  {\par\bigskip}
+
+\begin{abstractpage}
+\begin{i18nabstract}{english}
+  \lipsum[1]
+\end{i18nabstract}
+
+\begin{i18nabstract}{french}
+  \lipsum[1]
+\end{i18nabstract}
+\end{abstractpage}

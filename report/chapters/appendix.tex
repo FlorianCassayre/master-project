@@ -1,3 +1,96 @@
-\section{First appendix}
+\section{Appendix}
 
-\section{Second appendix}
+\begin{figure}[hbt!]
+  \newcounter{counter}
+  \NewEnviron{example}[4]{%
+    \toks0=\expandafter{\BODY}%
+    \toks2={\refstepcounter{counter}\thecounter & $#1$ & $#2$ & $#3$ & $#4$}%
+    \xdef\TableRowContents{\the\toks2 \the\toks0 }%
+    \aftergroup\TableRowContents
+  }
+  \centering
+  \begin{tabular}{||c | c c c | c||}
+    \hline
+    \# & \textbf{Patterns} & \textbf{Values} & \textbf{Partial Assignment} & \textbf{Result} \\ [0.5ex]
+    \hline\hline
+    \begin{example}{{?a} \land b}{c \land b}{\emptyset}{\{ {?a} \mapsto c \}}\end{example} \\ \hline
+    \begin{example}{{?a} \land {?b}}{a \land b}{\{ {?a} \mapsto b \}}{\bot}\end{example} \\ \hline
+    \begin{example}{{?a}}{c \land d}{\{ {?a} \mapsto {b \land c} \}}{\{ {?a} \mapsto {b \land c} \}}\end{example} \\ \hline
+    \begin{example}{{?a}}{{?a} \land c}{\emptyset}{\{ {?a} \mapsto {{?a} \land b} \}}\end{example} \\ \hline
+    \begin{example}{{?a} \land {?a}}{(b \lor c) \land (c \lor b)}{\emptyset}{\{ {?a} \mapsto {b \lor c} \}}\end{example} \\ \hline
+    \begin{example}{{?p}(t)}{t = u}{\emptyset}{\{ {?p} \mapsto {\lambda x. x = u} \}}\end{example} \\ \hline
+    \begin{example}{{?p}({?t})}{t = u}{\emptyset}{\bot}\end{example} \\ \hline
+    \begin{example}{{?p}({?t})}{t = u}{\{ {?t} \mapsto t \}}{\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}}\end{example} \\ \hline
+    \begin{example}{{?p}({?t})}{t = u}{\{ {?p} \mapsto \lambda x. x = u \}}{\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}}\end{example} \\ \hline
+    \begin{example}{{?p}({?t}); {?t}}{t = u; t}{\emptyset}{\{ {?p} \mapsto \lambda x. x = u; {?t} \mapsto t \}}\end{example} \\ \hline
+    \begin{example}{{?f}({?a} \land b)}{(a \land b) \lor (b \land a)}{\emptyset}{\bot}\end{example} \\ \hline
+    \begin{example}{{?f}({?a} \land b); {?a}}{(a \land b) \lor (b \land a); a}{\emptyset}{\{ {?a} \mapsto a, {?f} \mapsto \lambda x. x \lor x \}}\end{example} \\ \hline
+    \begin{example}{\exists x. x}{\exists y. y}{\emptyset}{\{ x \mapsto y \}}\end{example} \\ \hline
+    \begin{example}{{?f}(\exists x. x)}{(\exists y. y) \land (\exists z. z)}{\emptyset}{\{ {?f} \mapsto \exists y. y, x \mapsto y \}}\end{example} \\ \hline
+    \begin{example}{\exists x. {?a}}{\exists y. y = u}{\emptyset}{\bot}\end{example} \\ \hline
+    \begin{example}{\exists x. {?p}(x)}{\exists y. y = u}{\emptyset}{\{ x \mapsto x, {?p} \mapsto \lambda x. x = u \}}\end{example} \\ \hline
+    % \begin{example}{a}{a}{a}{a}\end{example} \\ \hline
+    % \begin{example}{a}{a}{a}{a}\end{example} \\ \hline
+  \end{tabular}
+  \caption[Matching examples]{Selected examples to illustrate the matching procedure.
+    Patterns and values are all formulas; types of the other symbols should be inferred consequently.}
+  \label{fig:matching-examples}
+\end{figure}
+
+\begin{figure}[hbt!]
+  \begingroup
+  \allowdisplaybreaks
+  \begin{align*}
+  % Hypothesis
+  \frac{}{{?a} \vdash {?a}} \quad (\text{H.}) && \\[1em]
+  % And
+  \frac{{?a}, {?b} \vdash}{{?a} \land {?b} \vdash} \quad (\text{I.L.} \land) && \frac{\vdash {?a} \quad \vdash {?b}}{\vdash {?a} \land {?b}} \quad (\text{I.R.} \land) \\[1em]
+  \frac{{?a} \land {?b} \vdash}{{?a}, {?b} \vdash} \quad (\text{E.L.} \land) && \frac{\vdash {?a} \land {?b}}{\vdash {?a}} \quad (\text{E.R.} \land_1) \quad\quad \frac{\vdash {?a} \land {?b}}{\vdash {?b}} \quad (\text{E.R.} \land_2) \\[1em]
+  % Or
+  \frac{{?a} \vdash \quad {?b} \vdash}{{?a} \lor {?b} \vdash} \quad (\text{I.L.} \lor) && \frac{\vdash {?a}, {?b}}{\vdash {?a} \lor {?b}} \quad (\text{I.R.} \lor) \\[1em]
+  \frac{{?a} \lor {?b} \vdash}{{?a} \vdash} \quad (\text{E.L.} \lor_1) \quad\quad \frac{{?a} \lor {?b} \vdash}{{?b} \vdash} \quad (\text{E.L.} \lor_2) && \frac{\vdash {?a} \lor {?b}}{\vdash {?a}, {?b}} \quad (\text{E.R.} \lor) \\[1em]
+  % Implies
+  \frac{\vdash {?a} \quad {?b} \vdash}{{?a} \Rightarrow {?b} \vdash} \quad (\text{I.L.} \Rightarrow) && \frac{{?a} \vdash {?b}}{\vdash {?a} \Rightarrow {?b}} \quad (\text{I.R.} \Rightarrow) \\[1em]
+  \frac{{?a} \Rightarrow {?b} \vdash}{\vdash {?a}} \quad (\text{E.L.} \Rightarrow_1) \quad\quad \frac{{?a} \Rightarrow {?b} \vdash}{{?b} \vdash} \quad (\text{E.L.} \Rightarrow_2) && \frac{\vdash {?a} \Rightarrow {?b}}{{?a} \vdash {?b}} \quad (\text{E.R.} \Rightarrow) \\[1em]
+  % Iff
+  \frac{{?a} \Rightarrow {?b}, {?b} \Rightarrow {?a} \vdash}{{?a} \Leftrightarrow {?b} \vdash} \quad (\text{I.L.} \Leftrightarrow) && \frac{\vdash {?a} \Rightarrow {?b} \quad \vdash {?b} \Rightarrow {?a}}{\vdash {?a} \Leftrightarrow {?b}} \quad (\text{I.R.} \Leftrightarrow) \\[1em]
+  \frac{{?a} \Leftrightarrow {?b} \vdash}{{?a} \Rightarrow {?b}, {?b} \Rightarrow {?a} \vdash} \quad (\text{E.L.} \Leftrightarrow) && \frac{\vdash {?a} \Leftrightarrow {?b}}{\vdash {?a} \Rightarrow {?b}} \quad (\text{E.R.} \Leftrightarrow_1) \quad\quad \frac{\vdash {?a} \Leftrightarrow {?b}}{\vdash {?b} \Rightarrow {?a}} \quad (\text{E.R.} \Leftrightarrow_2) \\[1em]
+  % Not
+  \frac{\vdash {?a}}{\neg {?a} \vdash} \quad (\text{I.L.} \neg) && \frac{{?a} \vdash}{\vdash \neg {?a}} \quad (\text{I.R.} \neg) \\[1em]
+  \frac{\neg {?a} \vdash}{\vdash {?a}} \quad (\text{E.L.} \neg) && \frac{\vdash \neg {?a}}{{?a} \vdash} \quad (\text{E.R.} \neg) \\[1em]
+  % Eq. refl.
+  \frac{{?s} = {?s} \vdash}{\vdash} \quad (\text{E.L.} =) && \frac{}{\vdash {?s} = {?s}} \quad (\text{I.R.} =) \\[1em]
+  \end{align*}
+  \endgroup
+  \caption[Rules]{Predefined rules provided in the front. For clarity, contexts have been omitted: the intended semantic is the one described in ???. ``H", ``I", ``E", ``L" and ``R" respectively stand for ``Hypothesis", ``Introduction", ``Elimination", ``Left" and ``Right". In the source, shorthand for these names are used, for instance ``I.L.$\land$" would be identified by \code{introLAnd}. Most introduction rules map to a single kernel proof step. Elimination rules on the other hand rely on the cut rule.}
+  \label{fig:rules-list-1}
+\end{figure}
+
+\begin{figure}[hbt!]
+  \begingroup
+  \allowdisplaybreaks
+  \begin{align*}
+  % Forall
+  \frac{{?p}({?t}) \vdash}{\forall x. {?p}(x) \vdash} \quad (\text{I.L.} \forall) && \frac{\vdash {?p}(\overline{?t})}{\vdash \forall x. {?p}(x)} \quad (\text{I.R.} \forall) \\[1em]
+  \frac{\forall x. {?p}(x) \vdash}{{?p}({?t}) \vdash} \quad (\text{E.L.} \forall) && \frac{\vdash \forall x. {?p}(x)}{\vdash {?p}(\overline{?t})} \quad (\text{E.R.} \forall) \\[1em]
+  % Exists
+  \frac{{?p}(\overline{?t}) \vdash}{\exists x. {?p}(x) \vdash} \quad (\text{I.L.} \exists) && \frac{\vdash {?p}({?t})}{\vdash \exists x. {?p}(x)} \quad (\text{I.R.} \exists) \\[1em]
+  \frac{\exists x. {?p}(x) \vdash}{{?p}(\overline{?t}) \vdash} \quad (\text{E.L.} \exists) && \frac{\vdash \exists x. {?p}(x)}{\vdash {?p}({?t})} \quad (\text{E.R.} \exists) \\[1em]
+  % Iff subst.
+  \frac{{?f}({?a}) \vdash \quad \vdash {?a} \Leftrightarrow {?b}}{{?f}({?b}) \vdash} \quad (\text{I.L.S.} \Leftrightarrow) && \frac{\vdash {?f}({?a}) \quad \vdash {?a} \Leftrightarrow {?b}}{\vdash {?f}({?b})} \quad (\text{I.R.S.} \Leftrightarrow) \\[1em]
+  \frac{{?f}({?a}) \vdash \quad \vdash {?a} \Leftrightarrow {?b}}{{?f}({?b}) \vdash} \quad (\text{E.L.S.} \Leftrightarrow) && \frac{\vdash {?f}({?a}) \quad \vdash {?a} \Leftrightarrow {?b}}{\vdash {?f}({?b})} \quad (\text{E.R.S.} \Leftrightarrow) \\[1em]
+  % Eq. subst.
+  \frac{{?p}({?s}) \vdash \quad \vdash {?s} = {?t}}{{?p}({?t}) \vdash} \quad (\text{I.L.S.} =) && \frac{\vdash {?p}({?s}) \quad \vdash {?s} = {?t}}{\vdash {?p}({?t})} \quad (\text{I.R.S.} =) \\[1em]
+  \frac{{?p}({?s}) \vdash \quad \vdash {?s} = {?t}}{{?p}({?t}) \vdash} \quad (\text{E.L.S.} =) && \frac{\vdash {?p}({?s}) \quad \vdash {?s} \Leftrightarrow {?t}}{\vdash {?p}({?t})} \quad (\text{E.R.S.} =) \\[1em]
+  \end{align*}
+  \endgroup
+  \caption[Rules, continued]{Continuation of figure \ref{fig:rules-list-1}. Schemas marked with an overline are constrained to resolve to fresh schemas; namely schemas that do not appear elsewhere in the sequent, apart from this binding.}
+  \label{fig:rules-list-2}
+\end{figure}
+
+\begin{figure}[hbt!]
+  \centering
+  \input{figures/proof-sample.lisa.tex}
+  \caption[Sample proof]{Example of a generated kernel proof following its description in the front. This proof shows that $\vdash \mathcal{U}(\mathcal{P}({?s})) = {?s}$ with respect to the axiom of powerset, the definition of the subset relation and the axioms of extensionality and union (imports 1-4). Such a kernel proof is objectively difficult to be produced by hand; in contrast it is relatively straightforward to be achieved in the front. Note that the latex code used in this figure is also part of the output.}
+  \label{fig:lisa-proof-sample}
+\end{figure}
