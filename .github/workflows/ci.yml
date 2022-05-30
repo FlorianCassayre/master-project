@@ -22,3 +22,21 @@ jobs:
           distribution: zulu
       - name: Execute tests
         run: sbt test
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Build thesis PDF
+        uses: xu-cheng/latex-action@v2
+        with:
+          working_directory: report
+          root_file: thesis.tex
+          args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode -shell-escape
+          extra_system_packages: inkscape
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: thesis
+          path: report/thesis.pdf
