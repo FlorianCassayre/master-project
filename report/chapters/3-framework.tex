@@ -1,0 +1,61 @@
+\section{The Framework}
+\label{sec:framework}
+
+The front-end is a layer that depends on the LISA kernel and strives to provide a higher-level interface to write and organize proofs. While the kernel is assumed to be trusted, the front-end does not make such an hypothesis and can thus be made arbitrarily more sophisticated. The only requirement is for the front-end to be able to reconstruct its proofs in the kernel for them to be checked. We define soundness as the property of a proof in the front to be equivalent to one in the kernel. By the requirement, soundness thus relies on the only assumption that statements in the front are logically equivalent to statements in the kernel. As a consequence such a system would satisfy the De Bruijn criterion, meaning that the underlying proofs can be checked by a reasonably simple procedure.
+
+While the front relies on the kernel, it does not expose it to the user. Instead, it redefines most of the kernel components and provides mappings to for uni or bi-directional translations. The motivation is two-fold. First of all, it allows us to extend the existing functionality. For example, it was decided that the kernel would not provide schematic connectors as they were not strictly needed. On the other hand, the front requires such a functionality for its rules and it is not possible to emulate them at low cost. Alternatively we can also strengthen some features, for instance representing sequents as indexed sequences rather than sets. Additionally we can redefine the method \code{toString} on all of our classes. Secondly, it allows us to enrich the DSL and bring type safety guarantees. Some types in the kernel are (purposely) weak and require runtime checks to ensure safety. Although this was not a main aspect of study in this project, it is certainly desirable and contributes to building a strong framework.
+
+The interaction between the front and the kernel is relatively limited as the front handles its own state independently. The common ground between the two are justified statements (axioms, theorems, definitions), which means that such objects can be converted back and forth. Whenever a theorem is proven in the front, it is translated to the kernel and checked for consistency. The front obtains the mirror of that justified statement.
+
+\subsection{Language and tools}
+
+The implementation was done in Scala version 3\footnote{Also known as Dotty: \href{https://dotty.epfl.ch}{dotty.epfl.ch}.}. The choice of version was a requirement, following the decision to upgrade LISA from version 2 to 3. This is because this project does not work directly on the LISA codebase, but instead depends on it as a library. Regarding the version, it turns out that some of the features implemented in this project would not have an equivalent encoding in the older version, which lets us to confidently argue that Scala version 3 is an appropriate language for the design of DSL libraries.
+
+During the implementation, bugs were discovered in different areas of the Dotty compiler. All the issues that could be minimized and reproduced were reported\footnote{
+\href{https://github.com/lampepfl/dotty}{github.com/lampepfl/dotty}:
+\href{https://github.com/lampepfl/dotty/issues/14667}{\#14667},\
+\href{https://github.com/lampepfl/dotty/issues/14707}{\#14707},\
+\href{https://github.com/lampepfl/dotty/issues/14765}{\#14765},\
+\href{https://github.com/lampepfl/dotty/issues/14818}{\#14818},\
+\href{https://github.com/lampepfl/dotty/issues/14834}{\#14834},\
+\href{https://github.com/lampepfl/dotty/issues/14858}{\#14858},\
+\href{https://github.com/lampepfl/dotty/issues/14907}{\#14907}, and\
+\href{https://github.com/lampepfl/dotty/issues/15145}{\#15145}.
+}\textsuperscript{,}\footnote{
+\href{https://github.com/scalameta/scalameta}{github.com/scalameta/scalameta}:
+\href{https://github.com/scalameta/scalameta/issues/2741}{\#2741}.
+}; most of them have since been fixed or are still in the process of getting fixed.
+
+\subsection{Structure}
+
+\begin{figure}[hbt!]
+  \centering
+  % https://tex.stackexchange.com/q/515582
+  \begin{tikzpicture}[grow via three points={one child at (1.0,-0.6) and two children at (1.0,-0.6) and (1.0,-1.2)}, edge from parent path={(\tikzparentnode.south)|-(\tikzchildnode.west)}]
+  \node{(root package)}
+  child{node{\code{front}}
+      child{node{\code{fol}}}
+      child{node{\code{parser}}}
+      child{node{\code{printer}}}
+      child{node{\code{proof}}}
+      child{node{\code{theory}}}}
+  child [missing] {}
+  child [missing] {}
+  child [missing] {}
+  child [missing] {}
+  child [missing] {}
+  child{node{\code{util}}}
+  child{node{\code{legacy}}};
+  \node at (6,  -1.2) {\parbox{7cm}{\hspace*{0pt}\hfill(first-order logic)}};
+  \node at (6,  -1.8) {\parbox{7cm}{\hspace*{0pt}\hfill(FOL parsers)}};
+  \node at (6,  -2.4) {\parbox{7cm}{\hspace*{0pt}\hfill(FOL and proof printers)}};
+  \node at (6,  -3.0) {\parbox{7cm}{\hspace*{0pt}\hfill(logic for proofs, depends on FOL)}};
+  \node at (6,  -3.6) {\parbox{7cm}{\hspace*{0pt}\hfill(available theories)}};
+  \node at (6,  -4.2) {\parbox{7cm}{\hspace*{0pt}\hfill(utilities that only rely on the kernel)}};
+  \node at (6,  -4.8) {\parbox{7cm}{\hspace*{0pt}\hfill(older code that isn't relevant anymore)}};
+  \end{tikzpicture}
+  \caption[Source code packages structure]{Structure of the packages in the source code.}
+  \label{fig:packages}
+\end{figure}
+
+The code is organized hierarchically to reduce coupling. This is achieved through Scala dependent members: the components are implemented as children of traits, these traits can then extend and mix with other traits to benefit from their features (included the inherited ones). Finally, all the traits are aggregated in a singleton object that acts as a module. All the components can then be put into scope using a single import. Note that if a same member is exported from two distinct modules it will be considered as a different entity: this is because the types are path-dependent.

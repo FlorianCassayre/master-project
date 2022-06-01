@@ -1,0 +1,19 @@
+\section{Existing Work}
+\label{sec:existing-work}
+
+Attempts at formalizing logic and mathematics are numerous, and one can observe that successful systems are often the result of an iterative process \cite{Paulson2019, Harrison2014}. In this section we present my contributions to the field and the challenges faced. We also discuss about past and ongoing work.
+
+\subsection{LCF-like framework}
+
+In 2020 I worked on designing a LCF-like framework in Scala that used the Von Neumann-Bernays-Gödel set theory (NBG) as a foundation \cite{Cassayre2020} and attempted to formalize the proof of logic textbook \cite{Mendelson2015}. This project allowed me to explore different areas in theorem proving such as the representation of proofs and tableaux solving strategies. One of the particularity of that framework was that formulas and more generally theorems were strongly typed. In the lines of the Curry-Howard Correspondence, this meant that the soundness could be enforced by the type checker alone. Naturally this feature gets in the way when working with higher-order rules (e.g. induction) and automated strategies (e.g. tableaux). It also demonstrated that the LCF style restricted the expressiveness of proofs, and that to provide more flexibility an extra layer would be needed.
+
+LISA uses the Zermelo-Fraenkel set theory (ZF, and more precisely ZFC) instead of NBG. Both axiomatizations are similar, the main difference being that NBG makes the distinction between sets and proper classes. Moreover NBG has been (independently) proven to be a conservative extension of ZFC, meaning that none is stronger than the other. Furthermore, LISA uses sequent calculus in its deductive system, while that framework had formulas as first-class citizens.
+
+\subsection{LISA}
+
+Before starting this thesis I contributed to the design of LISA late 2021, notably by maintaining the codebase, reviewing and testing the proof checker, and exploring the design of third-party tools for LISA. This LISA project then ramified itself into several sub-projects, including this very thesis. The topic of other projects include: formalization of other theories such as Peano's arithmetic, proof space exploration using deep learning methods, and interoperability with other tools, for example Stainless.
+
+\subsection{Literature review}
+
+% compare isabelle/coq \cite{Yushkovskiy2018}
+\cite{Yushkovskiy2018}

@@ -1,0 +1,83 @@
+\section{Proofs}
+\label{sec:proofs}
+
+LCF-like proof systems are notorious for the simplicity of their implementation, which makes them desirable foundational systems [citation needed]. However they also become a limiting factor in terms of usability, assuming they are used bare (that is without an overlay). For example incomplete proofs cannot be constructed, although those are useful in practice. Another example, which is a consequence of the first: proofs must be constructed in the forward direction only, meaning that the conclusion is dictated by the final construction (the last step) instead of being stated in advance as it is often done with pen and paper proofs.
+
+In that aspect the front introduces new concepts to describe proofs, heavily inspired by those in existing frameworks.
+
+\begin{definition}[Proof mode]
+The \textbf{proof mode} is a contextualized representation of a backward proof.
+\end{definition}
+
+The proof mode is stateful: commands can be applied to update the internal state. The history of commands is also stored and is used to later generate the kernel proof.
+
+\begin{definition}[Proof goal]
+In proof mode, a \textbf{proof goal} corresponds to a sequent that remains to be proven.
+\end{definition}
+
+A proof goal corresponds to an open branch. It is worth noting that proof goals are independent from each other, although it is possible to deduplicate equivalent proof goals.
+
+\begin{definition}[Proof state]
+In proof mode, the \textbf{proof state} is a stack of proof goals.
+\end{definition}
+
+To enter in proof mode it is required to provide an initial proof goal that will serve as an initial state to this proof mode. A statement is said to be proven once the proof state becomes empty, or in other words once all proof goals have been eliminated. Thus, proof modes with empty proof states should produce a valid kernel proof.
+
+Regarding the representation of the proof state as a stack, it is motivated by the fact that the order of the goals is arbitrary as it does not affect the realization of the proof. With that model in minde, the \textbf{current goal} naturally refers to the goal at the top of the stack. Therefore, by convention it is natural to choose to push new goals at the top of the stack since those are most likely to be proven next by the user (or a tactic).
+
+\subsection{Tactics}
+
+\begin{definition}[Tactic]
+A \textbf{tactic} is a partial function that maps parameters and proof states to proof states and reconstruction schemes.
+\end{definition}
+
+Informally, a tactic transforms a proof state into a new state, and the result of this transformation has a representation in terms of kernel proof steps. The former describes how the state evolves in the front while the latter does the synchronization with the kernel.
+
+Tactics can be categorized into more specific functions, for instance most tactics only work on a single goal by replacing by zero or more new goals.
+
+\subsection{Rules}
+\label{sec:proof-framework-rules}
+
+\begin{definition}[Rule]
+A \textbf{rule} ......
+\end{definition}
+
+Rules are a particular case of tactics, ....
+
+\subsection{Tactics combinators}
+
+Although impractical, tactics can call other tactics when they are applied. Instead we provide a set of predefined combinators that can be used as higher-order tactics (table \ref{tab:tactics-combinators}).
+
+\begin{table}[hbt!]
+  \centering
+  \begin{tabular}{||c c c c||}
+  \hline
+  \textbf{Combinator} & \textbf{Arity} & \textbf{Symbol} & \textbf{Semantic} \\
+  \hline\hline
+  Sequence & $\geq 1$ & $\sim$ & Applies all the tactics in sequence. \\ \hline
+  Repetition & $1$ & $+$ & Repeats a tactic one or more times. \\ \hline
+  Fallback & $\geq 1$ & $|$ & Applies the first tactic that does not fail. \\ \hline
+  \end{tabular}
+  \caption[Available combinators]{The main tactic combinators provided by the framework.}
+  \label{tab:tactics-combinators}
+\end{table}
+
+These combinators make it possible to conveniently write simple routines, for instance a propositional solver (figure \ref{fig:solver-combinators}). Remark that this particular procedure is deterministic and runs in exponential time in the worst case. The argument for the former is a proof by induction on the structure of the goal, while the argument for the latter is a pathological case (e.g. a sequence of conjunctions on the right side). More efficient heuristics could be used to slightly improve the runtime and the length of the proofs, however as per \cite{Krajicek1994} there exists tautologies that cannot be proven in less than an exponential number of LISA's sequent calculus steps (even with the cut rule).
+
+\begin{figure}[hbt!]
+  \centering
+  \begin{lstlisting}[language=Scala]
+val autoProp = (introHypo
+  | introLAnd | introRAnd
+  | introLOr | introROr
+  | introLImp | introRImp
+  | introLIff | introRIff
+  | introLNot | introRNot).+
+  \end{lstlisting}
+  \caption[Propositional solver]{A propositional solver written using exclusively rules and tactic combinators.}
+  \label{fig:solver-combinators}
+\end{figure}
+
+\subsection{Proof-level state transformations}
+
+Because the proof mode is meant to be interactive, it implements commands to interact with the history, for instance to cancel an applied tactic or to restart the proof. While these features aren't particularly interesting nor complex they provide an interface for interactivity; the most primitive example of such an interface being the REPL\footnote{REPL: Read-Eval-Print Loop, a generic term to describe an interactive code interpreting environment.}.

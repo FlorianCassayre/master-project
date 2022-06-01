@@ -1,6 +1,6 @@
 \section{Appendix}
 
-\begin{figure}[hbt!]
+\begin{table}[hbt!]
   \newcounter{counter}
   \NewEnviron{example}[4]{%
     \toks0=\expandafter{\BODY}%
@@ -15,8 +15,8 @@
     \hline\hline
     \begin{example}{{?a} \land b}{c \land b}{\emptyset}{\{ {?a} \mapsto c \}}\end{example} \\ \hline
     \begin{example}{{?a} \land {?b}}{a \land b}{\{ {?a} \mapsto b \}}{\bot}\end{example} \\ \hline
-    \begin{example}{{?a}}{c \land d}{\{ {?a} \mapsto {b \land c} \}}{\{ {?a} \mapsto {b \land c} \}}\end{example} \\ \hline
-    \begin{example}{{?a}}{{?a} \land c}{\emptyset}{\{ {?a} \mapsto {{?a} \land b} \}}\end{example} \\ \hline
+    \begin{example}{{?a}}{c \land b}{\{ {?a} \mapsto {b \land c} \}}{\{ {?a} \mapsto {b \land c} \}}\end{example} \\ \hline
+    \begin{example}{{?a}}{{?a} \land b}{\emptyset}{\{ {?a} \mapsto {{?a} \land b} \}}\end{example} \\ \hline
     \begin{example}{{?a} \land {?a}}{(b \lor c) \land (c \lor b)}{\emptyset}{\{ {?a} \mapsto {b \lor c} \}}\end{example} \\ \hline
     \begin{example}{{?p}(t)}{t = u}{\emptyset}{\{ {?p} \mapsto {\lambda x. x = u} \}}\end{example} \\ \hline
     \begin{example}{{?p}({?t})}{t = u}{\emptyset}{\bot}\end{example} \\ \hline
@@ -32,60 +32,86 @@
     % \begin{example}{a}{a}{a}{a}\end{example} \\ \hline
     % \begin{example}{a}{a}{a}{a}\end{example} \\ \hline
   \end{tabular}
+  \captionsetup{singlelinecheck=off}
   \caption[Matching examples]{Selected examples to illustrate the matching procedure.
-    Patterns and values are all formulas; types of the other symbols should be inferred consequently.}
-  \label{fig:matching-examples}
-\end{figure}
+    Patterns and values are all formulas; types of the other symbols should be inferred consequently. Detailed explanations for each example are provided below:
+    \begin{enumerate}
+    \itemsep-0.1cm
+    \item Simple pattern matching, ${?a}$ is assigned the value $c$, and $b$ is treated as a constant.
+    \item The provided partial assignment prevents the matching from succeeding. Note that $\{ ?a \mapsto b, ?b \mapsto a \}$ would still be a valid assignment according to OCBSL but it would not be returned by our procedure.
+    \item ${?a}$ must match $c \land b$ but should also satisfy the constraint $b \land c$; since both are OCBSL equivalent, the procedure succeeds.
+    \item ${?a}$ is treated as a constant in the value and has nothing to do with ${?a}$ in the pattern.
+    \item ${?a}$ is assigned $b \lor c$ (left branch), then checked for equivalence against $c \lor b$.
+    \item All occurrences of $t$ are factored out, resulting in $\lambda x. x = u$.
+    \item The problem is under-constrained; an infinite number of solutions exist.
+    \item By specifying the argument, the problem is reduced to (6).
+    \item By specifying the predicate, the problem is transformed into the matching of $t = u$ against pattern ${?x} = u$ (where ${?x}$ is a fresh variable).
+    \item The first pattern/value pair is the same as (7), however the second pair adds the necessary constraint to reduce the problem to (8).
+    \item The problem is under-constrained because the argument contains an unresolved variable.
+    \item Similar to (10), the variable is resolved while handling the second pair unlocking the first one. In addition, both branches are factored because they are equivalent.
+    \item This example showcases the renaming of bound/free variables.
+    \item Only the first branch can benefit from the renaming of bound/free variables.
+    \item Here ${?a}$ is a variable that should match a constant. However the formula $y = u$ depends on the bound variable $y$, and thus cannot match that pattern.
+    \item This is a fix for (15): the bound variable appears as an argument of the predicate variable.
+    \end{enumerate}
+    }
+  \label{tab:matching-examples}
+\end{table}
 
 \begin{figure}[hbt!]
-  \begingroup
-  \allowdisplaybreaks
-  \begin{align*}
+  $$\arraycolsep=0.75cm\def\arraystretch{2.75}\begin{array}{c c}
   % Hypothesis
-  \frac{}{{?a} \vdash {?a}} \quad (\text{H.}) && \\[1em]
+  \dfrac{}{{?a} \vdash {?a}} \quad (\text{H.}) & \\
   % And
-  \frac{{?a}, {?b} \vdash}{{?a} \land {?b} \vdash} \quad (\text{I.L.} \land) && \frac{\vdash {?a} \quad \vdash {?b}}{\vdash {?a} \land {?b}} \quad (\text{I.R.} \land) \\[1em]
-  \frac{{?a} \land {?b} \vdash}{{?a}, {?b} \vdash} \quad (\text{E.L.} \land) && \frac{\vdash {?a} \land {?b}}{\vdash {?a}} \quad (\text{E.R.} \land_1) \quad\quad \frac{\vdash {?a} \land {?b}}{\vdash {?b}} \quad (\text{E.R.} \land_2) \\[1em]
+  \dfrac{{?a}, {?b} \vdash}{{?a} \land {?b} \vdash} \quad (\text{I.L.} \land) & \dfrac{\vdash {?a} \quad \vdash {?b}}{\vdash {?a} \land {?b}} \quad (\text{I.R.} \land) \\
+  \dfrac{{?a} \land {?b} \vdash}{{?a}, {?b} \vdash} \quad (\text{E.L.} \land) & \dfrac{\vdash {?a} \land {?b}}{\vdash {?a}} \quad (\text{E.R.} \land_1) \\ % cont.
+  & \dfrac{\vdash {?a} \land {?b}}{\vdash {?b}} \quad (\text{E.R.} \land_2) \\
   % Or
-  \frac{{?a} \vdash \quad {?b} \vdash}{{?a} \lor {?b} \vdash} \quad (\text{I.L.} \lor) && \frac{\vdash {?a}, {?b}}{\vdash {?a} \lor {?b}} \quad (\text{I.R.} \lor) \\[1em]
-  \frac{{?a} \lor {?b} \vdash}{{?a} \vdash} \quad (\text{E.L.} \lor_1) \quad\quad \frac{{?a} \lor {?b} \vdash}{{?b} \vdash} \quad (\text{E.L.} \lor_2) && \frac{\vdash {?a} \lor {?b}}{\vdash {?a}, {?b}} \quad (\text{E.R.} \lor) \\[1em]
+  \dfrac{{?a} \vdash \quad {?b} \vdash}{{?a} \lor {?b} \vdash} \quad (\text{I.L.} \lor) & \dfrac{\vdash {?a}, {?b}}{\vdash {?a} \lor {?b}} \quad (\text{I.R.} \lor) \\
+  \dfrac{{?a} \lor {?b} \vdash}{{?a} \vdash} \quad (\text{E.L.} \lor_1) & \dfrac{\vdash {?a} \lor {?b}}{\vdash {?a}, {?b}} \quad (\text{E.R.} \lor) \\ % cont.
+  \dfrac{{?a} \lor {?b} \vdash}{{?b} \vdash} \quad (\text{E.L.} \lor_2) & \\
   % Implies
-  \frac{\vdash {?a} \quad {?b} \vdash}{{?a} \Rightarrow {?b} \vdash} \quad (\text{I.L.} \Rightarrow) && \frac{{?a} \vdash {?b}}{\vdash {?a} \Rightarrow {?b}} \quad (\text{I.R.} \Rightarrow) \\[1em]
-  \frac{{?a} \Rightarrow {?b} \vdash}{\vdash {?a}} \quad (\text{E.L.} \Rightarrow_1) \quad\quad \frac{{?a} \Rightarrow {?b} \vdash}{{?b} \vdash} \quad (\text{E.L.} \Rightarrow_2) && \frac{\vdash {?a} \Rightarrow {?b}}{{?a} \vdash {?b}} \quad (\text{E.R.} \Rightarrow) \\[1em]
+  \dfrac{\vdash {?a} \quad {?b} \vdash}{{?a} \Rightarrow {?b} \vdash} \quad (\text{I.L.} \Rightarrow) & \dfrac{{?a} \vdash {?b}}{\vdash {?a} \Rightarrow {?b}} \quad (\text{I.R.} \Rightarrow) \\
+  \dfrac{{?a} \Rightarrow {?b} \vdash}{\vdash {?a}} \quad (\text{E.L.} \Rightarrow_1) & \dfrac{\vdash {?a} \Rightarrow {?b}}{{?a} \vdash {?b}} \quad (\text{E.R.} \Rightarrow) \\ % cont.
+  \dfrac{{?a} \Rightarrow {?b} \vdash}{{?b} \vdash} \quad (\text{E.L.} \Rightarrow_2) & \\
   % Iff
-  \frac{{?a} \Rightarrow {?b}, {?b} \Rightarrow {?a} \vdash}{{?a} \Leftrightarrow {?b} \vdash} \quad (\text{I.L.} \Leftrightarrow) && \frac{\vdash {?a} \Rightarrow {?b} \quad \vdash {?b} \Rightarrow {?a}}{\vdash {?a} \Leftrightarrow {?b}} \quad (\text{I.R.} \Leftrightarrow) \\[1em]
-  \frac{{?a} \Leftrightarrow {?b} \vdash}{{?a} \Rightarrow {?b}, {?b} \Rightarrow {?a} \vdash} \quad (\text{E.L.} \Leftrightarrow) && \frac{\vdash {?a} \Leftrightarrow {?b}}{\vdash {?a} \Rightarrow {?b}} \quad (\text{E.R.} \Leftrightarrow_1) \quad\quad \frac{\vdash {?a} \Leftrightarrow {?b}}{\vdash {?b} \Rightarrow {?a}} \quad (\text{E.R.} \Leftrightarrow_2) \\[1em]
+  \dfrac{{?a} \Rightarrow {?b}, {?b} \Rightarrow {?a} \vdash}{{?a} \Leftrightarrow {?b} \vdash} \quad (\text{I.L.} \Leftrightarrow) & \dfrac{\vdash {?a} \Rightarrow {?b} \quad \vdash {?b} \Rightarrow {?a}}{\vdash {?a} \Leftrightarrow {?b}} \quad (\text{I.R.} \Leftrightarrow) \\
+  \dfrac{{?a} \Leftrightarrow {?b} \vdash}{{?a} \Rightarrow {?b}, {?b} \Rightarrow {?a} \vdash} \quad (\text{E.L.} \Leftrightarrow) & \dfrac{\vdash {?a} \Leftrightarrow {?b}}{\vdash {?a} \Rightarrow {?b}} \quad (\text{E.R.} \Leftrightarrow_1) \\ % cont.
+  & \dfrac{\vdash {?a} \Leftrightarrow {?b}}{\vdash {?b} \Rightarrow {?a}} \quad (\text{E.R.} \Leftrightarrow_2) \\
   % Not
-  \frac{\vdash {?a}}{\neg {?a} \vdash} \quad (\text{I.L.} \neg) && \frac{{?a} \vdash}{\vdash \neg {?a}} \quad (\text{I.R.} \neg) \\[1em]
-  \frac{\neg {?a} \vdash}{\vdash {?a}} \quad (\text{E.L.} \neg) && \frac{\vdash \neg {?a}}{{?a} \vdash} \quad (\text{E.R.} \neg) \\[1em]
+  \dfrac{\vdash {?a}}{\neg {?a} \vdash} \quad (\text{I.L.} \neg) & \dfrac{{?a} \vdash}{\vdash \neg {?a}} \quad (\text{I.R.} \neg) \\
+  \dfrac{\neg {?a} \vdash}{\vdash {?a}} \quad (\text{E.L.} \neg) & \dfrac{\vdash \neg {?a}}{{?a} \vdash} \quad (\text{E.R.} \neg) \\
   % Eq. refl.
-  \frac{{?s} = {?s} \vdash}{\vdash} \quad (\text{E.L.} =) && \frac{}{\vdash {?s} = {?s}} \quad (\text{I.R.} =) \\[1em]
-  \end{align*}
-  \endgroup
-  \caption[Rules]{Predefined rules provided in the front. For clarity, contexts have been omitted: the intended semantic is the one described in ???. ``H", ``I", ``E", ``L" and ``R" respectively stand for ``Hypothesis", ``Introduction", ``Elimination", ``Left" and ``Right". In the source, shorthand for these names are used, for instance ``I.L.$\land$" would be identified by \code{introLAnd}. Most introduction rules map to a single kernel proof step. Elimination rules on the other hand rely on the cut rule.}
+  \dfrac{{?s} = {?s} \vdash}{\vdash} \quad (\text{E.L.} =) & \dfrac{}{\vdash {?s} = {?s}} \quad (\text{I.R.} =)
+  \end{array}$$
+  \caption[Rules]{Predefined rules provided in the front. For clarity, contexts have been omitted: the intended semantic is the one described in section \ref{sec:proof-framework-rules}. ``H", ``I", ``E", ``L" and ``R" respectively stand for ``Hypothesis", ``Introduction", ``Elimination", ``Left" and ``Right". In the source, shorthand for these names are used, for instance ``I.L.$\land$" would be identified by \code{introLAnd}. Most introduction rules map to a single kernel proof step. Elimination rules on the other hand rely on the cut rule.}
   \label{fig:rules-list-1}
 \end{figure}
 
 \begin{figure}[hbt!]
-  \begingroup
-  \allowdisplaybreaks
-  \begin{align*}
+  $$\arraycolsep=0.75cm\def\arraystretch{3}\begin{array}{c c}
   % Forall
-  \frac{{?p}({?t}) \vdash}{\forall x. {?p}(x) \vdash} \quad (\text{I.L.} \forall) && \frac{\vdash {?p}(\overline{?t})}{\vdash \forall x. {?p}(x)} \quad (\text{I.R.} \forall) \\[1em]
-  \frac{\forall x. {?p}(x) \vdash}{{?p}({?t}) \vdash} \quad (\text{E.L.} \forall) && \frac{\vdash \forall x. {?p}(x)}{\vdash {?p}(\overline{?t})} \quad (\text{E.R.} \forall) \\[1em]
+  \dfrac{{?p}({?t}) \vdash}{\forall x. {?p}(x) \vdash} \quad (\text{I.L.} \forall) & \dfrac{\vdash {?p}(\overline{?t})}{\vdash \forall x. {?p}(x)} \quad (\text{I.R.} \forall) \\
+  \dfrac{\forall x. {?p}(x) \vdash}{{?p}({?t}) \vdash} \quad (\text{E.L.} \forall) & \dfrac{\vdash \forall x. {?p}(x)}{\vdash {?p}(\overline{?t})} \quad (\text{E.R.} \forall) \\
   % Exists
-  \frac{{?p}(\overline{?t}) \vdash}{\exists x. {?p}(x) \vdash} \quad (\text{I.L.} \exists) && \frac{\vdash {?p}({?t})}{\vdash \exists x. {?p}(x)} \quad (\text{I.R.} \exists) \\[1em]
-  \frac{\exists x. {?p}(x) \vdash}{{?p}(\overline{?t}) \vdash} \quad (\text{E.L.} \exists) && \frac{\vdash \exists x. {?p}(x)}{\vdash {?p}({?t})} \quad (\text{E.R.} \exists) \\[1em]
+  \dfrac{{?p}(\overline{?t}) \vdash}{\exists x. {?p}(x) \vdash} \quad (\text{I.L.} \exists) & \dfrac{\vdash {?p}({?t})}{\vdash \exists x. {?p}(x)} \quad (\text{I.R.} \exists) \\
+  \dfrac{\exists x. {?p}(x) \vdash}{{?p}(\overline{?t}) \vdash} \quad (\text{E.L.} \exists) & \dfrac{\vdash \exists x. {?p}(x)}{\vdash {?p}({?t})} \quad (\text{E.R.} \exists) \\
   % Iff subst.
-  \frac{{?f}({?a}) \vdash \quad \vdash {?a} \Leftrightarrow {?b}}{{?f}({?b}) \vdash} \quad (\text{I.L.S.} \Leftrightarrow) && \frac{\vdash {?f}({?a}) \quad \vdash {?a} \Leftrightarrow {?b}}{\vdash {?f}({?b})} \quad (\text{I.R.S.} \Leftrightarrow) \\[1em]
-  \frac{{?f}({?a}) \vdash \quad \vdash {?a} \Leftrightarrow {?b}}{{?f}({?b}) \vdash} \quad (\text{E.L.S.} \Leftrightarrow) && \frac{\vdash {?f}({?a}) \quad \vdash {?a} \Leftrightarrow {?b}}{\vdash {?f}({?b})} \quad (\text{E.R.S.} \Leftrightarrow) \\[1em]
+  \dfrac{{?f}({?a}) \vdash}{{?a} \Leftrightarrow {?b}, {?f}({?b}) \vdash} \quad (\text{I.L.S.} \Leftrightarrow) & \dfrac{\vdash {?f}({?a}) \quad}{{?a} \Leftrightarrow {?b} \vdash {?f}({?b})} \quad (\text{I.R.S.} \Leftrightarrow) \\
+  \dfrac{{?f}({?a}) \vdash \quad \vdash {?a} \Leftrightarrow {?b}}{{?f}({?b}) \vdash} \quad (\text{E.L.S.} \Leftrightarrow) & \dfrac{\vdash {?f}({?a}) \quad \vdash {?a} \Leftrightarrow {?b}}{\vdash {?f}({?b})} \quad (\text{E.R.S.} \Leftrightarrow) \\
   % Eq. subst.
-  \frac{{?p}({?s}) \vdash \quad \vdash {?s} = {?t}}{{?p}({?t}) \vdash} \quad (\text{I.L.S.} =) && \frac{\vdash {?p}({?s}) \quad \vdash {?s} = {?t}}{\vdash {?p}({?t})} \quad (\text{I.R.S.} =) \\[1em]
-  \frac{{?p}({?s}) \vdash \quad \vdash {?s} = {?t}}{{?p}({?t}) \vdash} \quad (\text{E.L.S.} =) && \frac{\vdash {?p}({?s}) \quad \vdash {?s} \Leftrightarrow {?t}}{\vdash {?p}({?t})} \quad (\text{E.R.S.} =) \\[1em]
-  \end{align*}
-  \endgroup
+  \dfrac{{?p}({?s}) \vdash \quad}{{?s} = {?t}, {?p}({?t}) \vdash} \quad (\text{I.L.S.} =) & \dfrac{\vdash {?p}({?s})}{{?s} = {?t} \vdash {?p}({?t})} \quad (\text{I.R.S.} =) \\
+  \dfrac{{?p}({?s}) \vdash \quad \vdash {?s} = {?t}}{{?p}({?t}) \vdash} \quad (\text{E.L.S.} =) & \dfrac{\vdash {?p}({?s}) \quad \vdash {?s} = {?t}}{\vdash {?p}({?t})} \quad (\text{E.R.S.} =)
+  \end{array}$$
   \caption[Rules, continued]{Continuation of figure \ref{fig:rules-list-1}. Schemas marked with an overline are constrained to resolve to fresh schemas; namely schemas that do not appear elsewhere in the sequent, apart from this binding.}
   \label{fig:rules-list-2}
+\end{figure}
+
+\begin{figure}[hbt!]
+  \centering
+  \input{figures/proof-sample.scala.tex}
+  \caption[XXXX]{.}
+  \label{fig:scala-proof-sample}
 \end{figure}
 
 \begin{figure}[hbt!]

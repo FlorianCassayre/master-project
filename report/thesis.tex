@@ -1,4 +1,4 @@
-\documentclass[11pt]{article}
+\documentclass[11pt]{article} % add `twoside` for book-style margins
 \usepackage[a4paper, total={140mm, 160mm}]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage{booktabs}
@@ -23,6 +23,7 @@
 \usepackage[stable]{footmisc}
 \usepackage[nounderscore]{syntax}
 \usepackage{framed}
+\usetikzlibrary{trees}
 \usepackage[style=numeric-comp]{biblatex}
 \addbibresource{bibliography.bib}
 \setlength{\columnsep}{4cm} % Adjust base on your name length
@@ -33,6 +34,14 @@
 \newcommand{\code}{\texttt}
 
 \hypersetup{hidelinks}
+
+\lstset{
+  language=Scala,
+  numbers=left,
+  stepnumber=1,
+  showstringspaces=false,
+  xleftmargin=0.75cm,
+}
 
 
 \begin{document}
@@ -61,13 +70,14 @@
 
 \pagestyle{fancy}
 \input{chapters/1-introduction}
-\input{chapters/2-preliminary-work}
-\input{chapters/3-proof-framework}
-\input{chapters/4-synthesis}
-\input{chapters/5-matching}
-\input{chapters/6-parsing-printing}
-\input{chapters/7-future-work}
-\input{chapters/8-conclusion}
+\input{chapters/2-existing-work}
+\input{chapters/3-framework}
+\input{chapters/4-proofs}
+\input{chapters/5-synthesis}
+\input{chapters/6-matching}
+\input{chapters/7-parsing-printing}
+\input{chapters/8-future-work}
+\input{chapters/9-conclusion}
 
 \printbibliography
 

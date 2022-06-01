@@ -3,7 +3,7 @@
 
 \subsection{Grammar}
 
-As of now, LISA does not have a formalized grammar for its language but rather a simple printer that is used to display proofs in a more readable way. In this project I defined a grammar for the first-order logic language with sequents of the front-end (figure \ref{fig:grammar}). The grammar is designed to be unambiguous so that we could use it for serialization/persistence later on, and is as close as possible to the original printer of LISA. The main challenge in designing a grammar for our language is due to the fact that the distinction between terms and formulas is made early on, in other words it is not possible to construct ill-typed trees. This subtlety opens the door to potential ambiguities where it is unclear if a node should be interpreted as a term or a formula. The front-end avoids thanks to a carefully designed grammar and a type checker that serves at the same time as a resolver.
+At the time of writing this thesis, LISA does not have a formalized grammar for its language but rather a simple printer that is used to display proofs in a more readable way. In this project I defined a grammar for the first-order logic language with sequents of the front-end (figure \ref{fig:grammar}). The grammar is designed to be unambiguous so that we could use it for serialization/persistence later on, and is as close as possible to the original printer of LISA. The main challenge in designing a grammar for our language is due to the fact that the distinction between terms and formulas is made early on, in other words it is not possible to construct ill-typed trees. This subtlety opens the door to potential ambiguities where it is unclear if a node should be interpreted as a term or a formula. The front-end avoids thanks to a carefully designed grammar and a type checker that serves at the same time as a resolver.
 
 \begin{figure}[H]
   \centering
@@ -55,7 +55,7 @@ As of now, LISA does not have a formalized grammar for its language but rather a
 
 \subsection{Parsing}
 
-A parser for this grammar was written using the library \code{scala-parser-combinators}\footnote{A DSL implementing a recursive-descent parser.}. The parser alone is not sufficient to generate the final trees; an intermediate phase called \textbf{resolution} performs type checking and resolves the intermediate representation into its final form. The procedure is dictated by the rules shown in figure \ref{fig:typing-rules}. Given the type of the top-level term, we can recover all the remaining types in the tree and thus reconstruct the final representation of the tree.
+A parser for this grammar was written using the library \code{scala-parser-combinators}\footnote{A DSL implementing a recursive-descent parser: \href{https://github.com/scala/scala-parser-combinators}{github.com/scala/scala-parser-combinators}}. The parser alone is not sufficient to generate the final trees; an intermediate phase called \textbf{resolution} performs type checking and resolves the intermediate representation into its final form. The procedure is dictated by the rules listed in figure \ref{fig:typing-rules}. Given the type of the top-level term, we can recover all the remaining types in the tree and thus reconstruct the final representation of the tree.
 
 \begin{figure}[H]
   \centering
@@ -96,8 +96,8 @@ It turns out we can do better than that. Scala offers a feature called string in
 \begin{figure}[H]
   \centering
   \begin{lstlisting}[language=Scala]
-  val s1: String = "world"
-  val s2: String = s"Hello $s1!" // Hello world!
+val s1: String = "world"
+val s2: String = s"Hello $s1!" // Hello world!
   \end{lstlisting}
   \caption[String interpolation general example]{Simple demonstration of the string interpolation mechanism in Scala. The \code{s} interpolator simply calls \code{toString} on each variable passed and concatenates all the parts together.}
   \label{fig:string-interpolation-general}

@@ -1,6 +1,14 @@
 \section{Proof synthesis}
 \label{sec:synthesis}
 
+\subsection{Front-end proof to kernel proof}
+
+In the front a backward proof is characterized by an initial proof goal and a sequence of tactics to apply such that they eventually reduce the goal to nil. Forward proofs in the front are much more concise as they are the result of a single step; e.g. a forward rule application. As stated in the requirements, we would like to be able to translate these two proofs into kernel proofs. We describe how this process works in this section. Note that since we are not that much interested in the final shape of the proof, it is not strictly speaking a one-to-one translation but rather a synthesis (or a reconstruction) process. Such a relaxation allows us for instance to optimize the proof.
+
+For backward proofs the first step is to reverse the order of the tactics and successive states. This is necessary as kernel proofs must be constructed forward; any changes to existing steps would require a complete reorganization of the proof. At the same time, we should also label each distinct proof goal as they will either represent an individual proof step or an import in the final kernel proof. This mechanism is achieved thanks to the \textbf{shadow proof state}, which associates identifiers to the goals in the proof state. That way, when a proof goal is transformed into subgoals we can recover the ids of the premises and the current step. Similarly, when proof goals are reordered we should update the shadow state accordingly to reflect the new order.
+
+Then, we can proceed with the reconstruction of the kernel proof. Recall that the tactics are listed in reverse order. The result of applying the tactic is a partial kernel proof that should be included as is in the reconstruction. The imports of this partial proof are updated to the corresponding steps in the final proof, and the partial proof is appended to the final proof. This partial proof can then be referred to as a single step with index equal to the size of the final proof minus one.
+
 \subsection{Optimizations}
 
 The front can translate its high-level proof representation into kernel proofs. The exported proofs are mainly intended for the proof checker rather than human readers. Regardless, we would like the generated proofs to be reasonably concise and easily verifiable. We could imagine that a larger proof base might take a non-negligible amount of time to be fully checked. Moreover these proofs would have to be shipped to the end users, taking up disk space, and the verification would also have to be performed on every host machine.
@@ -16,7 +24,7 @@ We identified that the following factors would impact negatively the complexity 
 
 The front provides some efforts to minimize some of these factors. However, because of its versatility and complexity we should not fully rely on it. For that reason it makes sense to design optimization techniques that work directly on kernel proofs.
 
-This general problem happens to relate to the area of compiler optimizations, in particular kernel proofs could be thought as a sequence of static single assignments, where each value would be a call to some function taking previously computed values as arguments (the premises).
+This general problem happens to relate to the area of compiler optimizations, in particular kernel proofs could be thought of as a sequence of static single assignments, where each value would be a call to some function taking previously computed values as arguments (the premises).
 
 We implement and describe a few techniques in the following sub-sections.
 
@@ -54,7 +62,7 @@ Note that this procedure should be applied recursively on children subproofs fir
   \draw [thick] (5.25,-0.75) rectangle (9.75,0.75);
   \node [label={[shift={(7.5,0.75)}](4)}] {};
   \end{tikzpicture}
-  \caption[XXX]{Example of applying the dead branch elimination procedure on a proof. Each node represents a proof step or an import; the rectangle represents a subproof step. The nodes in gray are part of dead branches. (3) and ($-1_4$) are dead because they are not referenced by any other step. (2) is dead because it is only referenced by (3) and ($-2_4$), which are dead. In this situation we can remove the steps (2), (3) along with the import ($-2_4$).}
+  \caption[Dead branch elimination]{Example of applying the dead branch elimination procedure on a proof. Each node represents a proof step or an import; the rectangle represents a subproof step. The nodes in gray are part of dead branches. (3) and ($-1_4$) are dead because they are not referenced by any other step. (2) is dead because it is only referenced by (3) and ($-2_4$), which are dead. In this situation we can remove the steps (2), (3) along with the import ($-2_4$).}
   \label{fig:synthesis-dead-branches}
 \end{figure}
 
@@ -111,7 +119,7 @@ This motivates the need of a procedure that can ``flatten" a proof by inlining a
   \draw[->] (2-1) to [out=135,in=45,looseness=0.4] (0);
   \draw[->] (2-2-1) to [out=135,in=45,looseness=0.2] (1);
   \end{tikzpicture}
-  \caption[YYY]{Example of applying the flattening procedure on a proof. The first graph represents the original proof while the second corresponds to the final state after flattening. The nodes in gray are the imports that have been inlined.}
+  \caption[Proof flattening]{Example of applying the flattening procedure on a proof. The first graph represents the original proof while the second corresponds to the final state after flattening. The nodes in gray are the imports that have been inlined.}
   \label{fig:synthesis-flattening}
 \end{figure}
 
@@ -124,11 +132,20 @@ In the actual implementation of LISA, the proof checker allows imports to be rew
 The previous optimizations ignored the semantics of the LISA sequent calculus. Taking them into account opens up a whole new category of optimization strategies.
 For instance, consecutive \code{Rewrite} steps can be merged together assuming the first one of the two is only referenced by other rewrite steps. Similarly, fruitless instantiations can be eliminated and consecutive ones merged in some cases. These optimizations could in fact be as complex and granular as desired (optimal simplification of a proof is a hard though decidable problem) but for the sake of efficiency and because such a procedure is error-prone, we limit ourselves to cases that are likely to be produced by the front.
 
-Some of the optimizations that are currently in place are listed in figure \ref{fig:synthesis-simplifications}.
+The optimizations that are currently in place are listed in figure \ref{fig:synthesis-simplifications}.
 
 \begin{figure}[H]
   \centering
-  \begin{gather}
+  \begin{gather*}
+  % Any identity
+  \begin{prooftree}
+  \hypo{\Gamma \vdash \Delta}
+  \infer1[$\mathcal{R}$]{\Gamma \vdash \Delta}
+  \end{prooftree}
+  \quad\leadsto\quad
+  \begin{prooftree}
+  \hypo{\Gamma \vdash \Delta}
+  \end{prooftree} \\[1em]
   % Rewrite - Rewrite
   \begin{prooftree}
   \hypo{\Gamma \vdash \Delta}
@@ -139,7 +156,51 @@ Some of the optimizations that are currently in place are listed in figure \ref{
   \begin{prooftree}
   \hypo{\Gamma \vdash \Delta}
   \infer1[Rewrite]{\Gamma'' \vdash \Delta''}
-  \end{prooftree} \label{eq:simplify-rewrite-rewrite} \\[1em]
+  \end{prooftree} \\[1em]
+  % Weakening - Weakening
+  \begin{prooftree}
+  \hypo{\Gamma \vdash \Delta}
+  \infer1[Weakening]{\Gamma', \Gamma \vdash \Delta, \Delta'}
+  \infer1[Weakening]{\Gamma'', \Gamma', \Gamma \vdash \Delta, \Delta', \Delta''}
+  \end{prooftree}
+  \quad\leadsto\quad
+  \begin{prooftree}
+  \hypo{\Gamma \vdash \Delta}
+  \infer1[Weakening]{\Gamma'', \Gamma', \Gamma \vdash \Delta, \Delta', \Delta''}
+  \end{prooftree} \\[1em]
+  % Rewrite - Weakening
+  \begin{prooftree}
+  \hypo{\Gamma \vdash \Delta}
+  \infer1[Rewrite]{\Gamma' \vdash \Delta'}
+  \infer1[Weakening]{\Gamma'', \Gamma' \vdash \Delta', \Delta''}
+  \end{prooftree}
+  \quad\leadsto\quad
+  \begin{prooftree}
+  \hypo{\Gamma \vdash \Delta}
+  \infer1[Weakening]{\Gamma'', \Gamma' \vdash \Delta', \Delta''}
+  \end{prooftree} \\[1em]
+  % Weakening - Rewrite
+  \begin{prooftree}
+  \hypo{\Gamma \vdash \Delta}
+  \infer1[Weakening]{\Gamma', \Gamma \vdash \Delta, \Delta'}
+  \infer1[Rewrite]{\Gamma'' \vdash \Delta''}
+  \end{prooftree}
+  \quad\leadsto\quad
+  \begin{prooftree}
+  \hypo{\Gamma \vdash \Delta}
+  \infer1[Weakening]{\Gamma'' \vdash \Delta''}
+  \end{prooftree} \\[1em]
+  % Hypothesis - Rewrite
+  \begin{prooftree}
+  \hypo{}
+  \infer1[Hypothesis]{\Gamma, \phi \vdash \phi, \Delta}
+  \infer1[Rewrite]{\Gamma', \phi \vdash \phi, \Delta'}
+  \end{prooftree}
+  \quad\leadsto\quad
+  \begin{prooftree}
+  \hypo{}
+  \infer1[Hypothesis]{\Gamma', \phi \vdash \phi, \Delta'}
+  \end{prooftree} \\[1em]
   % Hypothesis - Weakening
   \begin{prooftree}
   \hypo{}
@@ -150,7 +211,7 @@ Some of the optimizations that are currently in place are listed in figure \ref{
   \begin{prooftree}
   \hypo{}
   \infer1[Hypothesis]{\Gamma', \Gamma, \phi \vdash \phi, \Delta, \Delta'}
-  \end{prooftree} \label{eq:simplify-hypothesis-weakening} \\[1em]
+  \end{prooftree} \\[1em]
   % Cut left
   \begin{prooftree}
   \hypo{\Gamma_1 \vdash \phi, \Delta_1}
@@ -161,8 +222,19 @@ Some of the optimizations that are currently in place are listed in figure \ref{
   \begin{prooftree}
   \hypo{\Gamma_2, \phi \vdash \Delta_2}
   \infer1[Weakening]{\Gamma_1, \Gamma_2, \phi \vdash \Delta_1, \Delta_2}
-  \end{prooftree} \label{eq:simplify-cut-left}
-  \end{gather}
-  \caption[Sample term rewriting rules]{Sample of term rewriting rules used to simply a proof. \eqref{eq:simplify-rewrite-rewrite}} corresponds to double rewriting elimination; this rule exists in different flavours, to cover weakening as well. \eqref{eq:simplify-hypothesis-weakening} accounts for hypotheses followed by weakening (or rewrites). \eqref{eq:simplify-cut-left} eliminates needless cut rule applications.
+  \end{prooftree} \\[1em]
+  % Cut right
+  \begin{prooftree}
+  \hypo{\Gamma_1 \vdash \phi, \Delta_1}
+  \hypo{\Gamma_2, \phi \vdash \Delta_2}
+  \infer2[Cut]{\Gamma_1, \Gamma_2 \vdash \phi, \Delta_1, \Delta_2}
+  \end{prooftree}
+  \quad\leadsto\quad
+  \begin{prooftree}
+  \hypo{\Gamma_1 \vdash \phi, \Delta_1}
+  \infer1[Weakening]{\Gamma_1, \Gamma_2 \vdash \phi, \Delta_1, \Delta_2}
+  \end{prooftree}
+  \end{gather*}
+  \caption[Term rewriting rules]{Term rewriting rules used to simply a proof. The first rule states that any proof step with one hypothesis equal to the conclusion can be suppressed.}
   \label{fig:synthesis-simplifications}
 \end{figure}
