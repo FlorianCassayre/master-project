@@ -60,4 +60,7 @@ private[parser] object FrontParsed {
   case class ParsedExists(bound: Seq[String], termOrFormula: ParsedTermOrFormula) extends ParsedBinder
   case class ParsedExistsOne(bound: Seq[String], termOrFormula: ParsedTermOrFormula) extends ParsedBinder
 
+  case class ParsedProofStep(stepPosition: Position, indentation: Int, line: Int, ruleName: String, premises: Seq[Int], conclusion: ParsedSequent, parameters: Seq[ParsedTopTermOrFormula]) extends FrontParsed
+  case class ParsedProof(steps: IndexedSeq[ParsedProofStep]) extends FrontParsed
+
 }

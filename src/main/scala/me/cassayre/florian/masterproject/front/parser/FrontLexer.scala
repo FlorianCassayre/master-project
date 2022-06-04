@@ -80,6 +80,53 @@ private trait FrontLexer extends RegexParsers {
  */
 object FrontLexer {
 
+  private trait FrontLexerExtended extends FrontLexer {
+    private val kernelRuleIdentifiers = KernelRuleIdentifiers(S)
+    import kernelRuleIdentifiers.*
+
+    private def integerLiteral: Parser[IntegerLiteral] = positioned(
+      "0|-?[1-9][0-9]*".r ^^ { str => IntegerLiteral(str.toInt) }
+    )
+
+    private def rules: Parser[RuleName] =
+      positioned(
+        (Hypothesis
+          | Cut
+          | Rewrite
+          | Weakening
+          | LeftAnd
+          | RightAnd
+          | LeftOr
+          | RightOr
+          | LeftImplies
+          | RightImplies
+          | LeftIff
+          | RightIff
+          | LeftNot
+          | RightNot
+          | LeftForall
+          | RightForall
+          | LeftExists
+          | RightExists
+          | LeftExistsOne
+          | RightExistsOne
+          | LeftRefl
+          | RightRefl
+          | LeftSubstEq
+          | RightSubstEq
+          | LeftSubstIff
+          | RightSubstIff
+          | FunInstantiation
+          | PredInstantiation
+          | SubproofHidden // Must come before `SubproofShown`
+          | SubproofShown //
+          | Import) ^^ RuleName.apply
+      )
+
+    override protected def tokens: Parser[Seq[FrontToken]] =
+      phrase(initialIndentation ~ rep(rules | integerLiteral | (S.SquareBracketOpen ^^^ SquareBracketOpen()) | (S.SquareBracketClose ^^^ SquareBracketClose()) | standardTokens) ^^ { case h ~ t => h +: t })
+  }
+
   private trait FrontLexerAscii extends FrontLexer {
     override protected val S: FrontSymbols = FrontSymbols.FrontAsciiSymbols
   }
@@ -89,6 +136,8 @@ object FrontLexer {
     override protected val S: FrontSymbols = FrontSymbols.FrontUnicodeSymbols
   }
   private object FrontLexerStandardUnicode extends FrontLexerUnicode
+  private object FrontLexerExtendedUnicode extends FrontLexerUnicode with FrontLexerExtended // Order of inheritance matter
+
 
   private def postProcessor(lines: Boolean, indentation: Boolean)(tokens: Seq[FrontToken]): Seq[FrontToken] = {
     val tokensWithEnd = tokens :+ End()
@@ -117,5 +166,8 @@ object FrontLexer {
 
   def lexingUnicode(str: String, lines: Boolean = false, indentation: Boolean = false): Seq[FrontToken] =
     postProcessor(lines, indentation)(FrontLexerStandardUnicode(str))
+
+  def lexingExtendedUnicode(str: String): Seq[FrontToken] =
+    postProcessor(lines = true, indentation = true)(FrontLexerExtendedUnicode(str))
 
 }

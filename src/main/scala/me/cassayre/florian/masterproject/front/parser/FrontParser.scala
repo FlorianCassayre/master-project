@@ -22,6 +22,16 @@ private[parser] object FrontParser extends Parsers {
   private def schematicConnectorIdentifier: Parser[SchematicConnectorIdentifier] =
     positioned(accept("schematic connector identifier", { case id: SchematicConnectorIdentifier => id }))
 
+  private def integerLiteral: Parser[IntegerLiteral] =
+    positioned(accept("integer literal", { case lit: IntegerLiteral => lit }))
+  private def ruleName: Parser[RuleName] =
+    positioned(accept("rule", { case rule: RuleName => rule }))
+
+  private def indentation: Parser[Indentation] =
+    positioned(accept("indentation", { case indentation: Indentation => indentation }))
+  private def newLine: Parser[NewLine] =
+    positioned(accept("new line", { case line: NewLine => line }))
+
   private def identifierOrSchematic: Parser[Identifier | SchematicIdentifier | SchematicConnectorIdentifier] =
     positioned((identifier: Parser[Identifier | SchematicIdentifier | SchematicConnectorIdentifier]) | schematicIdentifier | schematicConnectorIdentifier)
 
@@ -30,10 +40,7 @@ private[parser] object FrontParser extends Parsers {
       rep1sep(identifier, Comma()) ~ Dot() ~ termOrFormula ^^ { case f ~ bs ~ _ ~ t => f(bs.map(_.identifier), t) }
   )
 
-  private def termOrFormula: Parser[ParsedTermOrFormula] = positioned(
-   termOrFormulaIff |
-      binder
-  )
+  private def termOrFormula: Parser[ParsedTermOrFormula] = positioned(termOrFormulaIff)
 
   private def termOrFormulaIff: Parser[ParsedTermOrFormula] =
     positioned(termOrFormulaImplies ~ rep(Iff() ~> termOrFormulaImplies) ^^ { case h ~ t => (h +: t).reduceRight(ParsedIff.apply) })
@@ -44,16 +51,17 @@ private[parser] object FrontParser extends Parsers {
   private def termOrFormulaAnd: Parser[ParsedTermOrFormula] =
     positioned(termOrFormulaPredicate ~ rep(And() ~> termOrFormulaPredicate) ^^ { case h ~ t => (h +: t).reduceRight(ParsedAnd.apply) })
   private def termOrFormulaPredicate: Parser[ParsedTermOrFormula] =
-    positioned(termNot ~
+    positioned(termNotBinder ~
       rep((Membership() ^^^ ParsedMembership.apply | Subset() ^^^ ParsedSubset.apply | SameCardinality() ^^^ ParsedSameCardinality.apply | Equal() ^^^ ParsedEqual.apply) ~
-        termNot) ^^ {
+        termNotBinder) ^^ {
       case t1 ~ ts => ts.foldRight(t1) { case (f ~ tr, tl) => f(tl, tr) }
     })
 
-  private def termNot: Parser[ParsedTermOrFormula] =
+  private def termNotBinder: Parser[ParsedTermOrFormula] =
     positioned(
       atom
         | Not() ~> atom ^^ ParsedNot.apply
+        | binder
     )
 
   private def atom: Parser[ParsedTermOrFormula] = positioned(
@@ -108,6 +116,21 @@ private[parser] object FrontParser extends Parsers {
         case fv ~ (l, pl) ~ _ ~ (r, pr) => ParsedPartialSequent(fv, l, r, pl, pr)
     })
 
+
+  private def proofStepParameters: Parser[Seq[ParsedTopTermOrFormula]] =
+    SquareBracketOpen() ~> repsep(topTermOrFormula, Semicolon()) <~ SquareBracketClose() ^^ (_.toSeq)
+
+  private def proofStep: Parser[ParsedProofStep] = positioned(
+    indentation ~ integerLiteral ~ ruleName ~ repsep(integerLiteral, Comma()) ~ sequent ~ proofStepParameters.? ^^ {
+      case i ~ l ~ r ~ p ~ s ~ ps => ParsedProofStep(l.pos, i.spaces, l.value, r.name, p.map(_.value), s, ps.getOrElse(Seq.empty))
+    }
+  )
+
+  private def proof: Parser[ParsedProof] = positioned(
+    (indentation ~ newLine).* ~> rep1sep(proofStep, newLine) <~ (newLine ~ indentation).* ^^ (steps => ParsedProof(steps.toIndexedSeq))
+  )
+
+
   private def parse[T](parser: Parser[T])(tokens: Seq[FrontToken]): T = {
     val reader = new FrontTokensReader(tokens)
     parser(reader) match {
@@ -128,4 +151,7 @@ private[parser] object FrontParser extends Parsers {
 
   def parsePartialSequent(tokens: Seq[FrontToken]): ParsedPartialSequent =
     parse(positioned(partialSequent <~ End()))(tokens)
+
+  def parseProof(tokens: Seq[FrontToken]): ParsedProof =
+    parse(positioned(proof <~ End()))(tokens)
 }

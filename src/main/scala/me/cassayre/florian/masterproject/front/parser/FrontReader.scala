@@ -18,7 +18,7 @@ object FrontReader {
   def readTerm(str: String, ascii: Boolean = true, toplevel: Boolean = true, multiline: Boolean = false): Term = {
     val tokens = lexing(str, ascii, multiline)
     if(toplevel)
-      FrontResolver.resolveTerm(FrontParser.parseTermOrFormula(tokens))
+      FrontResolver.resolveTerm(FrontParser.parseTopTermOrFormula(tokens))
     else
       FrontResolver.resolveTerm(FrontParser.parseTermOrFormula(tokens))
   }

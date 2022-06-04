@@ -47,14 +47,14 @@ private[parser] object FrontResolver {
       name match {
         case ParsedConstant(identifier) =>
           // If the name in context then it must be a variable. Otherwise we fallback to a constant function
-          if(ctx.variables.contains(name.identifier)) {
-            VariableTerm(VariableLabel(name.identifier))
+          if(ctx.variables.contains(identifier)) {
+            VariableTerm(VariableLabel(identifier))
           } else {
-            ConstantFunctionLabel[0](name.identifier)
+            ConstantFunctionLabel[0](identifier)
           }
         case ParsedSchema(identifier, connector) =>
           if(!connector) {
-            SchematicFunctionLabel[0](name.identifier)
+            SchematicFunctionLabel[0](identifier)
           } else {
             throw ResolutionException("Type error: expected term, got schematic connector formula", tree.pos)
           }
