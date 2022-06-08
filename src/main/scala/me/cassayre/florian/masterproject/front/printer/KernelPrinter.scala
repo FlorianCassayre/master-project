@@ -2,10 +2,12 @@ package me.cassayre.florian.masterproject.front.printer
 
 import lisa.kernel.proof.SequentCalculus as SC
 import lisa.kernel.fol.FOL
+import lisa.kernel.proof.SequentCalculus.SCProofStep
 import me.cassayre.florian.masterproject.front.*
-import me.cassayre.florian.masterproject.front.parser.KernelRuleIdentifiers
+import me.cassayre.florian.masterproject.front.parser.{FrontSymbols, KernelRuleIdentifiers}
 import me.cassayre.florian.masterproject.front.printer.FrontPositionedPrinter
 import me.cassayre.florian.masterproject.front.printer.FrontPrintStyle.{Ascii, Latex, Unicode}
+import me.cassayre.florian.masterproject.util.SCUtils
 
 object KernelPrinter {
 
@@ -22,13 +24,14 @@ object KernelPrinter {
     override val parameters: Seq[String] = Seq.empty
   }
 
+  private def sequentFromKernel(s: lisa.kernel.proof.SequentCalculus.Sequent): Sequent = {
+    def sorted(seq: IndexedSeq[Formula]): IndexedSeq[Formula] = seq.sortBy(_.toString)
+    Sequent(sorted(s.left.toIndexedSeq.map(fromKernel)), sorted(s.right.toIndexedSeq.map(fromKernel)))
+  }
+
   def prettyProof(scProof: lisa.kernel.proof.SCProof, style: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, explicit: Boolean = false): String = {
     val p = FrontPrintParameters(style, compact)
     val r = KernelRuleIdentifiers(p.s)
-    def sequentFromKernel(s: lisa.kernel.proof.SequentCalculus.Sequent): Sequent = {
-      def sorted(seq: IndexedSeq[Formula]): IndexedSeq[Formula] = seq.sortBy(_.toString)
-      Sequent(sorted(s.left.toIndexedSeq.map(fromKernel)), sorted(s.right.toIndexedSeq.map(fromKernel)))
-    }
     def prettyName(name: String): String = style match {
       case FrontPrintStyle.Latex => raw"\text{$name}"
       case _ => name
@@ -45,47 +48,48 @@ object KernelPrinter {
 
     def wrap(scProof: lisa.kernel.proof.SCProof): ProofWrapper = {
       val steps = scProof.steps.map { step =>
-        val (name: String, parameters: Seq[String]) = step match {
-          case s: SC.Hypothesis => (r.Hypothesis, Seq(prettyFormula(s.phi)))
-          case s: SC.Cut => (r.Cut, Seq(prettyFormula(s.phi)))
-          case _: SC.Rewrite => (r.Rewrite, Seq.empty)
-          case _: SC.Weakening => (r.Weakening, Seq.empty)
-          case s: SC.LeftAnd => (r.LeftAnd, Seq(s.phi, s.psi).map(prettyFormula))
-          case s: SC.RightAnd => (r.RightAnd, s.cunjuncts.map(prettyFormula))
-          case s: SC.LeftOr => (r.LeftOr, s.disjuncts.map(prettyFormula))
-          case s: SC.RightOr => (r.RightOr, Seq(s.phi, s.psi).map(prettyFormula))
-          case s: SC.LeftImplies => (r.LeftImplies, Seq(s.phi, s.psi).map(prettyFormula))
-          case s: SC.RightImplies => (r.RightImplies, Seq(s.phi, s.psi).map(prettyFormula))
-          case s: SC.LeftIff => (r.LeftIff, Seq(s.phi, s.psi).map(prettyFormula))
-          case s: SC.RightIff => (r.RightIff, Seq(s.phi, s.psi).map(prettyFormula))
-          case s: SC.LeftNot => (r.LeftNot, Seq(prettyFormula(s.phi)))
-          case s: SC.RightNot => (r.RightNot, Seq(prettyFormula(s.phi)))
-          case s: SC.LeftForall => (r.LeftForall, Seq(prettyFormula(s.phi), s.x.id, prettyTerm(s.t)))
-          case s: SC.RightForall => (r.RightForall, Seq(prettyFormula(s.phi), s.x.id))
-          case s: SC.LeftExists => (r.LeftExists, Seq(prettyFormula(s.phi), s.x.id))
-          case s: SC.RightExists => (r.RightExists, Seq(prettyFormula(s.phi), s.x.id, prettyTerm(s.t)))
-          case s: SC.LeftExistsOne => (r.LeftExistsOne, Seq(prettyFormula(s.phi), s.x.id))
-          case s: SC.RightExistsOne => (r.RightExistsOne, Seq(prettyFormula(s.phi), s.x.id))
-          case s: SC.LeftRefl => (r.LeftRefl, Seq(prettyFormula(s.fa)))
-          case s: SC.RightRefl => (r.RightRefl, Seq(prettyFormula(s.fa)))
-          case s: SC.LeftSubstEq => (r.LeftSubstEq, s.equals.flatMap { case (l, r) => Seq(l, r) }.map(prettyTerm)
-            :+ prettyPredicate(FOL.ConstantPredicateLabel(placeholder, s.lambdaPhi.vars.size), s.lambdaPhi))
-          case s: SC.RightSubstEq => (r.RightSubstEq, s.equals.flatMap { case (l, r) => Seq(l, r) }.map(prettyTerm)
-            :+ prettyPredicate(FOL.ConstantPredicateLabel(placeholder, s.lambdaPhi.vars.size), s.lambdaPhi))
-          case s: SC.LeftSubstIff => (r.LeftSubstIff, s.equals.flatMap { case (l, r) => Seq(l, r) }.map(prettyFormula)
+        val name = r.identify(step)
+        val parameters: Seq[String] = step match {
+          case s: SC.Hypothesis => Seq(prettyFormula(s.phi))
+          case s: SC.Cut => Seq(prettyFormula(s.phi))
+          case _: SC.Rewrite => Seq.empty
+          case _: SC.Weakening => Seq.empty
+          case s: SC.LeftAnd => Seq(s.phi, s.psi).map(prettyFormula)
+          case s: SC.RightAnd => s.cunjuncts.map(prettyFormula)
+          case s: SC.LeftOr => s.disjuncts.map(prettyFormula)
+          case s: SC.RightOr => Seq(s.phi, s.psi).map(prettyFormula)
+          case s: SC.LeftImplies => Seq(s.phi, s.psi).map(prettyFormula)
+          case s: SC.RightImplies => Seq(s.phi, s.psi).map(prettyFormula)
+          case s: SC.LeftIff => Seq(s.phi, s.psi).map(prettyFormula)
+          case s: SC.RightIff => Seq(s.phi, s.psi).map(prettyFormula)
+          case s: SC.LeftNot => Seq(prettyFormula(s.phi))
+          case s: SC.RightNot => Seq(prettyFormula(s.phi))
+          case s: SC.LeftForall => Seq(prettyFormula(s.phi), s.x.id, prettyTerm(s.t))
+          case s: SC.RightForall => Seq(prettyFormula(s.phi), s.x.id)
+          case s: SC.LeftExists => Seq(prettyFormula(s.phi), s.x.id)
+          case s: SC.RightExists => Seq(prettyFormula(s.phi), s.x.id, prettyTerm(s.t))
+          case s: SC.LeftExistsOne => Seq(prettyFormula(s.phi), s.x.id)
+          case s: SC.RightExistsOne => Seq(prettyFormula(s.phi), s.x.id)
+          case s: SC.LeftRefl => Seq(prettyFormula(s.fa))
+          case s: SC.RightRefl => Seq(prettyFormula(s.fa))
+          case s: SC.LeftSubstEq => s.equals.flatMap { case (l, r) => Seq(l, r) }.map(prettyTerm)
+            :+ prettyPredicate(FOL.ConstantPredicateLabel(placeholder, s.lambdaPhi.vars.size), s.lambdaPhi)
+          case s: SC.RightSubstEq => s.equals.flatMap { case (l, r) => Seq(l, r) }.map(prettyTerm)
+            :+ prettyPredicate(FOL.ConstantPredicateLabel(placeholder, s.lambdaPhi.vars.size), s.lambdaPhi)
+          case s: SC.LeftSubstIff => s.equals.flatMap { case (l, r) => Seq(l, r) }.map(prettyFormula)
             :+ prettyPredicate(
               FOL.ConstantPredicateLabel(placeholder, s.lambdaPhi.vars.size),
               FOL.LambdaTermFormula(s.lambdaPhi.vars.map(v => FOL.SchematicFunctionLabel(v.id, v.arity)), s.lambdaPhi.body)
-            ))
-          case s: SC.RightSubstIff => (r.RightSubstIff, s.equals.flatMap { case (l, r) => Seq(l, r) }.map(prettyFormula)
+            )
+          case s: SC.RightSubstIff => s.equals.flatMap { case (l, r) => Seq(l, r) }.map(prettyFormula)
             :+ prettyPredicate(
             FOL.ConstantPredicateLabel(placeholder, s.lambdaPhi.vars.size),
             FOL.LambdaTermFormula(s.lambdaPhi.vars.map(v => FOL.SchematicFunctionLabel(v.id, v.arity)), s.lambdaPhi.body)
-          ))
-          case s: SC.InstFunSchema => (r.FunInstantiation, s.insts.toSeq.map { case (label, lambda) => prettyFunction(label, lambda) })
-          case s: SC.InstPredSchema => (r.PredInstantiation, s.insts.toSeq.map { case (label, lambda) => prettyPredicate(label, lambda) })
-          case SC.SCSubproof(_, _, true) => (r.SubproofShown, Seq.empty)
-          case SC.SCSubproof(_, _, false) => (r.SubproofHidden, Seq.empty)
+          )
+          case s: SC.InstFunSchema => s.insts.toSeq.map { case (label, lambda) => prettyFunction(label, lambda) }
+          case s: SC.InstPredSchema => s.insts.toSeq.map { case (label, lambda) => prettyPredicate(label, lambda) }
+          case SC.SCSubproof(_, _, true) => Seq.empty
+          case SC.SCSubproof(_, _, false) => Seq.empty
         }
         step match {
           case SC.SCSubproof(sp, premises, true) =>
@@ -188,6 +192,31 @@ object KernelPrinter {
         ).mkString("\n")
       case _ => content
     }
+  }
+
+  def prettyProofTreeLatex(scProof: lisa.kernel.proof.SCProof): String = {
+    val r = KernelRuleIdentifiers(FrontSymbols.FrontLatexSymbols)
+    val flatProof = SCUtils.flattenProof(scProof)
+    def postOrder(step: SCProofStep): Seq[Either[SCProofStep, SC.Sequent]] =
+      step.premises.flatMap { i =>
+        if(i >= 0) postOrder(flatProof.steps(i)) else Seq(Right(flatProof.imports(-(i + 1))))
+      } :+ Left(step)
+    val orderedSteps = postOrder(flatProof.steps.last)
+    val orderedStepsOptionals: Seq[Either[SCProofStep, Option[SC.Sequent]]] = orderedSteps.flatMap {
+      case Left(step) => (if(step.premises.isEmpty) Seq(Right(None)) else Seq.empty) ++ Seq(Left(step))
+      case Right(sequent) => Seq(Right(Some(sequent)))
+    }
+
+    def prettySequent(sequent: SC.Sequent): String =
+      FrontPositionedPrinter.prettySequent(sequentFromKernel(sequent), Latex)
+
+    (raw"\begin{prooftree}" +:
+      orderedStepsOptionals.map {
+        case Left(step) => raw"\infer${Math.max(step.premises.size, 1)}[$$${r.identify(step)}$$]{${prettySequent(step.bot)}}"
+        case Right(None) => raw"\hypo{}"
+        case Right(Some(sequent)) => raw"\hypo{${prettySequent(sequent)}}"
+      } :+
+      raw"\end{prooftree}").mkString("\n")
   }
 
 }

@@ -1,5 +1,8 @@
 package me.cassayre.florian.masterproject.front.parser
 
+import lisa.kernel.proof.SequentCalculus.SCProofStep
+import lisa.kernel.proof.SequentCalculus as SC
+
 private[front] case class KernelRuleIdentifiers(symbols: FrontSymbols) {
 
   private val isLatex: Boolean = symbols.isInstanceOf[FrontSymbols.FrontLatexSymbols.type]
@@ -50,5 +53,38 @@ private[front] case class KernelRuleIdentifiers(symbols: FrontSymbols) {
   val SubproofShown: String = text(Subproof)
   val SubproofHidden: String = text(s"$Subproof (hidden)")
   val Import: String = text("Import")
+
+  def identify(step: SCProofStep): String = step match {
+    case _: SC.Hypothesis => Hypothesis
+    case _: SC.Cut => Cut
+    case _: SC.Rewrite => Rewrite
+    case _: SC.Weakening => Weakening
+    case _: SC.LeftAnd => LeftAnd
+    case _: SC.RightAnd => RightAnd
+    case _: SC.LeftOr => LeftOr
+    case _: SC.RightOr => RightOr
+    case _: SC.LeftImplies => LeftImplies
+    case _: SC.RightImplies => RightImplies
+    case _: SC.LeftIff => LeftIff
+    case _: SC.RightIff => RightIff
+    case _: SC.LeftNot => LeftNot
+    case _: SC.RightNot => RightNot
+    case _: SC.LeftForall => LeftForall
+    case _: SC.RightForall => RightForall
+    case _: SC.LeftExists => LeftExists
+    case _: SC.RightExists => RightExists
+    case _: SC.LeftExistsOne => LeftExistsOne
+    case _: SC.RightExistsOne => RightExistsOne
+    case _: SC.LeftRefl => LeftRefl
+    case _: SC.RightRefl => RightRefl
+    case _: SC.LeftSubstEq => LeftSubstEq
+    case _: SC.RightSubstEq => RightSubstEq
+    case _: SC.LeftSubstIff => LeftSubstIff
+    case _: SC.RightSubstIff => RightSubstIff
+    case _: SC.InstFunSchema => FunInstantiation
+    case _: SC.InstPredSchema => PredInstantiation
+    case SC.SCSubproof(_, _, true) => SubproofShown
+    case SC.SCSubproof(_, _, false) => SubproofHidden
+  }
 
 }
