@@ -23,10 +23,14 @@
 \usepackage[stable]{footmisc}
 \usepackage[nounderscore]{syntax}
 \usepackage{framed}
+\usepackage{etoc} % Multiple ToCs
 \usetikzlibrary{trees}
 \usepackage[style=numeric-comp]{biblatex}
 \addbibresource{bibliography.bib}
 \setlength{\columnsep}{4cm} % Adjust base on your name length
+
+% Draft
+\usepackage[firstpage]{draftwatermark}\SetWatermarkScale{2}
 
 \let\oldemptyset\emptyset
 \let\emptyset\varnothing
@@ -53,9 +57,10 @@
 \input{cover}
 \newpage
 
-\newgeometry{total={170mm, 250mm}}
-\setlength{\headheight}{1.5cm}
+\newgeometry{total={165mm, 245mm}}
+\setlength{\headheight}{2cm}
 \addtolength{\topmargin}{-0.5cm}
+\setlength{\headsep}{0.5cm}
 
 \pagenumbering{arabic}
 \newpage
@@ -63,14 +68,13 @@
 \input{abstract}
 \newpage
 
+\setcounter{tocdepth}{1}
 \tableofcontents
-\listoftables
-\listoffigures
 \newpage
 
 \pagestyle{fancy}
 \input{chapters/1-introduction}
-\input{chapters/2-existing-work}
+\input{chapters/2-background}
 \input{chapters/3-framework}
 \input{chapters/4-proofs}
 \input{chapters/5-synthesis}
@@ -79,9 +83,19 @@
 \input{chapters/8-future-work}
 \input{chapters/9-conclusion}
 
-\printbibliography
+\newpage
 
 \appendix
 \input{chapters/appendix}
+\newpage
+
+\printbibliography[heading=bibintoc]
+\newpage
+
+\setcounter{tocdepth}{3}
+\tableofcontents
+\listoftables
+\listoffigures
+\newpage
 
 \end{document}

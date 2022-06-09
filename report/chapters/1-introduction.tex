@@ -3,11 +3,53 @@
 
 % TODO introduction
 
-The supporting source code for this project is published on GitHub\footnote{\href{http://github.com/FlorianCassayre/master-project}{github.com/FlorianCassayre/master-project}}.
+The supporting source code for this project is published at the following address:
+\begin{center}
+\href{http://github.com/FlorianCassayre/master-project}{\textbf{github.com/FlorianCassayre/master-project}}
+\end{center}
+
 
 \cite{Asperti2007}
 
 \subsection{LISA}
 
-LISA\footnote{\href{https://github.com/epfl-lara/lisa}{github.com/epfl-lara/lisa}} (LISA Is Sets Automated) is an ongoing project conducted at LARA. It is a proof assistant framework built on top of sequent calculus and set theory. \cite{Guilloud2022-2}
+LISA\footnote{\textbf{L}ISA \textbf{I}s \textbf{S}ets \textbf{A}utomated} is an ongoing project conducted at LARA, EPFL. It is a proof assistant framework built on top of sequent calculus and set theory \cite{Guilloud2022-2}.
 
+A sequent is a pair of sets of formulas, noted $l_1, l_r, ..., l_n \vdash r_1, r_2, ..., r_m$, and can be understood as a conjunction of premises implying a disjunction of conclusions, although the actual semantic is controlled by the inference rules of the system. An inference rule can be used as a proof step by specifying the premises in the proof.
+
+\begin{figure}[H]
+  $$
+  \begin{prooftree}
+  \hypo{}
+  \infer1[Hypo.]{{?a} \vdash {?a}, {?b}}
+  \infer1[Left $\neg$]{\neg{?a}, {?a} \vdash {?b}}
+  \hypo{}
+  \infer1[Hypo.]{{?a}, {?b} \vdash {?b}}
+  \infer2[Left $\lor$]{\neg{?a} \lor {?b}, {?a} \vdash {?b}}
+  \infer1[Right $\Rightarrow$]{\neg{?a} \lor {?b} \vdash {?a} \Rightarrow {?b}}
+  \infer1[Right $\Rightarrow$]{\vdash \neg{?a} \lor {?b} \Rightarrow {?a} \Rightarrow {?b}}
+  %
+  \hypo{}
+  \infer1[Hypo.]{{?a} \vdash {?a}, {?b}}
+  \infer1[Right $\neg$]{\vdash \neg{?a}, {?a}, {?b}}
+  \hypo{}
+  \infer1[Hypo.]{{?b} \vdash \neg{?a}, {?b}}
+  \infer2[Left $\Rightarrow$]{{?a} \Rightarrow {?b} \vdash \neg{?a}, {?b}}
+  \infer1[Right $\lor$]{{?a} \Rightarrow {?b} \vdash \neg{?a} \lor {?b}}
+  \infer1[Right $\Rightarrow$]{\vdash ({?a} \Rightarrow {?b}) \Rightarrow \neg{?a} \lor {?b}}
+  %
+  \infer2[Right $\Leftrightarrow$]{\vdash \neg{?a} \lor {?b} \Leftrightarrow {?a} \Rightarrow {?b}}
+  \end{prooftree}
+  $$
+  \caption[Proof tree]{An example of a proof in sequent calculus. Here it proves the tautology $\neg{?a}\lor{?b}\Leftrightarrow{?a}\Rightarrow{?b}$. The question mark indicates a schema, essentially a variable such that the statement holds true for any value. The inference used at every step is indicated.}
+  \label{fig:simple-lisa-proof-graph}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \input{figures/proof-mini.lisa}
+  \caption[Proof in LISA]{A representation of the proof of \autoref{fig:simple-lisa-proof-graph} in LISA. Each step is assigned an index, import are represented with negative indices. The indentation corresponds to the level of the proof: subproofs are indented further down. The second column states what rule is used, along with the premises it relies upon. The third column is the conclusion of that step. The last column contains parameters to disambiguate the application of the rule.}
+  \label{fig:simple-lisa-proof}
+\end{figure}
+
+Currently LISA only exists as a Scala library, therefore the proofs are described using Scala code.

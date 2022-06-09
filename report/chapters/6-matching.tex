@@ -5,7 +5,7 @@ Matching is the process of finding an assignment for a pattern such that when th
 
 Most programming languages that implement pattern matching, such as Scala, disallow the reuse of pattern variables. These kinds of patterns are referred to as linear. On the other hand, non-linear patterns allow variables to appear multiple times. In that case the usually implied semantic is that all the occurrences of the same variable should be pairwise equal.
 
-In this framework we relax the notion of equality for non-linear pattern variables by allowing them to be equivalent with respect to OCBSL. This leads to an ambiguity in the assignment because by construction a variable can only be assigned a single value; thus not only will the resulting assignment may not lead to an instantiation that is structurally equal to the target, but it is also unclear which assigned value to choose. To address these ambiguities, we define deterministic rules that are not necessarily practical but are required to exhibit consistent behavior over different execution contexts.
+In this framework we relax the notion of equality for non-linear pattern variables by allowing them to be equivalent with respect the equivalence checker implemented in LISA: the orthocomplemented bisemilattices (OCBSL) equivalence checker \cite{Guilloud2022}. This leads to an ambiguity in the assignment because by construction a variable can only be assigned a single value; thus not only will the resulting assignment may not lead to an instantiation that is structurally equal to the target, but it is also unclear which assigned value to choose. To address these ambiguities, we define deterministic rules that are not necessarily practical but are required to exhibit consistent behavior over different execution contexts.
 
 \subsection{Definitions}
 
@@ -31,7 +31,7 @@ Because the procedure can also be used to rename bound variables, the pattern sh
 
 If a pattern variable can take more than one equivalent form, we should select the one that appears first with respect to the pre-order of that tree.
 
-For a list of examples with their expected output according to this specification, refer to table \ref{tab:matching-examples}.
+For a list of examples with their expected output according to this specification, refer to \autoref{tab:matching-examples}.
 
 \subsection{Algorithm\texorpdfstring{\footnote{The implementation of this algorithm can be found in the file \href{https://github.com/FlorianCassayre/master-project/blob/master/src/main/scala/me/cassayre/florian/masterproject/front/proof/unification/UnificationUtils.scala}{\code{UnificationUtils.scala}}.}}{Lg}}
 

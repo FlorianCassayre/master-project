@@ -1,9 +1,26 @@
 \section{Proofs}
 \label{sec:proofs}
 
-LCF-like proof systems are notorious for the simplicity of their implementation, which makes them desirable foundational systems [citation needed]. However they also become a limiting factor in terms of usability, assuming they are used bare (that is without an overlay). For example incomplete proofs cannot be constructed, although those are useful in practice. Another example, which is a consequence of the first: proofs must be constructed in the forward direction only, meaning that the conclusion is dictated by the final construction (the last step) instead of being stated in advance as it is often done with pen and paper proofs.
+LCF-like proof systems are notorious for the simplicity of their implementation, which makes them desirable foundational systems [citation needed]. However they also become a limiting factor in terms of usability, assuming they are used bare (that is without an overlay). For example incomplete proofs cannot be constructed, despite being useful in practice. Another example, which is a consequence of the former: proofs must be constructed in the forward direction only, meaning that the conclusion is dictated by the final construction (the last step) instead of being stated in advance as it is often done with pen and paper proofs.
 
-In that aspect the front introduces new concepts to describe proofs, heavily inspired by those in existing frameworks.
+\begin{definition}[Justified statement]
+A \textbf{justified statement} is a sequent that is understood to be true within a theory. Axioms, theorems and definitions are examples of justified statements.
+\end{definition}
+
+In LISA and in our system, sequents are the base logical construct. They carry a meaning that is at least as strong as formulas because any formula $\mathcal{F}$ can be encoded as $\vdash \mathcal{F}$. That is how axiomatic formulas are encoded.
+
+\begin{definition}[Theory]
+A \textbf{theory} (or \textbf{environment}) is a global context that contains a set of justified statements. It is constructed with an initial set of axioms and can be used to translate proofs into theorems and definitions.
+\end{definition}
+
+The concept of theories is a formalization of mathematical theories. Namely a context with some axioms and definitions that one can use without proving. In our framework, axioms must be defined in advance (it is not possible to add more later). This provides more control over the critical parts of the system, in particular it ensures that an instance of a theory will have exactly those axioms and not more. Theorems can be obtained by providing a proof that depends on other justified statements of this theory. Definitions require a proof of uniqueness. These aspects are similar to the kernel's \code{RunningTheory}.
+
+\begin{definition}[Proof direction]
+A \textbf{forward proof} is a proof where the conclusion of each proof step is a justified statement.
+A \textbf{backward proof} is a forward proof with the proof steps reversed.
+\end{definition}
+
+Forward proofs are conservative: when moving from one state to another the environment becomes strictly more rich. It is not the case for backward proofs, as it is possible to end up with proof states that are (provably) unprovable. One can observe that kernel proofs can easily be adapted to satisfy the forward reasoning definition, by transforming every proof step into an ordered sequence of proofs having one proof step. Moreover one can also see that forward and backward proofs are dual of each other. Backward proofs motivate the introduction of the following concepts, inspired by existing frameworks.
 
 \begin{definition}[Proof mode]
 The \textbf{proof mode} is a contextualized representation of a backward proof.
@@ -23,17 +40,37 @@ In proof mode, the \textbf{proof state} is a stack of proof goals.
 
 To enter in proof mode it is required to provide an initial proof goal that will serve as an initial state to this proof mode. A statement is said to be proven once the proof state becomes empty, or in other words once all proof goals have been eliminated. Thus, proof modes with empty proof states should produce a valid kernel proof.
 
-Regarding the representation of the proof state as a stack, it is motivated by the fact that the order of the goals is arbitrary as it does not affect the realization of the proof. With that model in minde, the \textbf{current goal} naturally refers to the goal at the top of the stack. Therefore, by convention it is natural to choose to push new goals at the top of the stack since those are most likely to be proven next by the user (or a tactic).
+Regarding the representation of the proof state as a stack, it is motivated by the fact that the order of the goals is arbitrary as it does not affect the realization of the proof. With that model in mind, the \textbf{current goal} naturally refers to the goal at the top of the stack. Therefore, by convention it is natural to choose to push new goals to the top of the stack since those are most likely to be proven next by the user.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[auto, on grid, block/.style = {draw, fill=white, rectangle, double, double distance=0.5mm, text width=3.2cm, node distance=2.5cm and 6cm, minimum height=1.4cm, inner sep=0.2cm}, none/.style = {draw=none, minimum height=0cm}]
+  \node [block] (state0) {\scriptsize $\vdash \neg{?a} \lor {?b} \Leftrightarrow {?a} \Rightarrow {?b}$};
+  \node [block, right = of state0] (state1) {\scriptsize $\vdash \neg{?a} \lor {?b} \Rightarrow {?a} \Rightarrow {?b}$ \\ $\vdash ({?a} \Rightarrow {?b}) \Rightarrow \neg{?a} \lor {?b}$};
+  \node [block, right = of state1] (state2) {\scriptsize $\vdash ({?a} \Rightarrow {?b}) \Rightarrow \neg{?a} \lor {?b}$ \\ $\vdash \neg{?a} \lor {?b} \Rightarrow {?a} \Rightarrow {?b}$};
+  \node [block, below = of state0] (state3) {\scriptsize ${?a} \Rightarrow {?b} \vdash \neg{?a} \lor {?b}$ \\ $\vdash \neg{?a} \lor {?b} \Rightarrow {?a} \Rightarrow {?b}$};
+  \node [block, below = of state1] (state4) {\scriptsize $\vdash {?a}, \neg{?a} \lor {?b}$ \\[0.2em] ${?b} \vdash \neg{?a} \lor {?b}$ \\[0em] $\vdash \neg{?a} \lor {?b} \Rightarrow {?a} \Rightarrow {?b}$}; % Weird
+  \node [block, below = of state2, text centered] (state5) {(no goals)};
+  \draw [->, shorten >= 0.5mm] -- ++(0, 1.5) node[fill=white]{Prove $\vdash \neg{?a} \lor {?b} \Leftrightarrow {?a} \Rightarrow {?b}$} -- (state0);
+  \draw [->, shorten >= 0.5mm] (state0.east) -- ++(1.25, 0) node[fill=white]{I.R.$\Leftrightarrow$} -- (state1);
+  \draw [->, shorten >= 0.5mm] (state1.east) -- ++(1.25, 0) node[fill=white]{Focus [2]} -- (state2);
+  \draw [->, shorten >= 0.5mm] (state2.south) |- ++(0, -0.55) |- ++(-5.95, 0) node[fill=white]{I.R.$\Rightarrow$} -| (state3.north);
+  \draw [->, shorten >= 0.5mm] (state3.east) -- ++(1.25, 0) node[fill=white]{I.L.$\Rightarrow$} -- (state4);
+  \draw [->, shorten >= 0.5mm] (state4.east) -- ++(1.25, 0) node[fill=white]{Solve} -- (state5);
+  \end{tikzpicture}
+  \caption[Example proof mode interaction]{Example of an interaction in proof mode. The boxes represent the successive proof states and the edges correspond to the tactic applied.}
+  \label{fig:proof-interaction}
+\end{figure}
 
 \subsection{Tactics}
 
 \begin{definition}[Tactic]
-A \textbf{tactic} is a partial function that maps parameters and proof states to proof states and reconstruction schemes.
+A \textbf{tactic} is a partial function that maps parameters and proof states to proof states and partial kernel proofs.
 \end{definition}
 
 Informally, a tactic transforms a proof state into a new state, and the result of this transformation has a representation in terms of kernel proof steps. The former describes how the state evolves in the front while the latter does the synchronization with the kernel.
 
-Tactics can be categorized into more specific functions, for instance most tactics only work on a single goal by replacing by zero or more new goals.
+Tactics can be categorized into more specific functions, for instance most tactics only work on a single goal by replacing it by zero or more new goals. Other tactics may only reorganize the proof, for instance by reordering goals.
 
 \subsection{Rules}
 \label{sec:proof-framework-rules}
@@ -44,9 +81,38 @@ A \textbf{rule} ......
 
 Rules are a particular case of tactics, ....
 
+\begin{figure}[hbt!]
+  \centering
+  \subfloat[\centering The rule \label{fig:example-rule-high}]{
+  $$
+  \begin{prooftree}
+  \hypo{\Gamma \vdash \phi \lor \psi, \Delta}
+  \infer1{\Gamma \vdash \phi, \psi, \Delta}
+  \end{prooftree}
+  \qquad
+  $$
+  }
+  \subfloat[\centering Corresponding kernel steps \label{fig:example-rule-kernel}]{
+  $$
+  \qquad
+  \begin{prooftree}
+  \hypo{\boxed{\Gamma \vdash \phi \lor \psi, \Delta}}
+  \hypo{}
+  \infer1[Hypothesis]{\phi \vdash \phi}
+  \hypo{}
+  \infer1[Hypothesis]{\psi \vdash \psi}
+  \infer2[Left $\lor$]{\phi \lor \psi \vdash \phi, \psi}
+  \infer2[Cut]{\boxed{\Gamma \vdash \phi, \psi, \Delta}}
+  \end{prooftree}
+  $$
+  }
+  \label{fig:example-rule}
+  \caption[Correspondence between front rules and kernel steps]{Correspondence between front rules and kernel steps. The framed sequent represent the corresponding input and output.}
+\end{figure}
+
 \subsection{Tactics combinators}
 
-Although impractical, tactics can call other tactics when they are applied. Instead we provide a set of predefined combinators that can be used as higher-order tactics (table \ref{tab:tactics-combinators}).
+Although impractical, tactics can call other tactics when they are applied. Instead we provide a set of predefined combinators that can be used as higher-order tactics (\autoref{tab:tactics-combinators}).
 
 \begin{table}[hbt!]
   \centering
@@ -62,7 +128,7 @@ Although impractical, tactics can call other tactics when they are applied. Inst
   \label{tab:tactics-combinators}
 \end{table}
 
-These combinators make it possible to conveniently write simple routines, for instance a propositional solver (figure \ref{fig:solver-combinators}). Remark that this particular procedure is deterministic and runs in exponential time in the worst case. The argument for the former is a proof by induction on the structure of the goal, while the argument for the latter is a pathological case (e.g. a sequence of conjunctions on the right side). More efficient heuristics could be used to slightly improve the runtime and the length of the proofs, however as per \cite{Krajicek1994} there exists tautologies that cannot be proven in less than an exponential number of LISA's sequent calculus steps (even with the cut rule).
+These combinators make it possible to conveniently write simple routines, for instance a propositional solver (\autoref{fig:solver-combinators}). Remark that this particular procedure is deterministic and runs in exponential time in the worst case. The argument for the former is a proof by induction on the structure of the goal, while the argument for the latter is a pathological case (e.g. a sequence of conjunctions on the right side). More efficient heuristics could be used to slightly improve the runtime and the length of the proofs, however as per \cite{Krajicek1994} there exists tautologies that cannot be proven in less than an exponential number of LISA's sequent calculus steps (even with the cut rule).
 
 \begin{figure}[hbt!]
   \centering
@@ -80,4 +146,4 @@ val autoProp = (introHypo
 
 \subsection{Proof-level state transformations}
 
-Because the proof mode is meant to be interactive, it implements commands to interact with the history, for instance to cancel an applied tactic or to restart the proof. While these features aren't particularly interesting nor complex they provide an interface for interactivity; the most primitive example of such an interface being the REPL\footnote{REPL: Read-Eval-Print Loop, a generic term to describe an interactive code interpreting environment.}.
+Because the proof mode is meant to be interactive, it implements commands to interact with the history, for instance to cancel an applied tactic or to restart the proof. While these features aren't particularly sophisticated they provide an interface for interactivity; the most primitive example of such an interface being the REPL\footnote{REPL: Read-Eval-Print Loop, a generic term to describe an environment that can interpret code interactively.}.

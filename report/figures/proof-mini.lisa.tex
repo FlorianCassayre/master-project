@@ -1,0 +1,20 @@
+\small
+$\begin{array}{r@{\hskip 0.1cm}rll@{\hskip 1cm}r}
+0   &  & \text{Hypo.}~                       & {?a} \vdash {?a}; {?b}                                          & [{?a}] \\
+1   &  & \text{Subproof}~0                   & \vdash \neg{?a} \lor {?b} \Rightarrow {?a} \Rightarrow {?b}     & \\
+ &  -1 & \text{Import}~                      & {?a} \vdash {?a}; {?b}                                          & \\
+ &   0 & \text{Left}~{\neg}~{-1}             & \neg{?a}; {?a} \vdash {?b}                                      & [{?a}] \\
+ &   1 & \text{Hypo.}~                       & {?a}; {?b} \vdash {?b}                                          & [{?b}] \\
+ &   2 & \text{Left}~{\lor}~0, 1             & \neg{?a} \lor {?b}; {?a} \vdash {?b}                            & [\neg{?a}; {?b}] \\
+ &   3 & \text{Right}~{\Rightarrow}~2        & \neg{?a} \lor {?b} \vdash {?a} \Rightarrow {?b}                 & [{?a}; {?b}] \\
+ &   4 & \text{Right}~{\Rightarrow}~3        & \vdash \neg{?a} \lor {?b} \Rightarrow {?a} \Rightarrow {?b}     & [\neg{?a} \lor {?b}; {?a} \Rightarrow {?b}] \\
+2   &  & \text{Subproof}~0                   & \vdash ({?a} \Rightarrow {?b}) \Rightarrow \neg{?a} \lor {?b}   & \\
+ &  -1 & \text{Import}~                      & {?a} \vdash {?a}; {?b}                                          & \\
+ &   0 & \text{Right}~{\neg}~{-1}            & \vdash \neg{?a}; {?a}; {?b}                                     & [{?a}] \\
+ &   1 & \text{Hypo.}~                       & {?b} \vdash \neg{?a}; {?b}                                      & [{?b}] \\
+ &   2 & \text{Left}~{\Rightarrow}~0, 1      & {?a} \Rightarrow {?b} \vdash \neg{?a}; {?b}                     & [{?a}; {?b}] \\
+ &   3 & \text{Right}~{\lor}~2               & {?a} \Rightarrow {?b} \vdash \neg{?a} \lor {?b}                 & [\neg{?a}; {?b}] \\
+ &   4 & \text{Right}~{\Rightarrow}~3        & \vdash ({?a} \Rightarrow {?b}) \Rightarrow \neg{?a} \lor {?b}   & [{?a} \Rightarrow {?b}; \neg{?a} \lor {?b}] \\
+3   &  & \text{Right}~{\Leftrightarrow}~1, 2 & \vdash \neg{?a} \lor {?b} \Leftrightarrow {?a} \Rightarrow {?b} & [\neg{?a} \lor {?b}; {?a} \Rightarrow {?b}]
+\end{array}$
+\normalsize

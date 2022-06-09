@@ -1,6 +1,6 @@
 \section{Appendix}
 
-\begin{table}[hbt!]
+\begin{table}[H]
   \newcounter{counter}
   \NewEnviron{example}[4]{%
     \toks0=\expandafter{\BODY}%
@@ -30,7 +30,6 @@
     \begin{example}{\exists x. {?a}}{\exists y. y = u}{\emptyset}{\bot}\end{example} \\ \hline
     \begin{example}{\exists x. {?p}(x)}{\exists y. y = u}{\emptyset}{\{ x \mapsto x, {?p} \mapsto \lambda x. x = u \}}\end{example} \\ \hline
     % \begin{example}{a}{a}{a}{a}\end{example} \\ \hline
-    % \begin{example}{a}{a}{a}{a}\end{example} \\ \hline
   \end{tabular}
   \captionsetup{singlelinecheck=off}
   \caption[Matching examples]{Selected examples to illustrate the matching procedure.
@@ -58,65 +57,72 @@
   \label{tab:matching-examples}
 \end{table}
 
-\begin{figure}[hbt!]
+\newcommand{\frule}[3]{
+  \begin{prooftree}
+  \hypo{#1}
+  \infer1[(#3)]{#2}
+  \end{prooftree}
+}
+  
+\begin{figure}[H]
   $$\arraycolsep=0.75cm\def\arraystretch{2.75}\begin{array}{c c}
   % Hypothesis
-  \dfrac{}{{?a} \vdash {?a}} \quad (\text{H.}) & \\
+  \frule{}{{?a} \vdash {?a}}{H.} & \\
   % And
-  \dfrac{{?a}, {?b} \vdash}{{?a} \land {?b} \vdash} \quad (\text{I.L.} \land) & \dfrac{\vdash {?a} \quad \vdash {?b}}{\vdash {?a} \land {?b}} \quad (\text{I.R.} \land) \\
-  \dfrac{{?a} \land {?b} \vdash}{{?a}, {?b} \vdash} \quad (\text{E.L.} \land) & \dfrac{\vdash {?a} \land {?b}}{\vdash {?a}} \quad (\text{E.R.} \land_1) \\ % cont.
-  & \dfrac{\vdash {?a} \land {?b}}{\vdash {?b}} \quad (\text{E.R.} \land_2) \\
+  \frule{{?a}, {?b} \vdash}{{?a} \land {?b} \vdash}{I.L.$\land$} & \frule{\vdash {?a} \quad \vdash {?b}}{\vdash {?a} \land {?b}}{I.R.$\land$} \\
+  \frule{{?a} \land {?b} \vdash}{{?a}, {?b} \vdash}{E.L.$\land$} & \frule{\vdash {?a} \land {?b}}{\vdash {?a}}{E.R.$\land_1$} \\ % cont.
+  & \frule{\vdash {?a} \land {?b}}{\vdash {?b}}{E.R.$\land_2$} \\
   % Or
-  \dfrac{{?a} \vdash \quad {?b} \vdash}{{?a} \lor {?b} \vdash} \quad (\text{I.L.} \lor) & \dfrac{\vdash {?a}, {?b}}{\vdash {?a} \lor {?b}} \quad (\text{I.R.} \lor) \\
-  \dfrac{{?a} \lor {?b} \vdash}{{?a} \vdash} \quad (\text{E.L.} \lor_1) & \dfrac{\vdash {?a} \lor {?b}}{\vdash {?a}, {?b}} \quad (\text{E.R.} \lor) \\ % cont.
-  \dfrac{{?a} \lor {?b} \vdash}{{?b} \vdash} \quad (\text{E.L.} \lor_2) & \\
+  \frule{{?a} \vdash \quad {?b} \vdash}{{?a} \lor {?b} \vdash}{I.L.$\lor$} & \frule{\vdash {?a}, {?b}}{\vdash {?a} \lor {?b}}{I.R.$\lor$} \\
+  \frule{{?a} \lor {?b} \vdash}{{?a} \vdash}{E.L.$\lor_1$} & \frule{\vdash {?a} \lor {?b}}{\vdash {?a}, {?b}}{E.R.$\lor$} \\ % cont.
+  \frule{{?a} \lor {?b} \vdash}{{?b} \vdash}{E.L.$\lor_2$} & \\
   % Implies
-  \dfrac{\vdash {?a} \quad {?b} \vdash}{{?a} \Rightarrow {?b} \vdash} \quad (\text{I.L.} \Rightarrow) & \dfrac{{?a} \vdash {?b}}{\vdash {?a} \Rightarrow {?b}} \quad (\text{I.R.} \Rightarrow) \\
-  \dfrac{{?a} \Rightarrow {?b} \vdash}{\vdash {?a}} \quad (\text{E.L.} \Rightarrow_1) & \dfrac{\vdash {?a} \Rightarrow {?b}}{{?a} \vdash {?b}} \quad (\text{E.R.} \Rightarrow) \\ % cont.
-  \dfrac{{?a} \Rightarrow {?b} \vdash}{{?b} \vdash} \quad (\text{E.L.} \Rightarrow_2) & \\
+  \frule{\vdash {?a} \quad {?b} \vdash}{{?a} \Rightarrow {?b} \vdash}{I.L.$\Rightarrow$} & \frule{{?a} \vdash {?b}}{\vdash {?a} \Rightarrow {?b}}{I.R.$\Rightarrow$} \\
+  \frule{{?a} \Rightarrow {?b} \vdash}{\vdash {?a}}{E.L.$\Rightarrow_1$} & \frule{\vdash {?a} \Rightarrow {?b}}{{?a} \vdash {?b}}{E.R.$\Rightarrow$} \\ % cont.
+  \frule{{?a} \Rightarrow {?b} \vdash}{{?b} \vdash}{E.L.$\Rightarrow_2$} & \\
   % Iff
-  \dfrac{{?a} \Rightarrow {?b}, {?b} \Rightarrow {?a} \vdash}{{?a} \Leftrightarrow {?b} \vdash} \quad (\text{I.L.} \Leftrightarrow) & \dfrac{\vdash {?a} \Rightarrow {?b} \quad \vdash {?b} \Rightarrow {?a}}{\vdash {?a} \Leftrightarrow {?b}} \quad (\text{I.R.} \Leftrightarrow) \\
-  \dfrac{{?a} \Leftrightarrow {?b} \vdash}{{?a} \Rightarrow {?b}, {?b} \Rightarrow {?a} \vdash} \quad (\text{E.L.} \Leftrightarrow) & \dfrac{\vdash {?a} \Leftrightarrow {?b}}{\vdash {?a} \Rightarrow {?b}} \quad (\text{E.R.} \Leftrightarrow_1) \\ % cont.
-  & \dfrac{\vdash {?a} \Leftrightarrow {?b}}{\vdash {?b} \Rightarrow {?a}} \quad (\text{E.R.} \Leftrightarrow_2) \\
+  \frule{{?a} \Rightarrow {?b}, {?b} \Rightarrow {?a} \vdash}{{?a} \Leftrightarrow {?b} \vdash}{I.L.$\Leftrightarrow$} & \frule{\vdash {?a} \Rightarrow {?b} \quad \vdash {?b} \Rightarrow {?a}}{\vdash {?a} \Leftrightarrow {?b}}{I.R.$\Leftrightarrow$} \\
+  \frule{{?a} \Leftrightarrow {?b} \vdash}{{?a} \Rightarrow {?b}, {?b} \Rightarrow {?a} \vdash}{E.L.$\Leftrightarrow$} & \frule{\vdash {?a} \Leftrightarrow {?b}}{\vdash {?a} \Rightarrow {?b}}{E.R.$\Leftrightarrow_1$} \\ % cont.
+  & \frule{\vdash {?a} \Leftrightarrow {?b}}{\vdash {?b} \Rightarrow {?a}}{E.R.$\Leftrightarrow_2$} \\
   % Not
-  \dfrac{\vdash {?a}}{\neg {?a} \vdash} \quad (\text{I.L.} \neg) & \dfrac{{?a} \vdash}{\vdash \neg {?a}} \quad (\text{I.R.} \neg) \\
-  \dfrac{\neg {?a} \vdash}{\vdash {?a}} \quad (\text{E.L.} \neg) & \dfrac{\vdash \neg {?a}}{{?a} \vdash} \quad (\text{E.R.} \neg) \\
+  \frule{\vdash {?a}}{\neg {?a} \vdash}{I.L.$\neg$} & \frule{{?a} \vdash}{\vdash \neg {?a}}{I.R.$\neg$} \\
+  \frule{\neg {?a} \vdash}{\vdash {?a}}{E.L.$\neg$} & \frule{\vdash \neg {?a}}{{?a} \vdash}{E.R.$\neg$} \\
   % Eq. refl.
-  \dfrac{{?s} = {?s} \vdash}{\vdash} \quad (\text{E.L.} =) & \dfrac{}{\vdash {?s} = {?s}} \quad (\text{I.R.} =)
+  \frule{{?s} = {?s} \vdash}{\vdash}{E.L.$=$} & \frule{}{\vdash {?s} = {?s}}{I.R.$=$}
   \end{array}$$
-  \caption[Rules]{Predefined rules provided in the front. For clarity, contexts have been omitted: the intended semantic is the one described in section \ref{sec:proof-framework-rules}. ``H", ``I", ``E", ``L" and ``R" respectively stand for ``Hypothesis", ``Introduction", ``Elimination", ``Left" and ``Right". In the source, shorthand for these names are used, for instance ``I.L.$\land$" would be identified by \code{introLAnd}. Most introduction rules map to a single kernel proof step. Elimination rules on the other hand rely on the cut rule.}
+  \caption[Rules]{Predefined rules provided in the front. For clarity, contexts have been omitted: the intended semantic is the one described in \autoref{sec:proof-framework-rules}. ``H'', ``I'', ``E'', ``L'' and ``R'' respectively stand for ``Hypothesis'', ``Introduction'', ``Elimination'', ``Left'' and ``Right''. In the source, shorthand for these names are used, for instance ``I.L.$\land$'' would be identified by \code{introLAnd}. Most introduction rules map to a single kernel proof step. Elimination rules on the other hand rely on the cut rule.}
   \label{fig:rules-list-1}
 \end{figure}
 
-\begin{figure}[hbt!]
+\begin{figure}[H]
   $$\arraycolsep=0.75cm\def\arraystretch{3}\begin{array}{c c}
   % Forall
-  \dfrac{{?p}({?t}) \vdash}{\forall x. {?p}(x) \vdash} \quad (\text{I.L.} \forall) & \dfrac{\vdash {?p}(\overline{?t})}{\vdash \forall x. {?p}(x)} \quad (\text{I.R.} \forall) \\
-  \dfrac{\forall x. {?p}(x) \vdash}{{?p}({?t}) \vdash} \quad (\text{E.L.} \forall) & \dfrac{\vdash \forall x. {?p}(x)}{\vdash {?p}(\overline{?t})} \quad (\text{E.R.} \forall) \\
+  \frule{{?p}({?t}) \vdash}{\forall x. {?p}(x) \vdash}{I.L.$\forall$} & \frule{\vdash {?p}(\overline{?t})}{\vdash \forall x. {?p}(x)}{I.R.$\forall$} \\
+  \frule{\forall x. {?p}(x) \vdash}{{?p}({?t}) \vdash}{E.L.$\forall$} & \frule{\vdash \forall x. {?p}(x)}{\vdash {?p}(\overline{?t})}{E.R.$\forall$} \\
   % Exists
-  \dfrac{{?p}(\overline{?t}) \vdash}{\exists x. {?p}(x) \vdash} \quad (\text{I.L.} \exists) & \dfrac{\vdash {?p}({?t})}{\vdash \exists x. {?p}(x)} \quad (\text{I.R.} \exists) \\
-  \dfrac{\exists x. {?p}(x) \vdash}{{?p}(\overline{?t}) \vdash} \quad (\text{E.L.} \exists) & \dfrac{\vdash \exists x. {?p}(x)}{\vdash {?p}({?t})} \quad (\text{E.R.} \exists) \\
+  \frule{{?p}(\overline{?t}) \vdash}{\exists x. {?p}(x) \vdash}{I.L.$\exists$} & \frule{\vdash {?p}({?t})}{\vdash \exists x. {?p}(x)}{I.R.$\exists$} \\
+  \frule{\exists x. {?p}(x) \vdash}{{?p}(\overline{?t}) \vdash}{E.L.$\exists$} & \frule{\vdash \exists x. {?p}(x)}{\vdash {?p}({?t})}{E.R.$\exists$} \\
   % Iff subst.
-  \dfrac{{?f}({?a}) \vdash}{{?a} \Leftrightarrow {?b}, {?f}({?b}) \vdash} \quad (\text{I.L.S.} \Leftrightarrow) & \dfrac{\vdash {?f}({?a}) \quad}{{?a} \Leftrightarrow {?b} \vdash {?f}({?b})} \quad (\text{I.R.S.} \Leftrightarrow) \\
-  \dfrac{{?f}({?a}) \vdash \quad \vdash {?a} \Leftrightarrow {?b}}{{?f}({?b}) \vdash} \quad (\text{E.L.S.} \Leftrightarrow) & \dfrac{\vdash {?f}({?a}) \quad \vdash {?a} \Leftrightarrow {?b}}{\vdash {?f}({?b})} \quad (\text{E.R.S.} \Leftrightarrow) \\
+  \frule{{?f}({?a}) \vdash}{{?a} \Leftrightarrow {?b}, {?f}({?b}) \vdash}{I.L.S.$\Leftrightarrow$} & \frule{\vdash {?f}({?a}) \quad}{{?a} \Leftrightarrow {?b} \vdash {?f}({?b})}{I.R.S.$\Leftrightarrow$} \\
+  \frule{{?f}({?a}) \vdash \quad \vdash {?a} \Leftrightarrow {?b}}{{?f}({?b}) \vdash}{E.L.S.$\Leftrightarrow$} & \frule{\vdash {?f}({?a}) \quad \vdash {?a} \Leftrightarrow {?b}}{\vdash {?f}({?b})}{E.R.S.$\Leftrightarrow$} \\
   % Eq. subst.
-  \dfrac{{?p}({?s}) \vdash \quad}{{?s} = {?t}, {?p}({?t}) \vdash} \quad (\text{I.L.S.} =) & \dfrac{\vdash {?p}({?s})}{{?s} = {?t} \vdash {?p}({?t})} \quad (\text{I.R.S.} =) \\
-  \dfrac{{?p}({?s}) \vdash \quad \vdash {?s} = {?t}}{{?p}({?t}) \vdash} \quad (\text{E.L.S.} =) & \dfrac{\vdash {?p}({?s}) \quad \vdash {?s} = {?t}}{\vdash {?p}({?t})} \quad (\text{E.R.S.} =)
+  \frule{{?p}({?s}) \vdash \quad}{{?s} = {?t}, {?p}({?t}) \vdash}{I.L.S.$=$} & \frule{\vdash {?p}({?s})}{{?s} = {?t} \vdash {?p}({?t})}{I.R.S.$=$} \\
+  \frule{{?p}({?s}) \vdash \quad \vdash {?s} = {?t}}{{?p}({?t}) \vdash}{E.L.S.$=$} & \frule{\vdash {?p}({?s}) \quad \vdash {?s} = {?t}}{\vdash {?p}({?t})}{E.R.S.$=$}
   \end{array}$$
-  \caption[Rules, continued]{Continuation of figure \ref{fig:rules-list-1}. Schemas marked with an overline are constrained to resolve to fresh schemas; namely schemas that do not appear elsewhere in the sequent, apart from this binding.}
+  \caption[Rules, continued]{Continuation of \autoref{fig:rules-list-1}. Schemas marked with an overline are constrained to resolve to fresh schemas; namely schemas that do not appear elsewhere in the sequent, apart from this binding.}
   \label{fig:rules-list-2}
 \end{figure}
 
-\begin{figure}[hbt!]
+\begin{figure}[H]
   \centering
   \input{figures/proof-sample.scala.tex}
-  \caption[XXXX]{.}
+  \caption[Sample proof (front)]{Example of a proof written in the front. The generated kernel proof is shown in \autoref{fig:lisa-proof-sample}.}
   \label{fig:scala-proof-sample}
 \end{figure}
 
-\begin{figure}[hbt!]
+\begin{figure}[H]
   \centering
   \input{figures/proof-sample.lisa.tex}
-  \caption[Sample proof]{Example of a generated kernel proof following its description in the front. This proof shows that $\vdash \mathcal{U}(\mathcal{P}({?s})) = {?s}$ with respect to the axiom of powerset, the definition of the subset relation and the axioms of extensionality and union (imports 1-4). Such a kernel proof is objectively difficult to be produced by hand; in contrast it is relatively straightforward to be achieved in the front. Note that the latex code used in this figure is also part of the output.}
+  \caption[Sample proof (kernel)]{Example of a generated kernel proof following its description in the front (\autoref{fig:scala-proof-sample}). This proof shows that $\vdash \mathcal{U}(\mathcal{P}({?s})) = {?s}$ with respect to the axiom of powerset, the definition of the subset relation and the axioms of extensionality and union (imports 1-4). Such a kernel proof is objectively difficult to be produced by hand; in contrast it is relatively straightforward to be achieved in the front. Note that the latex code used in this figure is also part of the output.}
   \label{fig:lisa-proof-sample}
 \end{figure}

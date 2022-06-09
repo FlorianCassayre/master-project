@@ -1,84 +1,84 @@
 \tiny
 $\begin{array}{rll}
--4 & \text{Import}~                        & \vdash \forall x, z. (x \in \mathcal{U}(z)) \Leftrightarrow \exists y. (x \in y) \land (y \in z) \\
--3 & \text{Import}~                        & \vdash \forall x, y. (\forall z. (z \in x) \Leftrightarrow (z \in y)) \Leftrightarrow (x = y) \\
--2 & \text{Import}~                        & \vdash \forall x, y. (x \subseteq y) \Leftrightarrow \forall z. (z \in x) \Rightarrow (z \in y) \\
--1 & \text{Import}~                        & \vdash \forall x, y. (x \in \mathcal{P}(y)) \Leftrightarrow (x \subseteq y) \\
- 0 & \text{Hypo.}~                         & \forall z. ({?s} \in \mathcal{U}(z)) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in z) \vdash \forall z. ({?s} \in \mathcal{U}(z)) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in z) \\
- 1 & \text{Left}~{\forall}~0               & \forall x, z. (x \in \mathcal{U}(z)) \Leftrightarrow \exists y. (x \in y) \land (y \in z) \vdash \forall z. ({?s} \in \mathcal{U}(z)) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in z) \\
- 2 & \text{Cut}~{-4}, 1                    & \vdash \forall z. ({?s} \in \mathcal{U}(z)) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in z) \\
- 3 & \text{Hypo.}~                         & ({?s} \in \mathcal{U}({?t})) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in {?t}) \vdash ({?s} \in \mathcal{U}({?t})) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in {?t}) \\
- 4 & \text{Left}~{\forall}~3               & \forall z. ({?s} \in \mathcal{U}(z)) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in z) \vdash ({?s} \in \mathcal{U}({?t})) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in {?t}) \\
- 5 & \text{Cut}~2, 4                       & \vdash ({?s} \in \mathcal{U}({?t})) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in {?t}) \\
- 6 & \text{Hypo.}~                         & \forall y. ({?s} \in \mathcal{P}(y)) \Leftrightarrow ({?s} \subseteq y) \vdash \forall y. ({?s} \in \mathcal{P}(y)) \Leftrightarrow ({?s} \subseteq y) \\
- 7 & \text{Left}~{\forall}~6               & \forall x, y. (x \in \mathcal{P}(y)) \Leftrightarrow (x \subseteq y) \vdash \forall y. ({?s} \in \mathcal{P}(y)) \Leftrightarrow ({?s} \subseteq y) \\
- 8 & \text{Cut}~{-1}, 7                    & \vdash \forall y. ({?s} \in \mathcal{P}(y)) \Leftrightarrow ({?s} \subseteq y) \\
- 9 & \text{Hypo.}~                         & ({?s} \in \mathcal{P}({?t})) \Leftrightarrow ({?s} \subseteq {?t}) \vdash ({?s} \in \mathcal{P}({?t})) \Leftrightarrow ({?s} \subseteq {?t}) \\
-10 & \text{Left}~{\forall}~9               & \forall y. ({?s} \in \mathcal{P}(y)) \Leftrightarrow ({?s} \subseteq y) \vdash ({?s} \in \mathcal{P}({?t})) \Leftrightarrow ({?s} \subseteq {?t}) \\
-11 & \text{Cut}~8, 10                      & \vdash ({?s} \in \mathcal{P}({?t})) \Leftrightarrow ({?s} \subseteq {?t}) \\
-12 & \text{Hypo.}~                         & \forall y. ({?s} \subseteq y) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in y) \vdash \forall y. ({?s} \subseteq y) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in y) \\
-13 & \text{Left}~{\forall}~12              & \forall x, y. (x \subseteq y) \Leftrightarrow \forall z. (z \in x) \Rightarrow (z \in y) \vdash \forall y. ({?s} \subseteq y) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in y) \\
-14 & \text{Cut}~{-2}, 13                   & \vdash \forall y. ({?s} \subseteq y) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in y) \\
-15 & \text{Hypo.}~                         & ({?s} \subseteq {?t}) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in {?t}) \vdash ({?s} \subseteq {?t}) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in {?t}) \\
-16 & \text{Left}~{\forall}~15              & \forall y. ({?s} \subseteq y) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in y) \vdash ({?s} \subseteq {?t}) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in {?t}) \\
-17 & \text{Cut}~14, 16                     & \vdash ({?s} \subseteq {?t}) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in {?t}) \\
-18 & \text{Hypo.}~                         & {?v} \in {?s} \vdash {?v} \in {?s} \\
-19 & \text{Right}~{\Rightarrow}~18         & \vdash ({?v} \in {?s}) \Rightarrow ({?v} \in {?s}) \\
-20 & \text{Rewrite}~19                     & \setminus z. \vdash (z \in {?s}) \Rightarrow (z \in {?s}) \\
-21 & \text{Right}~{\forall}~20             & \vdash \forall z. (z \in {?s}) \Rightarrow (z \in {?s}) \\
-22 & \text{Rewrite}~21                     & ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \vdash \forall z. (z \in {?s}) \Rightarrow (z \in {?s}) \\
-23 & \text{Right}~{\Rightarrow}~22         & \vdash (({?t} \in {?s}) \Rightarrow ({?t} \in {?s})) \Rightarrow \forall z. (z \in {?s}) \Rightarrow (z \in {?s}) \\
-24 & \text{Hypo.}~                         & ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \vdash ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
-25 & \text{Left}~{\forall}~24              & \forall z. (z \in {?s}) \Rightarrow (z \in {?s}) \vdash ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
-26 & \text{Right}~{\Rightarrow}~25         & \vdash (\forall z. (z \in {?s}) \Rightarrow (z \in {?s})) \Rightarrow ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
-27 & \text{Right}~{\Leftrightarrow}~26, 23 & \vdash (\forall z. (z \in {?s}) \Rightarrow (z \in {?s})) \Leftrightarrow ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
-28 & \text{?Fun Instantiation}~17          & \vdash ({?s} \subseteq {?s}) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in {?s}) \\
-29 & \text{Rewrite}~28                     & \vdash (\forall z. (z \in {?s}) \Rightarrow (z \in {?s})) \Leftrightarrow ({?s} \subseteq {?s}) \\
-30 & \text{R. SubstIff}~27                 & (\forall z. (z \in {?s}) \Rightarrow (z \in {?s})) \Leftrightarrow ({?s} \subseteq {?s}) \vdash ({?s} \subseteq {?s}) \Leftrightarrow ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
-31 & \text{Cut}~29, 30                     & \vdash ({?s} \subseteq {?s}) \Leftrightarrow ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
-32 & \text{Hypo.}~                         & \forall y. (\forall z. (z \in {?s}) \Leftrightarrow (z \in y)) \Leftrightarrow ({?s} = y) \vdash \forall y. (\forall z. (z \in {?s}) \Leftrightarrow (z \in y)) \Leftrightarrow ({?s} = y) \\
-33 & \text{Left}~{\forall}~32              & \forall x, y. (\forall z. (z \in x) \Leftrightarrow (z \in y)) \Leftrightarrow (x = y) \vdash \forall y. (\forall z. (z \in {?s}) \Leftrightarrow (z \in y)) \Leftrightarrow ({?s} = y) \\
-34 & \text{Cut}~{-3}, 33                   & \vdash \forall y. (\forall z. (z \in {?s}) \Leftrightarrow (z \in y)) \Leftrightarrow ({?s} = y) \\
-35 & \text{Hypo.}~                         & (\forall z. (z \in {?s}) \Leftrightarrow (z \in {?t})) \Leftrightarrow ({?s} = {?t}) \vdash (\forall z. (z \in {?s}) \Leftrightarrow (z \in {?t})) \Leftrightarrow ({?s} = {?t}) \\
-36 & \text{Left}~{\forall}~35              & \forall y. (\forall z. (z \in {?s}) \Leftrightarrow (z \in y)) \Leftrightarrow ({?s} = y) \vdash (\forall z. (z \in {?s}) \Leftrightarrow (z \in {?t})) \Leftrightarrow ({?s} = {?t}) \\
-37 & \text{Cut}~34, 36                     & \vdash (\forall z. (z \in {?s}) \Leftrightarrow (z \in {?t})) \Leftrightarrow ({?s} = {?t}) \\
-38 & \text{?Fun Instantiation}~37          & \vdash (\forall z. (z \in {?s}) \Leftrightarrow (z \in \mathcal{U}(\mathcal{P}({?s})))) \Leftrightarrow ({?s} = \mathcal{U}(\mathcal{P}({?s}))) \\
-39 & \text{Rewrite}~38                     & \vdash (\forall z. (z \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow (z \in {?s})) \Leftrightarrow (\mathcal{U}(\mathcal{P}({?s})) = {?s}) \\
-40 & \text{Hypo.}~                         & {?t} \in {?s} \vdash {?t} \in {?s} \\
-41 & \text{Right}~{\Rightarrow}~40         & {?t} \in {?s} \vdash ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
-42 & \text{Weakening}~31                   & {?t} \in {?s} \vdash ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \Leftrightarrow ({?s} \subseteq {?s}) \\
-43 & \text{R. SubstIff}~41                 & ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \Leftrightarrow ({?s} \subseteq {?s}); {?t} \in {?s} \vdash {?s} \subseteq {?s} \\
-44 & \text{Cut}~42, 43                     & {?t} \in {?s} \vdash {?s} \subseteq {?s} \\
-45 & \text{?Fun Instantiation}~11          & \vdash ({?s} \in \mathcal{P}({?s})) \Leftrightarrow ({?s} \subseteq {?s}) \\
-46 & \text{Weakening}~45                   & {?t} \in {?s} \vdash ({?s} \subseteq {?s}) \Leftrightarrow ({?s} \in \mathcal{P}({?s})) \\
-47 & \text{R. SubstIff}~44                 & ({?s} \subseteq {?s}) \Leftrightarrow ({?s} \in \mathcal{P}({?s})); {?t} \in {?s} \vdash {?s} \in \mathcal{P}({?s}) \\
-48 & \text{Cut}~46, 47                     & {?t} \in {?s} \vdash {?s} \in \mathcal{P}({?s}) \\
-49 & \text{Right}~{\land}~40, 48           & {?t} \in {?s} \vdash ({?t} \in {?s}) \land ({?s} \in \mathcal{P}({?s})) \\
-50 & \text{Right}~{\exists}~49             & {?t} \in {?s} \vdash \exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s})) \\
-51 & \text{Right}~{\Rightarrow}~50         & \vdash ({?t} \in {?s}) \Rightarrow \exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s})) \\
-52 & \text{Hypo.}~                         & {?t} \in {?s}; {?t} \in {?u} \vdash {?t} \in {?s} \\
-53 & \text{Hypo.}~                         & {?t} \in {?u} \vdash {?t} \in {?s}; {?t} \in {?u} \\
-54 & \text{Left}~{\Rightarrow}~53, 52      & ({?t} \in {?u}) \Rightarrow ({?t} \in {?s}); {?t} \in {?u} \vdash {?t} \in {?s} \\
-55 & \text{Left}~{\forall}~54              & \forall z. (z \in {?u}) \Rightarrow (z \in {?s}); {?t} \in {?u} \vdash {?t} \in {?s} \\
-56 & \text{?Fun Instantiation}~17          & \vdash ({?u} \subseteq {?s}) \Leftrightarrow \forall z. (z \in {?u}) \Rightarrow (z \in {?s}) \\
-57 & \text{Weakening}~56                   & {?t} \in {?u} \vdash (\forall z. (z \in {?u}) \Rightarrow (z \in {?s})) \Leftrightarrow ({?u} \subseteq {?s}); {?t} \in {?s} \\
-58 & \text{L. SubstIff}~55                 & (\forall z. (z \in {?u}) \Rightarrow (z \in {?s})) \Leftrightarrow ({?u} \subseteq {?s}); {?t} \in {?u}; {?u} \subseteq {?s} \vdash {?t} \in {?s} \\
-59 & \text{Cut}~57, 58                     & {?t} \in {?u}; {?u} \subseteq {?s} \vdash {?t} \in {?s} \\
-60 & \text{?Fun Instantiation}~11          & \vdash ({?u} \in \mathcal{P}({?s})) \Leftrightarrow ({?u} \subseteq {?s}) \\
-61 & \text{Weakening}~60                   & {?t} \in {?u} \vdash ({?u} \subseteq {?s}) \Leftrightarrow ({?u} \in \mathcal{P}({?s})); {?t} \in {?s} \\
-62 & \text{L. SubstIff}~59                 & ({?u} \subseteq {?s}) \Leftrightarrow ({?u} \in \mathcal{P}({?s})); {?t} \in {?u}; {?u} \in \mathcal{P}({?s}) \vdash {?t} \in {?s} \\
-63 & \text{Cut}~61, 62                     & {?t} \in {?u}; {?u} \in \mathcal{P}({?s}) \vdash {?t} \in {?s} \\
-64 & \text{Left}~{\land}~63                & ({?t} \in {?u}) \land ({?u} \in \mathcal{P}({?s})) \vdash {?t} \in {?s} \\
-65 & \text{?Fun Instantiation}~64          & \setminus y. ({?t} \in y) \land (y \in \mathcal{P}({?s})) \vdash {?t} \in {?s} \\
-66 & \text{Left}~{\exists}~65              & \exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s})) \vdash {?t} \in {?s} \\
-67 & \text{Right}~{\Rightarrow}~66         & \vdash (\exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s}))) \Rightarrow ({?t} \in {?s}) \\
-68 & \text{Right}~{\Leftrightarrow}~67, 51 & \vdash (\exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s}))) \Leftrightarrow ({?t} \in {?s}) \\
-69 & \text{?Fun Instantiation}~5           & \vdash ({?t} \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow \exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s})) \\
-70 & \text{R. SubstIff}~69                 & (\exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s}))) \Leftrightarrow ({?t} \in {?s}) \vdash ({?t} \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow ({?t} \in {?s}) \\
-71 & \text{Cut}~68, 70                     & \vdash ({?t} \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow ({?t} \in {?s}) \\
-72 & \text{?Fun Instantiation}~71          & \setminus z. \vdash (z \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow (z \in {?s}) \\
-73 & \text{Right}~{\forall}~72             & \vdash \forall z. (z \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow (z \in {?s}) \\
-74 & \text{R. SubstIff}~73                 & (\forall z. (z \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow (z \in {?s})) \Leftrightarrow (\mathcal{U}(\mathcal{P}({?s})) = {?s}) \vdash \mathcal{U}(\mathcal{P}({?s})) = {?s} \\
-75 & \text{Cut}~39, 74                     & \vdash \mathcal{U}(\mathcal{P}({?s})) = {?s}
+-4 & \text{Import}~                           & \vdash \forall x, z. (x \in \mathcal{U}(z)) \Leftrightarrow \exists y. (x \in y) \land (y \in z) \\
+-3 & \text{Import}~                           & \vdash \forall x, y. (\forall z. (z \in x) \Leftrightarrow (z \in y)) \Leftrightarrow (x = y) \\
+-2 & \text{Import}~                           & \vdash \forall x, y. (x \subseteq y) \Leftrightarrow \forall z. (z \in x) \Rightarrow (z \in y) \\
+-1 & \text{Import}~                           & \vdash \forall x, y. (x \in \mathcal{P}(y)) \Leftrightarrow (x \subseteq y) \\
+ 0 & \text{Hypo.}~                            & \forall z. ({?s} \in \mathcal{U}(z)) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in z) \vdash \forall z. ({?s} \in \mathcal{U}(z)) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in z) \\
+ 1 & \text{Left}~{\forall}~0                  & \forall x, z. (x \in \mathcal{U}(z)) \Leftrightarrow \exists y. (x \in y) \land (y \in z) \vdash \forall z. ({?s} \in \mathcal{U}(z)) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in z) \\
+ 2 & \text{Cut}~{-4}, 1                       & \vdash \forall z. ({?s} \in \mathcal{U}(z)) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in z) \\
+ 3 & \text{Hypo.}~                            & ({?s} \in \mathcal{U}({?t})) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in {?t}) \vdash ({?s} \in \mathcal{U}({?t})) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in {?t}) \\
+ 4 & \text{Left}~{\forall}~3                  & \forall z. ({?s} \in \mathcal{U}(z)) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in z) \vdash ({?s} \in \mathcal{U}({?t})) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in {?t}) \\
+ 5 & \text{Cut}~2, 4                          & \vdash ({?s} \in \mathcal{U}({?t})) \Leftrightarrow \exists y. ({?s} \in y) \land (y \in {?t}) \\
+ 6 & \text{Hypo.}~                            & \forall y. ({?s} \in \mathcal{P}(y)) \Leftrightarrow ({?s} \subseteq y) \vdash \forall y. ({?s} \in \mathcal{P}(y)) \Leftrightarrow ({?s} \subseteq y) \\
+ 7 & \text{Left}~{\forall}~6                  & \forall x, y. (x \in \mathcal{P}(y)) \Leftrightarrow (x \subseteq y) \vdash \forall y. ({?s} \in \mathcal{P}(y)) \Leftrightarrow ({?s} \subseteq y) \\
+ 8 & \text{Cut}~{-1}, 7                       & \vdash \forall y. ({?s} \in \mathcal{P}(y)) \Leftrightarrow ({?s} \subseteq y) \\
+ 9 & \text{Hypo.}~                            & ({?s} \in \mathcal{P}({?t})) \Leftrightarrow ({?s} \subseteq {?t}) \vdash ({?s} \in \mathcal{P}({?t})) \Leftrightarrow ({?s} \subseteq {?t}) \\
+10 & \text{Left}~{\forall}~9                  & \forall y. ({?s} \in \mathcal{P}(y)) \Leftrightarrow ({?s} \subseteq y) \vdash ({?s} \in \mathcal{P}({?t})) \Leftrightarrow ({?s} \subseteq {?t}) \\
+11 & \text{Cut}~8, 10                         & \vdash ({?s} \in \mathcal{P}({?t})) \Leftrightarrow ({?s} \subseteq {?t}) \\
+12 & \text{Hypo.}~                            & \forall y. ({?s} \subseteq y) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in y) \vdash \forall y. ({?s} \subseteq y) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in y) \\
+13 & \text{Left}~{\forall}~12                 & \forall x, y. (x \subseteq y) \Leftrightarrow \forall z. (z \in x) \Rightarrow (z \in y) \vdash \forall y. ({?s} \subseteq y) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in y) \\
+14 & \text{Cut}~{-2}, 13                      & \vdash \forall y. ({?s} \subseteq y) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in y) \\
+15 & \text{Hypo.}~                            & ({?s} \subseteq {?t}) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in {?t}) \vdash ({?s} \subseteq {?t}) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in {?t}) \\
+16 & \text{Left}~{\forall}~15                 & \forall y. ({?s} \subseteq y) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in y) \vdash ({?s} \subseteq {?t}) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in {?t}) \\
+17 & \text{Cut}~14, 16                        & \vdash ({?s} \subseteq {?t}) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in {?t}) \\
+18 & \text{Hypo.}~                            & {?v} \in {?s} \vdash {?v} \in {?s} \\
+19 & \text{Right}~{\Rightarrow}~18            & \vdash ({?v} \in {?s}) \Rightarrow ({?v} \in {?s}) \\
+20 & \text{Rewrite}~19                        & \setminus z. \vdash (z \in {?s}) \Rightarrow (z \in {?s}) \\
+21 & \text{Right}~{\forall}~20                & \vdash \forall z. (z \in {?s}) \Rightarrow (z \in {?s}) \\
+22 & \text{Rewrite}~21                        & ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \vdash \forall z. (z \in {?s}) \Rightarrow (z \in {?s}) \\
+23 & \text{Right}~{\Rightarrow}~22            & \vdash (({?t} \in {?s}) \Rightarrow ({?t} \in {?s})) \Rightarrow \forall z. (z \in {?s}) \Rightarrow (z \in {?s}) \\
+24 & \text{Hypo.}~                            & ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \vdash ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
+25 & \text{Left}~{\forall}~24                 & \forall z. (z \in {?s}) \Rightarrow (z \in {?s}) \vdash ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
+26 & \text{Right}~{\Rightarrow}~25            & \vdash (\forall z. (z \in {?s}) \Rightarrow (z \in {?s})) \Rightarrow ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
+27 & \text{Right}~{\Leftrightarrow}~26, 23    & \vdash (\forall z. (z \in {?s}) \Rightarrow (z \in {?s})) \Leftrightarrow ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
+28 & \text{?Fun. Instantiation}~17            & \vdash ({?s} \subseteq {?s}) \Leftrightarrow \forall z. (z \in {?s}) \Rightarrow (z \in {?s}) \\
+29 & \text{Rewrite}~28                        & \vdash (\forall z. (z \in {?s}) \Rightarrow (z \in {?s})) \Leftrightarrow ({?s} \subseteq {?s}) \\
+30 & \text{Right Subst.}~{\Leftrightarrow}~27 & (\forall z. (z \in {?s}) \Rightarrow (z \in {?s})) \Leftrightarrow ({?s} \subseteq {?s}) \vdash ({?s} \subseteq {?s}) \Leftrightarrow ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
+31 & \text{Cut}~29, 30                        & \vdash ({?s} \subseteq {?s}) \Leftrightarrow ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
+32 & \text{Hypo.}~                            & \forall y. (\forall z. (z \in {?s}) \Leftrightarrow (z \in y)) \Leftrightarrow ({?s} = y) \vdash \forall y. (\forall z. (z \in {?s}) \Leftrightarrow (z \in y)) \Leftrightarrow ({?s} = y) \\
+33 & \text{Left}~{\forall}~32                 & \forall x, y. (\forall z. (z \in x) \Leftrightarrow (z \in y)) \Leftrightarrow (x = y) \vdash \forall y. (\forall z. (z \in {?s}) \Leftrightarrow (z \in y)) \Leftrightarrow ({?s} = y) \\
+34 & \text{Cut}~{-3}, 33                      & \vdash \forall y. (\forall z. (z \in {?s}) \Leftrightarrow (z \in y)) \Leftrightarrow ({?s} = y) \\
+35 & \text{Hypo.}~                            & (\forall z. (z \in {?s}) \Leftrightarrow (z \in {?t})) \Leftrightarrow ({?s} = {?t}) \vdash (\forall z. (z \in {?s}) \Leftrightarrow (z \in {?t})) \Leftrightarrow ({?s} = {?t}) \\
+36 & \text{Left}~{\forall}~35                 & \forall y. (\forall z. (z \in {?s}) \Leftrightarrow (z \in y)) \Leftrightarrow ({?s} = y) \vdash (\forall z. (z \in {?s}) \Leftrightarrow (z \in {?t})) \Leftrightarrow ({?s} = {?t}) \\
+37 & \text{Cut}~34, 36                        & \vdash (\forall z. (z \in {?s}) \Leftrightarrow (z \in {?t})) \Leftrightarrow ({?s} = {?t}) \\
+38 & \text{?Fun. Instantiation}~37            & \vdash (\forall z. (z \in {?s}) \Leftrightarrow (z \in \mathcal{U}(\mathcal{P}({?s})))) \Leftrightarrow ({?s} = \mathcal{U}(\mathcal{P}({?s}))) \\
+39 & \text{Rewrite}~38                        & \vdash (\forall z. (z \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow (z \in {?s})) \Leftrightarrow (\mathcal{U}(\mathcal{P}({?s})) = {?s}) \\
+40 & \text{Hypo.}~                            & {?t} \in {?s} \vdash {?t} \in {?s} \\
+41 & \text{Right}~{\Rightarrow}~40            & {?t} \in {?s} \vdash ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \\
+42 & \text{Weakening}~31                      & {?t} \in {?s} \vdash ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \Leftrightarrow ({?s} \subseteq {?s}) \\
+43 & \text{Right Subst.}~{\Leftrightarrow}~41 & ({?t} \in {?s}) \Rightarrow ({?t} \in {?s}) \Leftrightarrow ({?s} \subseteq {?s}); {?t} \in {?s} \vdash {?s} \subseteq {?s} \\
+44 & \text{Cut}~42, 43                        & {?t} \in {?s} \vdash {?s} \subseteq {?s} \\
+45 & \text{?Fun. Instantiation}~11            & \vdash ({?s} \in \mathcal{P}({?s})) \Leftrightarrow ({?s} \subseteq {?s}) \\
+46 & \text{Weakening}~45                      & {?t} \in {?s} \vdash ({?s} \subseteq {?s}) \Leftrightarrow ({?s} \in \mathcal{P}({?s})) \\
+47 & \text{Right Subst.}~{\Leftrightarrow}~44 & ({?s} \subseteq {?s}) \Leftrightarrow ({?s} \in \mathcal{P}({?s})); {?t} \in {?s} \vdash {?s} \in \mathcal{P}({?s}) \\
+48 & \text{Cut}~46, 47                        & {?t} \in {?s} \vdash {?s} \in \mathcal{P}({?s}) \\
+49 & \text{Right}~{\land}~40, 48              & {?t} \in {?s} \vdash ({?t} \in {?s}) \land ({?s} \in \mathcal{P}({?s})) \\
+50 & \text{Right}~{\exists}~49                & {?t} \in {?s} \vdash \exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s})) \\
+51 & \text{Right}~{\Rightarrow}~50            & \vdash ({?t} \in {?s}) \Rightarrow \exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s})) \\
+52 & \text{Hypo.}~                            & {?t} \in {?s}; {?t} \in {?u} \vdash {?t} \in {?s} \\
+53 & \text{Hypo.}~                            & {?t} \in {?u} \vdash {?t} \in {?s}; {?t} \in {?u} \\
+54 & \text{Left}~{\Rightarrow}~53, 52         & ({?t} \in {?u}) \Rightarrow ({?t} \in {?s}); {?t} \in {?u} \vdash {?t} \in {?s} \\
+55 & \text{Left}~{\forall}~54                 & \forall z. (z \in {?u}) \Rightarrow (z \in {?s}); {?t} \in {?u} \vdash {?t} \in {?s} \\
+56 & \text{?Fun. Instantiation}~17            & \vdash ({?u} \subseteq {?s}) \Leftrightarrow \forall z. (z \in {?u}) \Rightarrow (z \in {?s}) \\
+57 & \text{Weakening}~56                      & {?t} \in {?u} \vdash (\forall z. (z \in {?u}) \Rightarrow (z \in {?s})) \Leftrightarrow ({?u} \subseteq {?s}); {?t} \in {?s} \\
+58 & \text{Left Subst.}~{\Leftrightarrow}~55  & (\forall z. (z \in {?u}) \Rightarrow (z \in {?s})) \Leftrightarrow ({?u} \subseteq {?s}); {?t} \in {?u}; {?u} \subseteq {?s} \vdash {?t} \in {?s} \\
+59 & \text{Cut}~57, 58                        & {?t} \in {?u}; {?u} \subseteq {?s} \vdash {?t} \in {?s} \\
+60 & \text{?Fun. Instantiation}~11            & \vdash ({?u} \in \mathcal{P}({?s})) \Leftrightarrow ({?u} \subseteq {?s}) \\
+61 & \text{Weakening}~60                      & {?t} \in {?u} \vdash ({?u} \subseteq {?s}) \Leftrightarrow ({?u} \in \mathcal{P}({?s})); {?t} \in {?s} \\
+62 & \text{Left Subst.}~{\Leftrightarrow}~59  & ({?u} \subseteq {?s}) \Leftrightarrow ({?u} \in \mathcal{P}({?s})); {?t} \in {?u}; {?u} \in \mathcal{P}({?s}) \vdash {?t} \in {?s} \\
+63 & \text{Cut}~61, 62                        & {?t} \in {?u}; {?u} \in \mathcal{P}({?s}) \vdash {?t} \in {?s} \\
+64 & \text{Left}~{\land}~63                   & ({?t} \in {?u}) \land ({?u} \in \mathcal{P}({?s})) \vdash {?t} \in {?s} \\
+65 & \text{?Fun. Instantiation}~64            & \setminus y. ({?t} \in y) \land (y \in \mathcal{P}({?s})) \vdash {?t} \in {?s} \\
+66 & \text{Left}~{\exists}~65                 & \exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s})) \vdash {?t} \in {?s} \\
+67 & \text{Right}~{\Rightarrow}~66            & \vdash (\exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s}))) \Rightarrow ({?t} \in {?s}) \\
+68 & \text{Right}~{\Leftrightarrow}~67, 51    & \vdash (\exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s}))) \Leftrightarrow ({?t} \in {?s}) \\
+69 & \text{?Fun. Instantiation}~5             & \vdash ({?t} \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow \exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s})) \\
+70 & \text{Right Subst.}~{\Leftrightarrow}~69 & (\exists y. ({?t} \in y) \land (y \in \mathcal{P}({?s}))) \Leftrightarrow ({?t} \in {?s}) \vdash ({?t} \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow ({?t} \in {?s}) \\
+71 & \text{Cut}~68, 70                        & \vdash ({?t} \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow ({?t} \in {?s}) \\
+72 & \text{?Fun. Instantiation}~71            & \setminus z. \vdash (z \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow (z \in {?s}) \\
+73 & \text{Right}~{\forall}~72                & \vdash \forall z. (z \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow (z \in {?s}) \\
+74 & \text{Right Subst.}~{\Leftrightarrow}~73 & (\forall z. (z \in \mathcal{U}(\mathcal{P}({?s}))) \Leftrightarrow (z \in {?s})) \Leftrightarrow (\mathcal{U}(\mathcal{P}({?s})) = {?s}) \vdash \mathcal{U}(\mathcal{P}({?s})) = {?s} \\
+75 & \text{Cut}~39, 74                        & \vdash \mathcal{U}(\mathcal{P}({?s})) = {?s}
 \end{array}$
 \normalsize

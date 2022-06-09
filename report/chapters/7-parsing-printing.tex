@@ -3,7 +3,7 @@
 
 \subsection{Grammar}
 
-At the time of writing this thesis, LISA does not have a formalized grammar for its language but rather a simple printer that is used to display proofs in a more readable way. In this project I defined a grammar for the first-order logic language with sequents of the front-end (figure \ref{fig:grammar}). The grammar is designed to be unambiguous so that we could use it for serialization/persistence later on, and is as close as possible to the original printer of LISA. The main challenge in designing a grammar for our language is due to the fact that the distinction between terms and formulas is made early on, in other words it is not possible to construct ill-typed trees. This subtlety opens the door to potential ambiguities where it is unclear if a node should be interpreted as a term or a formula. The front-end avoids thanks to a carefully designed grammar and a type checker that serves at the same time as a resolver.
+At the time of writing this thesis, LISA does not have a formalized grammar for its language but rather a simple printer that is used to display proofs in a more readable way. In this project I defined a grammar for the first-order logic language with sequents of the front-end (\autoref{fig:grammar}). The grammar is designed to be unambiguous so that we could use it for serialization/persistence later on, and is as close as possible to the original printer of LISA. The main challenge in designing a grammar for our language is due to the fact that the distinction between terms and formulas is made early on, in other words it is not possible to construct ill-typed trees. This subtlety opens the door to potential ambiguities where it is unclear if a node should be interpreted as a term or a formula. The front-end avoids thanks to a carefully designed grammar and a type checker that serves at the same time as a resolver.
 
 \begin{figure}[H]
   \centering
@@ -49,19 +49,19 @@ At the time of writing this thesis, LISA does not have a formalized grammar for 
   (((<term> `;')* `...') | <terms>)
   \end{grammar}
   \end{framed}
-  \caption[BNF grammar]{BNF grammar for the front. The current system uses an extended syntax which simply adds convenient aliases for common symbols in set theory (empty, singleton and pair sets, constants, etc.).}
+  \caption[BNF grammar]{BNF grammar for the front. The rules for precedence are the usual ones. The current system uses an extended syntax which simply adds convenient aliases for common symbols in set theory (empty, singleton and pair sets, constants, etc.).}
   \label{fig:grammar}
 \end{figure}
 
 \subsection{Parsing}
 
-A parser for this grammar was written using the library \code{scala-parser-combinators}\footnote{A DSL implementing a recursive-descent parser: \href{https://github.com/scala/scala-parser-combinators}{github.com/scala/scala-parser-combinators}}. The parser alone is not sufficient to generate the final trees; an intermediate phase called \textbf{resolution} performs type checking and resolves the intermediate representation into its final form. The procedure is dictated by the rules listed in figure \ref{fig:typing-rules}. Given the type of the top-level term, we can recover all the remaining types in the tree and thus reconstruct the final representation of the tree.
+A parser for this grammar was written using \code{scala-parser-combinators} \cite{Moors2008}, a recursive-descent parsing library for Scala. The parser alone is not sufficient to generate the final trees; an intermediate phase called \textbf{resolution} performs type checking and resolves the intermediate representation into its final form. The procedure is dictated by the rules listed in \autoref{fig:typing-rules}. Given the type of the top-level term, we can recover all the remaining types in the tree and thus reconstruct the final representation of the tree.
 
 \begin{figure}[H]
   \centering
   \begin{framed}
   \begin{gather}
-  \frac{\Gamma, x_1, ..., x_n \vdash t_{l1}: \mathcal{F} \quad ... \quad \Gamma, x_1, ..., x_n \vdash t_{rm}: \mathcal{F}}{\Gamma \vdash \backslash x_1, ..., x_n. t_{l1}, ..., t_{ln} ``\vdash" t_{r1}, ..., t_{rm}: \mathcal{S}} \tag{\textsc{(partial) Sequent}} \\[1em]
+  \frac{\Gamma, x_1, ..., x_n \vdash t_{l1}: \mathcal{F} \quad ... \quad \Gamma, x_1, ..., x_n \vdash t_{rm}: \mathcal{F}}{\Gamma \vdash \backslash x_1, ..., x_n. t_{l1}, ..., t_{ln} ``\vdash'' t_{r1}, ..., t_{rm}: \mathcal{S}} \tag{\textsc{(partial) Sequent}} \\[1em]
   \frac{\Gamma, x_1, ..., x_n \vdash t: \mathcal{F}}{\Gamma \vdash \backslash x_1, ..., x_n. t: \mathcal{F}} \tag{\textsc{Top-Level Formula}} \\[1em]
   \frac{\Gamma, x \vdash t: \mathcal{F}}{\Gamma \vdash B x. t: \mathcal{F}} \mkern3mu B \in \{\forall, \exists, \exists!\} \tag{\textsc{Binder}} \\[1em]
   \frac{\Gamma \vdash t: \mathcal{F}}{\Gamma \vdash !t: \mathcal{F}} \quad\quad
@@ -91,7 +91,7 @@ While the parser was originally designed for runtime usage, it can also be used 
 
 The idea was to exploit this mechanism to guarantee safe parsing at compile-time. Thus, if the user attempts to parse an invalid string literal, the compiler would raise an error. The implementation of that feature is relatively straight forward and is done within a macro. First we extract the string literal value from the expression, then we call our parser on it and finally convert the resulting tree to an expression (that is, in the meta-level converting \code{T} to \code{Expr[T]}). The last step requires defining conversion methods for all ADT members.
 
-It turns out we can do better than that. Scala offers a feature called string interpolators which additionally allows variables to be inserted within the string literal (figure \ref{fig:string-interpolation-general}). Moreover, it only works on string literals thus guaranteeing the recovery of the value at compile-time.
+It turns out we can do better than that. Scala offers a feature called string interpolators which additionally allows variables to be ``inserted'' within the string literal (\autoref{fig:string-interpolation-general}). Moreover, it only works on string literals thus guaranteeing the recovery of the value at compile-time.
 
 \begin{figure}[H]
   \centering
@@ -103,7 +103,7 @@ val s2: String = s"Hello $s1!" // Hello world!
   \label{fig:string-interpolation-general}
 \end{figure}
 
-This feature has a nice application in our case: not only can we enforce interpolated variables to be terms or formulas but we can also check their type with respect to the context they appear in. For instance, in the expression \code{formula"\$a /\textbackslash\ b"}, the variable \code{a} cannot be a term (more specifically, it must be a formula). In addition to terms and formulas, we may also allow the interpolation of labels which is very useful to express names dynamically, e.g. \code{formula"\$p(s)"}. Notice that the previous expression is structurally different from \code{formula"\${p(term"s")}"}, although it leads to the same formula.
+This feature has a nice application in our case: not only can we enforce interpolated variables to be terms or formulas but we can also check their type with respect to the context they appear in. For instance, in the expression \code{formula"\$a /\textbackslash\ b"}, the variable \code{a} cannot be a term (in fact, it must be a formula). In addition to terms and formulas, we may also allow the interpolation of labels which is very useful to express names dynamically, e.g. \code{formula"\$p(s)"}. Notice that the previous expression is structurally different from \code{formula"\${p(term"s")}"}, although it leads to the same formula.
 
 \begin{figure}[H]
   \centering
@@ -146,4 +146,4 @@ This feature has a nice application in our case: not only can we enforce interpo
   \label{fig:multi-stage-parsing}
 \end{figure}
 
-To implement this feature, we must execute the different parsing phases separately (figure \ref{fig:multi-stage-parsing}). One can observe that in a well-formed interpolator, tokens cannot possibly overlap different string parts. That property let us to do lexing on each string part independently. We can then list all the potentially taken identifiers allowing us to safely create fresh ones. Then, all the variables are replaced by fresh schemas; still represented as tokens at this point. Finally, we can proceed to the parsing and type checking phases. The first type checking phase will assign types to all of our fresh schemas, while the second will ensure that these assigned types agree with the types of the variables that were interpolated. A disagreement is then mapped to a positioned type error. Finally all that is left to do is substitute those schemas by their actual value, and convert the value into an expression. Notice that we cannot do that at compilation-time as we don't have access to the variables values, only their type. But this makes sense: variables can have different values throughout the execution (e.g. function arguments or mutable variables). Therefore the tree should be constructed at compilation-time but the substitution must happen at runtime.
+To implement this feature, we must execute the different parsing phases separately (\autoref{fig:multi-stage-parsing}). One can observe that in a well-formed interpolator, tokens (as output by the lexer) cannot possibly overlap different string parts. That property let us to do lexing on each string part independently. From this step we can then identify all the potentially taken identifiers allowing us to safely create fresh ones. Then, all the variables are replaced by fresh schemas; still represented as tokens at this point. Finally, we can proceed to the parsing and type checking phases. The first type checking phase will assign types to all of our fresh schemas, while the second will ensure that these assigned types agree with the Scala types of the interpolated variables. A disagreement or an error at an earlier phase is mapped to a positioned Scala type error. Finally all that is left to do is substitute those schemas by their actual value, and convert the value into an expression tree. Notice that we cannot do that at compilation-time as we don't have access to the variables' values: only their type. But this makes sense: types model the range of allowed values, the rest of the information is to be discovered at runtime. Therefore the tree should be constructed at compilation-time, while the final substitution can only happen at runtime.

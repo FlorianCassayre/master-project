@@ -3,7 +3,13 @@
 
 While the original goal of this framework was to propose an opinionated front-end for LISA, we do not exclude the possibility of integrating some useful components directly into LISA (as is, or in a refined version). That includes all the logic for bidirectional parsing and printing (possibly with macros), proof utilities and optimization routines, and a matcher or unifier. It should also be decided whether it would be worth strengthening the kernel to provide support for schematic connectors, which are as we have shown essential elements for unification tasks.
 
-The following subsections expose potential ramifications that could be explored as a sequel to this project or as a distinct project altogether.
+The following subsections expose known limitations of the framework, how they could be addressed and finally a selected list of potential ramifications that could be explored as a sequel to this project.
+
+\subsection{Limitations}
+
+Despite our efforts and the previous iterations, we have discovered a few limitations in the current version of the system and present them here along with a hint for a potential fix.
+
+
 
 % simplification
 % dedicate language
@@ -15,4 +21,4 @@ The following subsections expose potential ramifications that could be explored 
 
 \subsection{Theorem search}
 
-One highly desirable feature would be to perform search on proven statements, usually theorems. Such a feature could automatically eliminate goals, improving the usability of the system. For instance, one is usually not interested in knowing if the theorem $\vdash {?s} = {?s}$ exists with that specific name ${?s}$, but rather to find a theorem of the form $\vdash \_ = \_$ such that both underscores can be instantiated to a term. While the matcher can already solve this task, it is perhaps too powerful to be reduced to a sub-linear querying algorithm and would have to be run on every candidate. Instead, we would be interested in a weaker version that provides a simple pattern matching language to efficiently find theorems that match a pattern.
+One highly desirable feature would be to perform search on proven statements, usually theorems. Such a feature could automatically eliminate goals, improving the usability of the system. For instance, one is usually not interested in knowing if the theorem $\vdash {?s} = {?s}$ exists with that specific name ${?s}$, but rather to find a theorem of the form $\vdash \_ = \_$ such that both underscores can be instantiated to a term. Although the matcher can already solve this task, it is perhaps too powerful to be reduced to a sub-linear querying algorithm and would have to be run on every candidate. Instead, we would be interested in a weaker version that provides a simple pattern matching language to efficiently find theorems that match a pattern.
