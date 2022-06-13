@@ -85,6 +85,34 @@ A parser for this grammar was written using \code{scala-parser-combinators} \cit
   \label{fig:typing-rules}
 \end{figure}
 
+We also implemented a printer and parser for kernel proofs (\autoref{fig:grammar-kernel}). Such proofs look like the one in \autoref{fig:simple-lisa-proof}.
+
+\begin{figure}[H]
+  \centering
+  \begin{framed}
+  \grammarindent6.2cm
+  \begin{grammar}
+  <indentation> ::= ` '*
+
+  <line-feed> ::= `\\n'
+  
+  <integer> ::= `-'? (`1'-`9') (`0'-`9')*
+
+  <step-name> ::= ...
+
+  <kernel-step> ::= <indentation> <integer> \\ 
+  <step-name> \\
+  <integer> (`,' <integer>)* \\
+  <sequent> \\
+  (`[' <top-term> (`;' <top-term>)* `]')?
+
+  <kernel-proof> ::= <kernel-step> (<line-feed> <kernel-step>)*
+  \end{grammar}
+  \end{framed}
+  \caption[BNF grammar for kernel proofs]{BNF grammar for kernel proofs.}
+  \label{fig:grammar-kernel}
+\end{figure}
+
 \subsection{Compile-time string interpolation}
 
 While the parser was originally designed for runtime usage, it can also be used by the compiler at compilation-time. This is possible thanks to the fact that the Scala 3 allows multi-stage metaprogramming. That enables the user to manipulate values (\code{T}), expressions for these values (\code{Expr[T]}) or even expressions of expressions for these values (\code{Expr[Expr[T]]}); all within the same program.
@@ -93,15 +121,10 @@ The idea was to exploit this mechanism to guarantee safe parsing at compile-time
 
 It turns out we can do better than that. Scala offers a feature called string interpolators which additionally allows variables to be ``inserted'' within the string literal (\autoref{fig:string-interpolation-general}). Moreover, it only works on string literals thus guaranteeing the recovery of the value at compile-time.
 
-\begin{figure}[H]
-  \centering
-  \begin{lstlisting}[language=Scala]
+\begin{lstlisting}[language=Scala,caption={[String interpolation general example]{Simple demonstration of the string interpolation mechanism in Scala. The \code{s} interpolator simply calls \code{toString} on each variable passed and concatenates all the parts together.}},label={fig:string-interpolation-general},captionpos=b]
 val s1: String = "world"
 val s2: String = s"Hello $s1!" // Hello world!
-  \end{lstlisting}
-  \caption[String interpolation general example]{Simple demonstration of the string interpolation mechanism in Scala. The \code{s} interpolator simply calls \code{toString} on each variable passed and concatenates all the parts together.}
-  \label{fig:string-interpolation-general}
-\end{figure}
+\end{lstlisting}
 
 This feature has a nice application in our case: not only can we enforce interpolated variables to be terms or formulas but we can also check their type with respect to the context they appear in. For instance, in the expression \code{formula"\$a /\textbackslash\ b"}, the variable \code{a} cannot be a term (in fact, it must be a formula). In addition to terms and formulas, we may also allow the interpolation of labels which is very useful to express names dynamically, e.g. \code{formula"\$p(s)"}. Notice that the previous expression is structurally different from \code{formula"\${p(term"s")}"}, although it leads to the same formula.
 

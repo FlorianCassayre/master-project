@@ -5,17 +5,15 @@
 
 The supporting source code for this project is published at the following address:
 \begin{center}
-\href{http://github.com/FlorianCassayre/master-project}{\textbf{github.com/FlorianCassayre/master-project}}
+\href{http://github.com/FlorianCassayre/master-project}{\textbf{github.com/FlorianCassayre/master-project}}\footnote{At the time of writing, the latest release is identified by commit: \code{c3499c2729730a7f807efb8676a92dcb6f8a3f8f}}
 \end{center}
 
 
-\cite{Asperti2007}
+%\cite{Asperti2007}
 
 \subsection{LISA}
 
-LISA\footnote{\textbf{L}ISA \textbf{I}s \textbf{S}ets \textbf{A}utomated} is an ongoing project conducted at LARA, EPFL. It is a proof assistant framework built on top of sequent calculus and set theory \cite{Guilloud2022-2}.
-
-A sequent is a pair of sets of formulas, noted $l_1, l_r, ..., l_n \vdash r_1, r_2, ..., r_m$, and can be understood as a conjunction of premises implying a disjunction of conclusions, although the actual semantic is controlled by the inference rules of the system. An inference rule can be used as a proof step by specifying the premises in the proof.
+LISA\footnote{\textbf{L}ISA \textbf{I}s \textbf{S}ets \textbf{A}utomated} is an ongoing project conducted at LARA, EPFL. It is a framework built on top of sequent calculus and set theory that enables the formalization of mathematical proofs \cite{Guilloud2022-2}.
 
 \begin{figure}[H]
   $$
@@ -48,8 +46,10 @@ A sequent is a pair of sets of formulas, noted $l_1, l_r, ..., l_n \vdash r_1, r
 \begin{figure}[H]
   \centering
   \input{figures/proof-mini.lisa}
-  \caption[Proof in LISA]{A representation of the proof of \autoref{fig:simple-lisa-proof-graph} in LISA. Each step is assigned an index, import are represented with negative indices. The indentation corresponds to the level of the proof: subproofs are indented further down. The second column states what rule is used, along with the premises it relies upon. The third column is the conclusion of that step. The last column contains parameters to disambiguate the application of the rule.}
+  \caption[Proof in LISA (1)]{A representation of the proof of \autoref{fig:simple-lisa-proof-graph} in LISA. Each step is assigned an index, import are represented with negative indices. The indentation corresponds to the level of the proof: subproofs are indented further down. The second column states what rule is used, along with the premises it relies upon. The third column is the conclusion of that step. The last column contains parameters to disambiguate the application of the rule.}
   \label{fig:simple-lisa-proof}
 \end{figure}
 
-Currently LISA only exists as a Scala library, therefore the proofs are described using Scala code.
+A proof in this system is a directed acyclic graph of proof steps. Each such step is an application of an inference rule. It is characterized by its conclusion expressed as a sequent, and some premises. A sequent is a pair of sets of formulas, noted $l_1, l_r, ..., l_n \vdash r_1, r_2, ..., r_m$, and can be understood as a conjunction of premises implying a disjunction of conclusions, although the actual semantic is controlled by the inference rules provided by the system. Proofs can optionally have ``imports'', sequents that can be used as premises, and proofs may also be nested for organization purposes. Figures \ref{fig:simple-lisa-proof-graph} and \ref{fig:simple-lisa-proof} showcase a formal proof in LISA along with its linear representation.
+
+Currently LISA only exists as a Scala library, therefore the proofs are described using Scala code. For further technical details about LISA, we forward the reader to the official manual.

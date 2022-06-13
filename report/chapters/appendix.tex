@@ -90,7 +90,7 @@
   % Eq. refl.
   \frule{{?s} = {?s} \vdash}{\vdash}{E.L.$=$} & \frule{}{\vdash {?s} = {?s}}{I.R.$=$}
   \end{array}$$
-  \caption[Rules]{Predefined rules provided in the front. For clarity, contexts have been omitted: the intended semantic is the one described in \autoref{sec:proof-framework-rules}. ``H'', ``I'', ``E'', ``L'' and ``R'' respectively stand for ``Hypothesis'', ``Introduction'', ``Elimination'', ``Left'' and ``Right''. In the source, shorthand for these names are used, for instance ``I.L.$\land$'' would be identified by \code{introLAnd}. Most introduction rules map to a single kernel proof step. Elimination rules on the other hand rely on the cut rule.}
+  \caption[Rules (1)]{Predefined rules provided in the front. For clarity, contexts have been omitted: the intended semantic is the one described in \autoref{sec:proof-framework-rules}. ``H'', ``I'', ``E'', ``L'' and ``R'' respectively stand for ``Hypothesis'', ``Introduction'', ``Elimination'', ``Left'' and ``Right''. In the source, shorthand for these names are used, for instance ``I.L.$\land$'' would be identified by \code{introLAnd}. Most introduction rules map to a single kernel proof step. Elimination rules on the other hand rely on the cut rule.}
   \label{fig:rules-list-1}
 \end{figure}
 
@@ -109,16 +109,11 @@
   \frule{{?p}({?s}) \vdash \quad}{{?s} = {?t}, {?p}({?t}) \vdash}{I.L.S.$=$} & \frule{\vdash {?p}({?s})}{{?s} = {?t} \vdash {?p}({?t})}{I.R.S.$=$} \\
   \frule{{?p}({?s}) \vdash \quad \vdash {?s} = {?t}}{{?p}({?t}) \vdash}{E.L.S.$=$} & \frule{\vdash {?p}({?s}) \quad \vdash {?s} = {?t}}{\vdash {?p}({?t})}{E.R.S.$=$}
   \end{array}$$
-  \caption[Rules, continued]{Continuation of \autoref{fig:rules-list-1}. Schemas marked with an overline are constrained to resolve to fresh schemas; namely schemas that do not appear elsewhere in the sequent, apart from this binding.}
+  \caption[Rules (2)]{Continuation of \autoref{fig:rules-list-1}. Schemas marked with an overline are constrained to resolve to fresh schemas; namely schemas that do not appear elsewhere in the sequent, apart from this binding.}
   \label{fig:rules-list-2}
 \end{figure}
 
-\begin{figure}[H]
-  \centering
-  \input{figures/proof-sample.scala.tex}
-  \caption[Sample proof (front)]{Example of a proof written in the front. The generated kernel proof is shown in \autoref{fig:lisa-proof-sample}.}
-  \label{fig:scala-proof-sample}
-\end{figure}
+\input{figures/proof-sample.scala}
 
 \begin{figure}[H]
   \centering

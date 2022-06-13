@@ -13,7 +13,7 @@ In LISA and in our system, sequents are the base logical construct. They carry a
 A \textbf{theory} (or \textbf{environment}) is a global context that contains a set of justified statements. It is constructed with an initial set of axioms and can be used to translate proofs into theorems and definitions.
 \end{definition}
 
-The concept of theories is a formalization of mathematical theories. Namely a context with some axioms and definitions that one can use without proving. In our framework, axioms must be defined in advance (it is not possible to add more later). This provides more control over the critical parts of the system, in particular it ensures that an instance of a theory will have exactly those axioms and not more. Theorems can be obtained by providing a proof that depends on other justified statements of this theory. Definitions require a proof of uniqueness. These aspects are similar to the kernel's \code{RunningTheory}.
+The concept of theories is a formalization of mathematical theories. Namely it is a context with some axioms and definitions that one can use without proving. In our framework, axioms must be defined in advance (it is not possible to add more later). This provides more control over the critical parts of the system, in particular it ensures that an instance of a theory will have exactly those axioms and not more. Theorems can be obtained by providing a proof that depends on other justified statements of this theory. Definitions require a proof of uniqueness. These aspects are similar to the kernel's \code{RunningTheory}. Remark that a theory is stateful as one can always add more definitions to it.
 
 \begin{definition}[Proof direction]
 A \textbf{forward proof} is a proof where the conclusion of each proof step is a justified statement.
@@ -42,6 +42,20 @@ To enter in proof mode it is required to provide an initial proof goal that will
 
 Regarding the representation of the proof state as a stack, it is motivated by the fact that the order of the goals is arbitrary as it does not affect the realization of the proof. With that model in mind, the \textbf{current goal} naturally refers to the goal at the top of the stack. Therefore, by convention it is natural to choose to push new goals to the top of the stack since those are most likely to be proven next by the user.
 
+\begin{lstlisting}[language=Scala,caption={[Tactical proof]{Example of a tactical proof.}},label={lst:proof-interaction},captionpos=b]
+val theorem: Theorem = {
+  val p = ProofMode(sequent"|- (!?a \/ ?b) <=> (?a => ?b)")
+
+  p.apply(introRIff)
+  p.focus(1)
+  p.apply(introRImp)
+  p.apply(introLImp)
+  p.apply(solveProp)
+
+  p.asTheorem()
+}
+\end{lstlisting}
+
 \begin{figure}[H]
   \centering
   \begin{tikzpicture}[auto, on grid, block/.style = {draw, fill=white, rectangle, double, double distance=0.5mm, text width=3.2cm, node distance=2.5cm and 6cm, minimum height=1.4cm, inner sep=0.2cm}, none/.style = {draw=none, minimum height=0cm}]
@@ -58,7 +72,7 @@ Regarding the representation of the proof state as a stack, it is motivated by t
   \draw [->, shorten >= 0.5mm] (state3.east) -- ++(1.25, 0) node[fill=white]{I.L.$\Rightarrow$} -- (state4);
   \draw [->, shorten >= 0.5mm] (state4.east) -- ++(1.25, 0) node[fill=white]{Solve} -- (state5);
   \end{tikzpicture}
-  \caption[Example proof mode interaction]{Example of an interaction in proof mode. The boxes represent the successive proof states and the edges correspond to the tactic applied.}
+  \caption[Tactical proof interaction]{Representation of the interaction of the tactical proof from \autoref{lst:proof-interaction}. The boxes represent the successive proof states and the edges correspond to the tactics applied.}
   \label{fig:proof-interaction}
 \end{figure}
 
@@ -72,14 +86,16 @@ Informally, a tactic transforms a proof state into a new state, and the result o
 
 Tactics can be categorized into more specific functions, for instance most tactics only work on a single goal by replacing it by zero or more new goals. Other tactics may only reorganize the proof, for instance by reordering goals.
 
+In \autoref{lst:proof-interaction}, the method \code{apply} expects a tactic as an argument. Tactics can optionally take arguments, but in practice we try to infer them when possible in order to ease the usage.
+
 \subsection{Rules}
 \label{sec:proof-framework-rules}
 
 \begin{definition}[Rule]
-A \textbf{rule} ......
+A \textbf{rule} is a directive described by a fixed number of premises (potentially zero) and a conclusion; all expressed as patterns.
 \end{definition}
 
-Rules are a particular case of tactics, ....
+Patterns are essentially sequents in which the schemas should be interpreted as variables. Moreover, the pattern sequents are said to be \textbf{partial}, as any other formula that does not appear in them can be ignored.
 
 \begin{figure}[hbt!]
   \centering
@@ -106,9 +122,14 @@ Rules are a particular case of tactics, ....
   \end{prooftree}
   $$
   }
+  \caption[Correspondence between front rules and kernel steps]{Correspondence between front rules and kernel steps. The framed sequents represent the corresponding input and output of the rule.}
   \label{fig:example-rule}
-  \caption[Correspondence between front rules and kernel steps]{Correspondence between front rules and kernel steps. The framed sequent represent the corresponding input and output.}
 \end{figure}
+
+Rule are by themselves not tactics, however a rule can be instantiated to obtain a tactic. In fact, since rules are made of patterns they could be applied in different ways on a same context. The parameters are there disambiguate the application of that rule. For instance they specify what formula of the sequent correspond to what pattern, and what variable assignment should be used. In proof mode, we are therefore trying to match the conclusion pattern of a rule against a proof goal. Successfully applying a rule replaces the current goal by a number of goals equal to the number of premises of that rule. Any formula that does not appear in the pattern will appear as is the new goals.
+Rules may also be applied forward in a very similar fashion: this time we are matching the premises against a sequence of justified statements, to obtain a new justified statement.
+
+Most of the kernel's proof steps can be translated into rules, and several kernel proof steps can be represented by a single rule. \autoref{fig:example-rule} shows an example rule and its translation in the kernel. The explanation on how patterns are matched against values can be found in \autoref{sec:matching}.
 
 \subsection{Tactics combinators}
 
@@ -128,22 +149,64 @@ Although impractical, tactics can call other tactics when they are applied. Inst
   \label{tab:tactics-combinators}
 \end{table}
 
-These combinators make it possible to conveniently write simple routines, for instance a propositional solver (\autoref{fig:solver-combinators}). Remark that this particular procedure is deterministic and runs in exponential time in the worst case. The argument for the former is a proof by induction on the structure of the goal, while the argument for the latter is a pathological case (e.g. a sequence of conjunctions on the right side). More efficient heuristics could be used to slightly improve the runtime and the length of the proofs, however as per \cite{Krajicek1994} there exists tautologies that cannot be proven in less than an exponential number of LISA's sequent calculus steps (even with the cut rule).
+These combinators make it possible to conveniently write simple routines, for instance a propositional solver (\autoref{lst:solver-combinators}). Remark that this particular procedure is deterministic and runs in exponential time in the worst case. The argument for the former is a proof by induction on the structure of the goal, while the argument for the latter is a pathological case (e.g. a sequence of conjunctions on the right side). More efficient heuristics could be used to slightly improve the runtime and the length of the proofs, however as per \cite{Krajicek1994} there exists tautologies that cannot be proven in less than an exponential number of LISA's sequent calculus steps (even with the cut rule).
 
-\begin{figure}[hbt!]
-  \centering
-  \begin{lstlisting}[language=Scala]
+\begin{lstlisting}[language=Scala,caption={[Propositional solver]{A propositional solver written using exclusively rules and tactic combinators.}},label={lst:solver-combinators},captionpos=b]
 val autoProp = (introHypo
   | introLAnd | introRAnd
-  | introLOr | introROr
+  | introLOr  | introROr
   | introLImp | introRImp
   | introLIff | introRIff
   | introLNot | introRNot).+
-  \end{lstlisting}
-  \caption[Propositional solver]{A propositional solver written using exclusively rules and tactic combinators.}
-  \label{fig:solver-combinators}
-\end{figure}
+\end{lstlisting}
+
+\subsection{Justifications}
+
+In general, proofs depend on other justifications, such as an axiom or a proven theorem. In forward mode the dependency is evident because the justifications must be passed as arguments in order to obtain the desired justification. In backward mode the reasoning is the opposite: if a goal matches exactly a justification, then it can be eliminated. However we can do more than that; for instance if a goal is equivalent to the justification with respect to the equivalence checker, then we can rewrite it on the fly. Moreover, we can also use theorems as rules and perform the required instantiation. This is depicted in \autoref{lst:proof-justifications}.
+
+\begin{lstlisting}[language=Scala,caption={[Proof with justifications]{Example of a proof with justifications.}},label={lst:proof-justifications},captionpos=b]
+val p = ProofMode(sequent"|- ({} in {}) => ?a")
+
+p.apply(introRImp)
+p.apply(elimRNot)
+p.apply(justificationInst(
+  elimRForall
+    (RuleParameters(AssignedFunction(t, s)))
+    (axiomEmpty.asJustified)
+    .get
+))
+
+val theorem = p.asTheorem()
+\end{lstlisting}
+
+At line 5, the tactic \code{justificationInst} takes a justification as parameter and performs all the necessary rewrites and instantiations. Here we pass it a theorem of the form $\vdash \neg({?s} \in \emptyset)$ (lines 6-9); which matches with the current goal $\vdash \neg(\emptyset \in \emptyset), {?a}$. ${?s}$ is instantiated to $\emptyset$, and ${?a}$ is removed as part of a weakening step.
 
 \subsection{Proof-level state transformations}
 
 Because the proof mode is meant to be interactive, it implements commands to interact with the history, for instance to cancel an applied tactic or to restart the proof. While these features aren't particularly sophisticated they provide an interface for interactivity; the most primitive example of such an interface being the REPL\footnote{REPL: Read-Eval-Print Loop, a generic term to describe an environment that can interpret code interactively.}.
+
+\subsection{Mixing proof styles}
+
+Our framework allows both forward and backward to be used. The most common use case is to transform a justification to eliminate a goal. Some rules are also more commonly used in a mode than another. For example, instantiation rules are more intuitively understood when used forward while weakening rules are more naturally used backward.
+
+\begin{figure}[H]
+  \centering
+\begin{prooftree}
+\hypo{\vdash \forall x. \neg(x \in \varnothing)}
+\hypo{}
+\infer1[$\text{Hypo.}$]{\neg({?s} \in \varnothing) \vdash \neg({?s} \in \varnothing)}
+\infer1[$\text{Left}~{\forall}$]{\forall x. \neg(x \in \varnothing) \vdash \neg({?s} \in \varnothing)}
+\infer2[$\text{Cut}$]{\vdash \neg({?s} \in \varnothing)}
+\infer1[$\text{?Fun. Instantiation}$]{\vdash \neg(\varnothing \in \varnothing)}
+\infer1[$\text{Weakening}$]{\vdash \neg(\varnothing \in \varnothing); {?a}}
+\hypo{}
+\infer1[$\text{Hypo.}$]{\varnothing \in \varnothing \vdash \varnothing \in \varnothing}
+\infer1[$\text{Left}~{\neg}$]{\neg(\varnothing \in \varnothing); \varnothing \in \varnothing \vdash}
+\infer2[$\text{Cut}$]{\varnothing \in \varnothing \vdash {?a}}
+\infer1[$\text{Right}~{\Rightarrow}$]{\vdash (\varnothing \in \varnothing) \Rightarrow {?a}}
+\end{prooftree}
+  \caption[Proof in LISA (2)]{Translation of the proof in \autoref{lst:proof-justifications} into LISA. The left branch was derived in forward mode (forward rule application followed by an implicit instantiation), while the remaining steps were derived in backward mode through the tactical \code{apply} steps.}
+  \label{fig:proof-mixed-tree}
+\end{figure}
+
+Regardless the style used, the proof will successfully be converted into either a monolithic proof tree or a forest of proof trees; as demonstrated in \autoref{fig:proof-mixed-tree}. The details describing how this is achieved are presented in \autoref{sec:synthesis}.

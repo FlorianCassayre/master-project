@@ -1,4 +1,4 @@
-\section{The Framework}
+\section{The framework}
 \label{sec:framework}
 
 The work of this thesis is designated as ``a front-end for LISA''. The term ``front-end'' is generally used for layered architectures to outline a layer that is the closest to the end user. Though, what is understood as a user can vary depending on the context. In our case, we understand front-end as a programmatic interface for the user of LISA. More precisely, we were interested in designing a framework that depended on the LISA kernel and strove to provide a higher-level interface to construct and organize proofs. The use of an indefinite article in our designation is to emphasize the fact that such a layer is by essence guided by opinionated design choices (independent of LISA).
@@ -35,6 +35,7 @@ During the implementation, eight bugs were discovered in different areas of the 
   % https://tex.stackexchange.com/q/515582
   \begin{tikzpicture}[grow via three points={one child at (1.0,-0.6) and two children at (1.0,-0.6) and (1.0,-1.2)}, edge from parent path={(\tikzparentnode.south)|-(\tikzchildnode.west)}]
   \node{(root package)}
+  child{node{\code{example}}}
   child{node{\code{front}}
       child{node{\code{fol}}}
       child{node{\code{parser}}}
@@ -48,15 +49,17 @@ During the implementation, eight bugs were discovered in different areas of the 
   child [missing] {}
   child{node{\code{util}}}
   child{node{\code{legacy}}};
-  \node at (6, -1.2) {\parbox{7cm}{\hspace*{0pt}\hfill(first-order logic)}};
-  \node at (6, -1.8) {\parbox{7cm}{\hspace*{0pt}\hfill(FOL parsers)}};
-  \node at (6, -2.4) {\parbox{7cm}{\hspace*{0pt}\hfill(FOL and proof printers)}};
-  \node at (6, -3.0) {\parbox{7cm}{\hspace*{0pt}\hfill(logic for proofs, depends on FOL)}};
-  \node at (6, -3.6) {\parbox{7cm}{\hspace*{0pt}\hfill(available theories)}};
-  \node at (6, -4.2) {\parbox{7cm}{\hspace*{0pt}\hfill(utilities that only rely on the kernel)}};
-  \node at (6, -4.8) {\parbox{7cm}{\hspace*{0pt}\hfill(older experiments)}};
+  \node at (6, -0.6) {\parbox{7cm}{\hspace*{0pt}\hfill(examples)}};
+  \node at (6, -1.2) {\parbox{7cm}{\hspace*{0pt}\hfill(the front-end framework)}};
+  \node at (6, -1.8) {\parbox{7cm}{\hspace*{0pt}\hfill(first-order logic)}};
+  \node at (6, -2.4) {\parbox{7cm}{\hspace*{0pt}\hfill(FOL parsers)}};
+  \node at (6, -3.0) {\parbox{7cm}{\hspace*{0pt}\hfill(FOL and proof printers)}};
+  \node at (6, -3.6) {\parbox{7cm}{\hspace*{0pt}\hfill(logic for proofs, depends on FOL)}};
+  \node at (6, -4.2) {\parbox{7cm}{\hspace*{0pt}\hfill(available theories)}};
+  \node at (6, -4.8) {\parbox{7cm}{\hspace*{0pt}\hfill(utilities that only rely on the kernel)}};
+  \node at (6, -5.4) {\parbox{7cm}{\hspace*{0pt}\hfill(older experiments)}};
   \end{tikzpicture}
-  \caption[Source code packages structure]{Structure of the packages in the source code.}
+  \caption[Source code packages structure]{Structure of the packages in the source code. The reader is invited to start with the package \code{example} which presents a collection of examples demonstrating the capabilities of the framework.}
   \label{fig:packages}
 \end{figure}
 

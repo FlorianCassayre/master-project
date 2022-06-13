@@ -1,4 +1,4 @@
-\section{Future Work}
+\section{Future work}
 \label{sec:future-work}
 
 While the original goal of this framework was to propose an opinionated front-end for LISA, we do not exclude the possibility of integrating some useful components directly into LISA (as is, or in a refined version). That includes all the logic for bidirectional parsing and printing (possibly with macros), proof utilities and optimization routines, and a matcher or unifier. It should also be decided whether it would be worth strengthening the kernel to provide support for schematic connectors, which are as we have shown essential elements for unification tasks.
@@ -8,6 +8,8 @@ The following subsections expose known limitations of the framework, how they co
 \subsection{Limitations}
 
 Despite our efforts and the previous iterations, we have discovered a few limitations in the current version of the system and present them here along with a hint for a potential fix.
+
+Unlike the kernel, the front does not have an explicit error reporting system when writing proofs. This means that if a tactic is incorrectly applied the result of the optional will be empty but will not indicate the reason. This lack seriously hinders the usability of the framework as it is more difficult to debug proofs. The reason for such absence is because we have not yet been able to unify the tactic arguments APIs in an elegant way, thus postponing the implementation of such a feature.
 
 
 

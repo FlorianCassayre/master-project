@@ -7,17 +7,33 @@ Most programming languages that implement pattern matching, such as Scala, disal
 
 In this framework we relax the notion of equality for non-linear pattern variables by allowing them to be equivalent with respect the equivalence checker implemented in LISA: the orthocomplemented bisemilattices (OCBSL) equivalence checker \cite{Guilloud2022}. This leads to an ambiguity in the assignment because by construction a variable can only be assigned a single value; thus not only will the resulting assignment may not lead to an instantiation that is structurally equal to the target, but it is also unclear which assigned value to choose. To address these ambiguities, we define deterministic rules that are not necessarily practical but are required to exhibit consistent behavior over different execution contexts.
 
-\subsection{Definitions}
+\subsection{Terminology}
 
-Formally, a matching is characterized by the following components:
+Formally, a matching is characterized by the following elements:
 
-\begin{itemize}
-\item Pattern variable: a typed hole represented as a schema or a bound/free variable.
-\item Constants: a term or a formula that is free of pattern variables.
-\item Pattern: a tree made from pattern variables and constants.
-\item Value: a tree containing only constants. Schemas and bound/free variables are interpreted as constants and shouldn't clash with pattern variables.
-\item Solution: an assignment mapping pattern variables to values, such that when the pattern is instantiated it becomes equivalent to the value.
-\end{itemize}
+\begin{definition}[Tree]
+A \textbf{tree} refers to either a term, a formula or a sequent.
+\end{definition}
+
+The type of a tree is known and gives its nature (term, formula or sequent).
+
+\begin{definition}[Pattern variable and constant]
+A \textbf{pattern variable} is a term or a formula represented as a schema or a bound/free variable.
+A \textbf{constant} is a tree that is free of pattern variables.
+\end{definition}
+
+Without context, it is not possible to tell if a schema or a variable is a pattern variable or a constant.
+
+\begin{definition}[Pattern and value]
+A \textbf{pattern} is a tree in which the nodes can be either pattern variables or constants.
+A \textbf{value} is a tree in which the nodes are all constants.
+\end{definition}
+
+In a value, schemas and bound/free variables are interpreted as constants and shouldn't clash with pattern variables.
+
+\begin{definition}[Solution of a matching]
+A \textbf{solution} is an assignment mapping pattern variables to values, such that when the pattern is instantiated it becomes equivalent to the value.
+\end{definition}
 
 The matching procedure takes three arguments: a sequence of patterns, a sequence of values and a partial assignment. It returns a solution or fails. The partial assignment corresponds to a partial solution that the procedure should complete.
 
@@ -25,11 +41,11 @@ Patterns are referred to as the left hand side, and values as the right hand sid
 
 \subsection{Specification}
 
-The goal is to find an assignment for the sequence of patterns such that when it is instantiated it becomes equivalent to the sequence of values. Each pattern is matched against the value located at the same index in the sequence. The matching is successful if all the patterns can be resolved without reaching a contradiction. The matching fails if a contradiction is reached, or if the problem is under-constrained (solution space is infinite). If a solution is returned, then it should always be a superset of the provided partial assignment. By default the partial assignment equals the empty set.
+The goal is to find an assignment for the sequence of patterns such that when it is instantiated it becomes equivalent to the sequence of values. Each pattern is matched against the value located at the same index in the sequence. The matching is successful if all the patterns can be resolved without reaching a contradiction. The matching fails if a contradiction is reached, or if the problem is under-constrained (solution space is infinite). If a solution is returned, then it should always be a superset of the provided partial assignment. By default the partial assignment is the empty set.
 
 Because the procedure can also be used to rename bound variables, the pattern should not declare a bound variable more than once. Moreover, no free variable can reuse the name of a bound variable, regardless the scope. Apart from these restrictions, all pattern variables can appear any number of times in the pattern. In addition, pattern variables can appear as arguments of other pattern variables (without any limitation on the depth).
 
-If a pattern variable can take more than one equivalent form, we should select the one that appears first with respect to the pre-order of that tree.
+By convention, if a pattern variable can take more than one equivalent form, we should select the one that appears first with respect to the pre-order listing of the nodes of that tree.
 
 For a list of examples with their expected output according to this specification, refer to \autoref{tab:matching-examples}.
 
@@ -37,33 +53,29 @@ For a list of examples with their expected output according to this specificatio
 
 \subsubsection{Preliminary checks}
 
-We should initially check that the inputs are well-formed. For instance the pattern should satisfy the above requirement. Since the patterns and values are matched sequentially, we should check that the lengths of the two sequences correspond. Other relatively basic checks on the parameters should be performed but are not described in details.
+We should initially check that the inputs are well-formed. For instance the pattern should satisfy the requirements described in the previous section. Since the patterns and values are matched sequentially, we should check that the lengths of the two sequences correspond. Other checks on the parameters should be performed but are not described in details here.
 
 \subsubsection{Fresh names}
 
-Schemas and variables have a different meaning depending whether they appear in the pattern or in the value. One of the requirements was to avoid extending the first order logic package with new datatypes. To disambiguate both meanings there are two options. The first one consists of defining a new intermediate representation. The alternative approach is to rename schemas and variable in such a way that we can distinguish them from each other. The second option was chosen as the implementation is significantly shorter.
+Schemas and variables have a different meaning depending whether they appear in the pattern or in the value. One of the requirements was to avoid extending the first order logic package with new datatypes. To disambiguate both meanings there are two options. The first one consists of defining a new intermediate representation that is exclusive to patterns. The alternative approach is to rename schemas and variable in such a way that we can distinguish them from each other. The second option was chosen as the implementation is significantly shorter.
 
-The first step of the algorithm is therefore to list all schemas and variables on both sides, and then to rename all schemas and pattern variables to freshly generated identifiers. The mapping should be kept because we must restore the original names at the end. Moreover it also allows us to know which names are patterns variables.
+The first step of the algorithm is therefore to list all schemas and variables on both sides, and then to rename all schemas and pattern variables by freshly generated identifiers. The mapping should be kept because we will use it to restore the original names at the end. The mapping also serves as a predicate to determine whether a name is a pattern variable or a constant.
 
 \subsubsection{Constraints collection}
 
-Pattern variables can appear as arguments of other pattern variables, therefore we cannot solve the constraints in a single traversal. Instead, we enumerate the cons
-
-A constraint consists of a pattern variable, its arguments and a target value.
-
-This step consists of traversing the pattern and the values trees in parallel.
+Pattern variables can appear as arguments of other pattern variables, which does not make it possible to solve the constraints in a single traversal. Instead, we decompose the problem into different phases, which can be mutually recursive. The first one of these is the constraints enumeration. A constraint is a triplet consisting of a pattern variable, its arguments and a target value. In this phase we traverse the pattern and value trees at the same time, in pre-order. As long as the pattern is constant, the only task done by this procedure is to ensure that both sides are structurally equal. When a pattern variable is encountered, a constraint is returned and the traversal stops for this branch. At any point, if a contradiction is detected, it is transferred back to the first caller in order to halt the procedure; we further refer to that as a \textbf{failure}.
 
 \subsubsection{Constraints resolution}
 
-The constraints are processed in the order they appear. However, not all constraints can be immediately solved: sometimes the resolution of a constraint may unlock another constraint. While there remains constraints, the procedure picks the first constraints that can be solved. If none exists, that means the problem is under-constrained and the procedure returns a failure. The resolution of a constraint may produce additional constraints. In that case the new constraints are inserted at the same position in the sequence.
+After collecting the constraints the objective of the next phase is to attempt to resolve them. We say that a constraint is resolved as soon as the pattern variable it represents has been assigned a value in this context, and that value is compatible with the constraint's. For that, the constraints are processed in the order they appear; by assumption these constraints were listed in pre-order. However, not all constraints can be immediately solved: sometimes the resolution of a constraint may unlock another constraint. Therefore while there remains unsolved constraints the procedure picks the first constraints that can be solved. If none exists, that means the problem is under-constrained and the procedure returns a failure. Although the current implementation of the resolution phase does not create additional constraints, other implementations that may want to return a result for under-constrained instances has the possibility to produce and return additional constraints. In that case the new constraints are inserted at the same position in the sequence.
 
-A constraint can be solved if and only if all the pattern variables in the pattern's arguments have been assigned a value with respect to the current context. As a consequence, all constraints represented by nullary schemas or variables can be solved.
+In this phase a constraint can be solved if and only if all the pattern variables in the pattern's arguments have been assigned a value with respect to the current context. As a consequence, all constraints represented by nullary schemas or variables can be solved immediately.
 
 Once a constraint satisfying the above condition has been located, we can proceed with the resolution. Firstly, each argument is instantiated (thus becoming values). Then, there are two cases to consider.
 
-If the pattern variable is already assigned a value, then we instantiate this assignment with the instantiated arguments and compare it against the value for equivalence. If they can't be proven equivalent then we return a failure, otherwise we don't do anything and carry on.
+If the pattern variable is already assigned a value, we instantiate this assignment with the instantiated arguments and compare it against the value for equivalence. If we cannot prove that they are equivalent we return a failure, otherwise we do not do anything and carry on.
 
-If the pattern variable does not have an assigned value, we should find one. We associate fresh schemas to each argument. We then apply a greedy factoring algorithm to replace all occurrences of the instantiated arguments by their associated schema. Again, we traverse the tree in pre-order to satisfy the specification, and then find the first instantiated argument that is equivalent to this node. This procedure cannot fail: an edge case would be that no value is factored, which is still a valid solution.
+If the pattern variable does not have an assigned value we must assign one to it. If applicable we generate fresh schemas for the arguments of this assignment. We then apply a greedy factoring algorithm to replace all occurrences of the instantiated arguments by their associated schema. Again, we traverse the tree in pre-order to satisfy the specification, and then find the first instantiated argument that is equivalent to this node. The factoring procedure cannot fail: an special case could be that no value is factored, however it is still a valid solution.
 
 \subsubsection{Conclusion}
 
@@ -89,4 +101,4 @@ The procedure is by design incomplete, i.e. there are problem instances where a 
 
 The first application of matching is to automatically infer arguments of rules. This reduces the burden of applying rules. Because rules are defined in a general way, it is particularly desirable to solve that problem using the same procedure.
 
-While introduction rules can usually be applied backwards without ambiguity, other rules may need some parameters to be specified explicitly. This motivates the introduction of an additional parameter: an optional partial assignment that constrains the solution space. It can also be used as a hint when the framework picked the "wrong" solution. It is guaranteed that the partial assignment will be subset of the returned solution, if there is any. In general, if a pattern variable appears at the target side but not at the source, then it must be specified.
+While introduction rules can usually be applied backwards without ambiguity, other rules may need some parameters to be specified explicitly. This motivates the introduction of an additional parameter: an optional partial assignment that constrains the solution space. It can also be used as a hint when the framework picked the ``wrong'' solution. It is guaranteed that the partial assignment will be subset of the returned solution, if there is any. In general, if a pattern variable appears at the target side but not at the source, then it must be specified.
