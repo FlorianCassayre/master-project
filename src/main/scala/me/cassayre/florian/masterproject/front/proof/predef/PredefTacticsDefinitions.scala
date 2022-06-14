@@ -156,7 +156,7 @@ trait PredefTacticsDefinitions extends ProofEnvironmentDefinitions with Unificat
                 0,
                 ctx.assignedPredicates.map(assigned => toKernel(assigned.schema) -> toKernel(assigned.lambda)).toMap,
               ),
-              Rewrite(sequentToKernel(proofGoal), 1),
+              Weakening(sequentToKernel(proofGoal), 1),
             ),
           )
         }

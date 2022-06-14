@@ -189,13 +189,17 @@ object SCUtils {
           Left(SCSubproof(simplifyProof(sp), premises, display))
         // Double or fruitless rewrite
         case Rewrite(bot, t1)
-          if (notLast || t1 == i - 1) && (
+          if notLast && (
             bot == getSequentLocal(t1) ||
               dependents(i).toSeq.map(proof.steps).forall { case _: (Rewrite | Weakening) => true; case _ => false }) =>
           Right(t1)
+        case Rewrite(bot, t1) if t1 >= 0 && proof.steps(t1).isInstanceOf[Hypothesis] =>
+          Left(Hypothesis(bot, proof.steps(t1).asInstanceOf[Hypothesis].phi))
+        case Weakening(bot, t1) if t1 >= 0 && proof.steps(t1).isInstanceOf[Hypothesis] =>
+          Left(Hypothesis(bot, proof.steps(t1).asInstanceOf[Hypothesis].phi))
         // Double or fruitless weakening
         case Weakening(bot, t1)
-          if (notLast || t1 == i - 1) && (
+          if notLast && (
             bot == getSequentLocal(t1) ||
               dependents(i).toSeq.map(proof.steps).forall { case _: Weakening => true; case _ => false }) =>
           Right(t1)
@@ -233,7 +237,7 @@ object SCUtils {
   }
 
   /**
-   * Attempts to factor the premises such that the first import of proven sequent is used.
+   * Attempts to factor the premises such that the first occurrence of a proven sequent is used.
    * This procedure is greedy.
    * Unused proof steps will not be removed. Use [[deadStepsElimination]] for that.
    * @param proof the proof to be factored

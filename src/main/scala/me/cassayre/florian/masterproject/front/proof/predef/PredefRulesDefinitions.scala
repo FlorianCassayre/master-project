@@ -260,20 +260,16 @@ trait PredefRulesDefinitions extends RuleDefinitions {
     ** |- *(forall(x, p(x))),
     ** |- *(p(t)),
     (bot, ctx) => {
-      ctx(t) match {
-        case FunctionTerm(_: SchematicFunctionLabel[?], Seq()) =>
-          val vx = VariableTerm(ctx(x))
-          val tv = ctx(t)
-          val (px, pt) = (ctx(p)(vx), ctx(p)(tv))
-          val fpx = forall(ctx(x), px)
-          val cBot = bot -> pt
-          IndexedSeq(
-            Hypothesis(bot +< pt, pt),
-            LeftForall(bot +< fpx, 0, px, vx.label, tv),
-            Cut(bot, -1, 1, fpx),
-          )
-        case e => throw new MatchError(e)
-      }
+      val vx = VariableTerm(ctx(x))
+      val tv = ctx(t)
+      val (px, pt) = (ctx(p)(vx), ctx(p)(tv))
+      val fpx = forall(ctx(x), px)
+      val cBot = bot -> pt
+      IndexedSeq(
+        Hypothesis(bot +< pt, pt),
+        LeftForall(bot +< fpx, 0, px, vx.label, tv),
+        Cut(bot, -1, 1, fpx),
+      )
     }
   )
 

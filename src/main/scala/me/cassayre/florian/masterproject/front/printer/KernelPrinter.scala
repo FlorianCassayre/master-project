@@ -29,7 +29,7 @@ object KernelPrinter {
     Sequent(sorted(s.left.toIndexedSeq.map(fromKernel)), sorted(s.right.toIndexedSeq.map(fromKernel)))
   }
 
-  def prettyProof(scProof: lisa.kernel.proof.SCProof, style: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, explicit: Boolean = false): String = {
+  def prettyProof(scProof: lisa.kernel.proof.SCProof, style: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, explicit: Boolean = false, error: Option[(Seq[Int], String)] = None): String = {
     val p = FrontPrintParameters(style, compact)
     val r = KernelRuleIdentifiers(p.s)
     def prettyName(name: String): String = style match {
@@ -137,6 +137,9 @@ object KernelPrinter {
       }.max
     val maximumRuleNameLength = computeMaximumRuleNameLength(proof)
 
+    val proofStepIndicator = s"${p.s.Implies} "
+    val proofStepNoIndicator = " " * proofStepIndicator.length
+
     def recursivePrint(proof: ProofWrapper, path: Seq[Int]): Seq[(String, String)] = {
       val importsPairs = proof.imports.zipWithIndex.map { case (s, i) => (-(i + 1), NormalStepWrapper(prettyName("Import"), Seq.empty, s, Seq.empty)) }.reverse
       val stepsTriplets = proof.steps.zipWithIndex.map { case (step, i) =>
@@ -155,7 +158,15 @@ object KernelPrinter {
         val (leftLength, rightLength) = (numberColumnEnd - numberColumn.length + 1, maximumNumberColumnEnd - numberColumnEnd)
         val (leftSpace, rightSpace) = (columnInterleaving * path.size, columnInterleaving * (maximumNumberColumnDepth - path.size))
 
-        leftSpace + (" " * (leftLength - leftSpace.length)) +
+        val fullPath = i +: path
+
+        val prefix = error match {
+          case None => ""
+          case Some((errorPath, _)) => if(errorPath.reverse == fullPath) proofStepIndicator else proofStepNoIndicator
+        }
+
+        prefix +
+          leftSpace + (" " * (leftLength - leftSpace.length)) +
           numberColumn +
           (" " * (rightLength - rightSpace.length)) + rightSpace +
           columnInterleaving +
@@ -175,11 +186,17 @@ object KernelPrinter {
       case _ => "\n"
     }
 
+    val errorSeq = error match {
+      case None => Seq.empty
+      case Some((path, message)) => Seq(s"Proof checker has reported an error at line ${path.mkString(".")}: $message")
+    }
+
     val allLinesPairs = recursivePrint(proof, Seq.empty)
     val maximumLengthFirst = allLinesPairs.map { case (first, _) => first.length }.max
-    val content = allLinesPairs.map { case (first, second) =>
+    val contentProof = allLinesPairs.map { case (first, second) =>
       Seq(first, " " * (maximumLengthFirst - first.length), if(explicit) columnInterleaving else "", second).mkString.replaceAll("\\s+$", "")
-    }.mkString(lineSeparator)
+    }
+    val content = (contentProof ++ errorSeq).mkString(lineSeparator)
 
     style match {
       case FrontPrintStyle.Latex =>
