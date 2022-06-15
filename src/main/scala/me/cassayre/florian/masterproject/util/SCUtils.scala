@@ -167,48 +167,59 @@ object SCUtils {
    * @return the simplified proof
    */
   def simplifyProof(proof: SCProof): SCProof = {
+    def isSequentSubset(subset: Sequent, superset: Sequent): Boolean =
+      isSubset(subset.left, superset.left) && isSubset(subset.right, superset.right)
     def schematicPredicates(sequent: Sequent): Set[SchematicPredicateLabel] =
       (sequent.left ++ sequent.right).flatMap(_.schematicPredicates)
     def schematicFunctions(sequent: Sequent): Set[SchematicFunctionLabel] =
       (sequent.left ++ sequent.right).flatMap(_.schematicFunctions)
-    val dependents = proof.steps.zipWithIndex.flatMap { case (step, i) => step.premises.map(_ -> i) }
-      .groupBy { case (i, _) => i }.view.mapValues(_.map { case (_, j) => j }.toSet).toMap.withDefaultValue(Set.empty)
-    val (newSteps, _) = proof.steps.zipWithIndex.foldLeft((IndexedSeq.empty[SCProofStep], IndexedSeq.empty[Int])) { case ((acc, map), (step, i)) =>
+    val (newSteps, _) = proof.steps.zipWithIndex.foldLeft((IndexedSeq.empty[SCProofStep], IndexedSeq.empty[Int])) { case ((acc, map), (oldStep, i)) =>
       def resolveLocal(j: Int): Int = {
         require(j < i)
         if(j >= 0) map(j) else j
       }
       def getSequentLocal(j: Int): Sequent = {
         require(j < i)
-        if(j >= 0) acc(j).bot else proof.getSequent(j)
+        if(j >= 0) acc(map(j)).bot else proof.getSequent(j)
       }
-      val notLast = i != proof.steps.size - 1
-      val either: Either[SCProofStep, Int] = mapPremises(step, resolveLocal) match {
+      object LocalStep {
+        def unapply(j: Int): Option[SCProofStep] = {
+          require(j < i)
+          if(j >= 0) Some(acc(map(j))) else None
+        }
+      }
+      val step = mapPremises(oldStep, resolveLocal)
+      val either: Either[SCProofStep, Int] = step match {
+        // General unary steps
+        case _ if step.premises.sizeIs == 1 && getSequentLocal(step.premises.head) == step.bot =>
+          Right(step.premises.head)
+        case _ if !step.isInstanceOf[Rewrite] && step.premises.sizeIs == 1 && isSameSequent(getSequentLocal(step.premises.head), step.bot) =>
+          Left(Rewrite(step.bot, step.premises.head))
+        case _ if !step.isInstanceOf[Rewrite] && !step.isInstanceOf[Weakening]
+          && step.premises.sizeIs == 1 && isSequentSubset(getSequentLocal(step.premises.head), step.bot) =>
+          Left(Weakening(step.bot, step.premises.head))
         // Recursive
         case SCSubproof(sp, premises, display) =>
           Left(SCSubproof(simplifyProof(sp), premises, display))
-        // Double or fruitless rewrite
-        case Rewrite(bot, t1)
-          if notLast && (
-            bot == getSequentLocal(t1) ||
-              dependents(i).toSeq.map(proof.steps).forall { case _: (Rewrite | Weakening) => true; case _ => false }) =>
-          Right(t1)
-        case Rewrite(bot, t1) if t1 >= 0 && proof.steps(t1).isInstanceOf[Hypothesis] =>
-          Left(Hypothesis(bot, proof.steps(t1).asInstanceOf[Hypothesis].phi))
-        case Weakening(bot, t1) if t1 >= 0 && proof.steps(t1).isInstanceOf[Hypothesis] =>
-          Left(Hypothesis(bot, proof.steps(t1).asInstanceOf[Hypothesis].phi))
-        // Double or fruitless weakening
-        case Weakening(bot, t1)
-          if notLast && (
-            bot == getSequentLocal(t1) ||
-              dependents(i).toSeq.map(proof.steps).forall { case _: Weakening => true; case _ => false }) =>
-          Right(t1)
-        case Weakening(bot, t1) if isSameSequent(bot, getSequentLocal(t1)) =>
-          Left(Rewrite(bot, t1))
-        // Hypothesis followed by weakening
-        case Weakening(bot, t1) if t1 >= 0 && (acc(t1) match { case _: Hypothesis => true; case _ => false }) =>
-          Left(Hypothesis(bot, acc(t1).asInstanceOf[Hypothesis].phi))
-        // Needless cut
+        // Double rewrite
+        case Rewrite(bot1, LocalStep(Rewrite(bot2, t2))) if isSameSequent(bot1, bot2) =>
+          Left(Rewrite(bot1, t2))
+        // Double weakening
+        case Weakening(bot1, LocalStep(Weakening(bot2, t2))) if isSequentSubset(bot2, bot1) =>
+          Left(Weakening(bot1, t2))
+        // Rewrite and weakening
+        case Weakening(bot1, LocalStep(Rewrite(_, t2))) if isSequentSubset(getSequentLocal(t2), bot1) =>
+          Left(Weakening(bot1, t2))
+        // Weakening and rewrite
+        case Rewrite(bot1, LocalStep(Weakening(_, t2))) if isSequentSubset(getSequentLocal(t2), bot1) =>
+          Left(Weakening(bot1, t2))
+        // Hypothesis and rewrite
+        case Rewrite(bot1, LocalStep(Hypothesis(_, phi))) if bot1.left.contains(phi) && bot1.right.contains(phi) =>
+          Left(Hypothesis(bot1, phi))
+        // Hypothesis and weakening
+        case Weakening(bot1, LocalStep(Hypothesis(_, phi))) if bot1.left.contains(phi) && bot1.right.contains(phi) =>
+          Left(Hypothesis(bot1, phi))
+        // Useless cut
         case Cut(bot, _, t2, phi) if bot.left.contains(phi) =>
           Left(Weakening(bot, t2))
         case Cut(bot, t1, _, phi) if bot.right.contains(phi) =>
@@ -225,12 +236,11 @@ object SCUtils {
         case InstFunSchema(bot, t1, insts) if !insts.keySet.subsetOf(schematicFunctions(getSequentLocal(t1))) =>
           val newInsts = insts -- insts.keySet.diff(schematicFunctions(getSequentLocal(t1)))
           Left(InstFunSchema(bot, t1, newInsts))
-        // No optimization found
         case other => Left(other)
       }
       either match {
-        case Left(sequent) => (acc :+ sequent, map :+ acc.size)
-        case Right(index) => (acc, map :+ index)
+        case Left(newStep) => (acc :+ newStep, map :+ acc.size)
+        case Right(index) => (acc :+ oldStep, map :+ index)
       }
     }
     SCProof(newSteps, proof.imports)
