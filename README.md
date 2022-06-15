@@ -4,6 +4,7 @@
 ![Version](https://img.shields.io/github/v/release/FlorianCassayre/master-project)
 ![Last commit](https://img.shields.io/github/last-commit/FlorianCassayre/master-project)
 ![License](https://img.shields.io/github/license/FlorianCassayre/master-project)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6645113.svg)](https://doi.org/10.5281/zenodo.6645113)
 
 This repository hosts the work related to my Master Project (PDM) at [LARA](https://lara.epfl.ch/w/).
 This includes source code, writeup and any other significant resource related to the project.

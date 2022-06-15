@@ -5,7 +5,7 @@ on:
     types: [created]
 
 jobs:
-  release:
+  release-software:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -29,3 +29,23 @@ jobs:
           remote_host: maven.cassayre.me
           remote_user: github
           remote_key: ${{ secrets.DEPLOY_KEY }}
+  release-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Build thesis PDF
+        uses: xu-cheng/latex-action@v2
+        with:
+          working_directory: report
+          root_file: thesis.tex
+          args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode -shell-escape
+          extra_system_packages: inkscape
+      - name: Upload the artifacts
+        uses: skx/github-action-publish-binaries@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          working_directory: report
+          args: thesis.pdf
