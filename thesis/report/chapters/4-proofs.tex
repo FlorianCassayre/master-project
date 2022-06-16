@@ -38,7 +38,7 @@ A proof goal corresponds to an open branch. It is worth noting that proof goals 
 In proof mode, the \textbf{proof state} is a stack of proof goals.
 \end{definition}
 
-To enter in proof mode it is required to provide an initial proof goal that will serve as an initial state to this proof mode. A statement is said to be proven once the proof state becomes empty, or in other words once all proof goals have been eliminated. Thus, proof modes with empty proof states should produce a valid kernel proof.
+To enter proof mode it is required to provide an initial proof goal that will serve as an initial state to this proof mode. A statement is said to be proven once the proof state becomes empty, or in other words once all proof goals have been eliminated. Thus, proof modes with empty proof states should produce a valid kernel proof.
 
 Regarding the representation of the proof state as a stack, it is motivated by the fact that the order of the goals is arbitrary as it does not affect the realization of the proof. With that model in mind, the \textbf{current goal} naturally refers to the goal at the top of the stack. Therefore, by convention it is natural to choose to push new goals to the top of the stack since those are most likely to be proven next by the user.
 
@@ -58,7 +58,7 @@ val theorem: Theorem = {
 
 \begin{figure}[H]
   \centering
-  \begin{tikzpicture}[auto, on grid, block/.style = {draw, fill=white, rectangle, double, double distance=0.5mm, text width=3.2cm, node distance=2.5cm and 6cm, minimum height=1.4cm, inner sep=0.2cm}, none/.style = {draw=none, minimum height=0cm}]
+  \begin{tikzpicture}[auto, on grid, block/.style = {draw, fill=white, rectangle, double, double distance=0.5mm, text width=3.1cm, node distance=2.5cm and 6cm, minimum height=1.4cm, inner sep=0.2cm}, none/.style = {draw=none, minimum height=0cm}]
   \node [block] (state0) {\scriptsize $\vdash \neg{?a} \lor {?b} \Leftrightarrow {?a} \Rightarrow {?b}$};
   \node [block, right = of state0] (state1) {\scriptsize $\vdash \neg{?a} \lor {?b} \Rightarrow {?a} \Rightarrow {?b}$ \\ $\vdash ({?a} \Rightarrow {?b}) \Rightarrow \neg{?a} \lor {?b}$};
   \node [block, right = of state1] (state2) {\scriptsize $\vdash ({?a} \Rightarrow {?b}) \Rightarrow \neg{?a} \lor {?b}$ \\ $\vdash \neg{?a} \lor {?b} \Rightarrow {?a} \Rightarrow {?b}$};
@@ -67,7 +67,7 @@ val theorem: Theorem = {
   \node [block, below = of state2, text centered] (state5) {(no goals)};
   \draw [->, shorten >= 0.5mm] -- ++(0, 1.5) node[fill=white]{Prove $\vdash \neg{?a} \lor {?b} \Leftrightarrow {?a} \Rightarrow {?b}$} -- (state0);
   \draw [->, shorten >= 0.5mm] (state0.east) -- ++(1.25, 0) node[fill=white]{I.R.$\Leftrightarrow$} -- (state1);
-  \draw [->, shorten >= 0.5mm] (state1.east) -- ++(1.25, 0) node[fill=white]{Focus [2]} -- (state2);
+  \draw [->, shorten >= 0.5mm] (state1.east) -- ++(1.25, 0) node[fill=white]{Focus (2)} -- (state2);
   \draw [->, shorten >= 0.5mm] (state2.south) |- ++(0, -0.55) |- ++(-5.95, 0) node[fill=white]{I.R.$\Rightarrow$} -| (state3.north);
   \draw [->, shorten >= 0.5mm] (state3.east) -- ++(1.25, 0) node[fill=white]{I.L.$\Rightarrow$} -- (state4);
   \draw [->, shorten >= 0.5mm] (state4.east) -- ++(1.25, 0) node[fill=white]{Solve} -- (state5);
@@ -102,8 +102,8 @@ Patterns are essentially sequents in which the schemas should be interpreted as 
   \subfloat[\centering The rule \label{fig:example-rule-high}]{
   $$
   \begin{prooftree}
-  \hypo{\Gamma \vdash \phi \lor \psi, \Delta}
-  \infer1{\Gamma \vdash \phi, \psi, \Delta}
+  \hypo{..., \vdash {?a} \lor {?b}, ...}
+  \infer1{... \vdash {?a}, {?b}, ...}
   \end{prooftree}
   \qquad
   $$
@@ -112,13 +112,13 @@ Patterns are essentially sequents in which the schemas should be interpreted as 
   $$
   \qquad
   \begin{prooftree}
-  \hypo{\boxed{\Gamma \vdash \phi \lor \psi, \Delta}}
+  \hypo{\boxed{\Gamma \vdash {?a} \lor {?b}, \Delta}}
   \hypo{}
-  \infer1[Hypothesis]{\phi \vdash \phi}
+  \infer1[Hypothesis]{{?a} \vdash {?a}}
   \hypo{}
-  \infer1[Hypothesis]{\psi \vdash \psi}
-  \infer2[Left $\lor$]{\phi \lor \psi \vdash \phi, \psi}
-  \infer2[Cut]{\boxed{\Gamma \vdash \phi, \psi, \Delta}}
+  \infer1[Hypothesis]{{?b} \vdash {?b}}
+  \infer2[Left $\lor$]{{?a} \lor {?b} \vdash {?a}, {?b}}
+  \infer2[Cut]{\boxed{\Gamma \vdash {?a}, {?b}, \Delta}}
   \end{prooftree}
   $$
   }
@@ -126,14 +126,15 @@ Patterns are essentially sequents in which the schemas should be interpreted as 
   \label{fig:example-rule}
 \end{figure}
 
-Rule are by themselves not tactics, however a rule can be instantiated to obtain a tactic. In fact, since rules are made of patterns they could be applied in different ways on a same context. The parameters are there disambiguate the application of that rule. For instance they specify what formula of the sequent correspond to what pattern, and what variable assignment should be used. In proof mode, we are therefore trying to match the conclusion pattern of a rule against a proof goal. Successfully applying a rule replaces the current goal by a number of goals equal to the number of premises of that rule. Any formula that does not appear in the pattern will appear as is the new goals.
-Rules may also be applied forward in a very similar fashion: this time we are matching the premises against a sequence of justified statements, to obtain a new justified statement.
+Rule are by themselves not tactics, however a rule can be instantiated to obtain a tactic. In fact, since rules are made of patterns they could be applied in different ways on a same context. The parameters are there disambiguate the application of that rule. For instance they specify what formula of the sequent correspond to what pattern, and what variable assignment should be used. In proof mode, we are therefore trying to match the conclusion pattern of a rule against a proof goal. Successfully applying a rule replaces the current goal by a number of goals equal to the number of premises of that rule. Any formula that does not appear in the pattern will appear as is the new goals. Formally, an instantiated rule with premises $\vec{\phi_1} \vdash \vec{\psi_1}; ...; \vec{\phi_n} \vdash \vec{\psi_n}$ and conclusion $\vec{\phi_0} \vdash \vec{\psi_0}$ applied on a goal $\Gamma, \vec{\phi_0} \vdash \vec{\psi_0}, \Delta$ will replace this goal by the new goals $\Gamma, \vec{\phi_1} \vdash \vec{\psi_1}, \Delta; ...; \Gamma, \vec{\phi_n} \vdash \vec{\psi_n}, \Delta$.
+
+Rules may also be applied forward in a very similar fashion: this time we are matching the premises against a sequence of justified statements, to obtain a new justified statement. Using the same notation as previously, justifications $\Gamma_1, \vec{\phi_1} \vdash \vec{\psi_1}, \Delta_1; ...; \Gamma_n, \vec{\phi_n} \vdash \vec{\psi_n}, \Delta_n$ will generate the new theorem $\Gamma_1 \cup ... \cup \Gamma_n, \vec{\phi_0} \vdash \vec{\psi_0}, \Delta_1 \cup ... \cup \Delta_n$. In practice, since the front stores sequents as pairs of indexed sequences of formulas, the union operation is a concatenation operation followed by the removal of duplicate formulas.
 
 Most of the kernel's proof steps can be translated into rules, and several kernel proof steps can be represented by a single rule. \autoref{fig:example-rule} shows an example rule and its translation in the kernel. The explanation on how patterns are matched against values can be found in \autoref{sec:matching}.
 
 \subsection{Tactics combinators}
 
-Although impractical, tactics can call other tactics when they are applied. Instead we provide a set of predefined combinators that can be used as higher-order tactics (\autoref{tab:tactics-combinators}).
+Although impractical, tactics can call other tactics when they are applied. Instead we provide a set of predefined combinators that can be used as higher-order tactics (\autoref{tab:tactics-combinators}) \cite{Milner1984}.
 
 \begin{table}[hbt!]
   \centering
@@ -205,7 +206,7 @@ Our framework allows both forward and backward to be used. The most common use c
 \infer2[$\text{Cut}$]{\varnothing \in \varnothing \vdash {?a}}
 \infer1[$\text{Right}~{\Rightarrow}$]{\vdash (\varnothing \in \varnothing) \Rightarrow {?a}}
 \end{prooftree}
-  \caption[Proof in LISA (2)]{Translation of the proof in \autoref{lst:proof-justifications} into LISA. The left branch was derived in forward mode (forward rule application followed by an implicit instantiation), while the remaining steps were derived in backward mode through the tactical \code{apply} steps.}
+  \caption[Proof tree (2)]{Translation of the proof in \autoref{lst:proof-justifications} into LISA. The left branch was derived in forward mode (forward rule application followed by an implicit instantiation), while the remaining steps were derived in backward mode through the tactical \code{apply} steps.}
   \label{fig:proof-mixed-tree}
 \end{figure}
 

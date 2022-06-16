@@ -5,7 +5,7 @@
 
 The supporting source code for this project is published at the following address:
 \begin{center}
-\href{http://github.com/FlorianCassayre/master-project}{\textbf{github.com/FlorianCassayre/master-project}}\footnote{At the time of writing, the latest release is identified by commit: \code{c3499c2729730a7f807efb8676a92dcb6f8a3f8f}}
+\href{http://github.com/FlorianCassayre/master-project}{\textbf{github.com/FlorianCassayre/master-project}}\footnote{The current release is identified by commit: \code{c3499c2729730a7f807efb8676a92dcb6f8a3f8f}}
 \end{center}
 
 
@@ -39,17 +39,17 @@ LISA\footnote{\textbf{L}ISA \textbf{I}s \textbf{S}ets \textbf{A}utomated} is an 
   \infer2[Right $\Leftrightarrow$]{\vdash \neg{?a} \lor {?b} \Leftrightarrow {?a} \Rightarrow {?b}}
   \end{prooftree}
   $$
-  \caption[Proof tree]{An example of a proof in sequent calculus. Here it proves the tautology $\neg{?a}\lor{?b}\Leftrightarrow{?a}\Rightarrow{?b}$. The question mark indicates a schema, essentially a variable such that the statement holds true for any value. The inference used at every step is indicated.}
+  \caption[Proof tree (1)]{An example of a proof in sequent calculus. Here it proves the tautology $\neg{?a}\lor{?b}\Leftrightarrow{?a}\Rightarrow{?b}$. The question mark indicates a schema, essentially a variable such that the statement holds true for any value. The inference used at every step is indicated.}
   \label{fig:simple-lisa-proof-graph}
 \end{figure}
 
 \begin{figure}[H]
   \centering
   \input{figures/proof-mini.lisa}
-  \caption[Proof in LISA (1)]{A representation of the proof of \autoref{fig:simple-lisa-proof-graph} in LISA. Each step is assigned an index, import are represented with negative indices. The indentation corresponds to the level of the proof: subproofs are indented further down. The second column states what rule is used, along with the premises it relies upon. The third column is the conclusion of that step. The last column contains parameters to disambiguate the application of the rule.}
+  \caption[Proof in LISA]{A representation of the proof of \autoref{fig:simple-lisa-proof-graph} in LISA. Each step is assigned an index, import are represented with negative indices. The indentation corresponds to the level of the proof: subproofs are indented further down. The second column states what rule is used, along with the premises it relies upon. The third column is the conclusion of that step. The last column contains parameters to disambiguate the application of the rule.}
   \label{fig:simple-lisa-proof}
 \end{figure}
 
-A proof in this system is a directed acyclic graph of proof steps. Each such step is an application of an inference rule. It is characterized by its conclusion expressed as a sequent, and some premises. A sequent is a pair of sets of formulas, noted $l_1, l_r, ..., l_n \vdash r_1, r_2, ..., r_m$, and can be understood as a conjunction of premises implying a disjunction of conclusions, although the actual semantic is controlled by the inference rules provided by the system. Proofs can optionally have ``imports'', sequents that can be used as premises, and proofs may also be nested for organization purposes. Figures \ref{fig:simple-lisa-proof-graph} and \ref{fig:simple-lisa-proof} showcase a formal proof in LISA along with its linear representation.
+A proof in this system is a directed acyclic graph of proof steps. Each such step corresponds to the application of an inference rule, and is characterized by its conclusion expressed as a sequent, and some premises. A sequent is a pair of sets of formulas, noted $\phi_1, \phi_2, ..., \phi_n \vdash \psi_1, \psi_2, ..., \psi_m$ or $\Gamma \vdash \Delta$, and can be interpreted in conventional logic as a conjunction of premises implying a disjunction of conclusions. That said, the actual semantic is controlled by the inference rules provided by the system. Proofs can optionally have ``imports'', sequents that can be used as premises, and proofs may also be nested for organization purposes. Figures \ref{fig:simple-lisa-proof-graph} and \ref{fig:simple-lisa-proof} showcase a formal proof in LISA along with its linear representation. Notice that a directed acyclic graph can always be represented in a linear fashion, but not necessarily as a tree (without having to inline leaves).
 
-Currently LISA only exists as a Scala library, therefore the proofs are described using Scala code. For further technical details about LISA, we forward the reader to the official manual.
+Currently LISA only exists as a Scala library, therefore the proofs are described using Scala code. For further technical details about LISA, we refer the reader to the official manual \cite{Guilloud2022-2}.

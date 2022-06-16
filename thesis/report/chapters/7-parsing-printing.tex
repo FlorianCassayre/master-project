@@ -109,7 +109,7 @@ We also implemented a printer and parser for kernel proofs (\autoref{fig:grammar
   <kernel-proof> ::= <kernel-step> (<line-feed> <kernel-step>)*
   \end{grammar}
   \end{framed}
-  \caption[BNF grammar for kernel proofs]{BNF grammar for kernel proofs.}
+  \caption[BNF grammar for kernel proofs]{BNF grammar for kernel proofs. The symbol $\langle\textit{step-name}\rangle$ is defined by an expression containing only terminals, but omitted for conciseness.}
   \label{fig:grammar-kernel}
 \end{figure}
 
@@ -147,7 +147,7 @@ This feature has a nice application in our case: not only can we enforce interpo
   \qquad\qquad
   \subfloat[\centering Compile-time parsing, with variable interpolation \label{fig:parsing-compile-time}]{
   % Compile-time
-  \begin{tikzpicture}[auto, on grid, node distance=1.5cm and 2cm, block/.style = {draw, fill=white, rectangle, minimum height=1cm, minimum width=2cm}, none/.style = {draw=none}]
+  \begin{tikzpicture}[auto, on grid, node distance=1.5cm and 2.25cm, block/.style = {draw, fill=white, rectangle, minimum height=1cm, minimum width=2cm}, none/.style = {draw=none}]
   \node [none] (input) {$\small\code{Expr[StringContext]}\normalsize$};
   \node [block, below left = of input] (lexer) {Lexer};
   \node [block, below right = of lexer] (parser) {Parser};
@@ -160,7 +160,7 @@ This feature has a nice application in our case: not only can we enforce interpo
   \draw [->] (input) -- (parser);
   \draw [->] (parser) -- (typer1);
   \draw [->] (typer1) -- (typer2);
-  \draw [->] (input) -- ++(2cm, 0) -- ++(0, -6cm) -- (typer2);
+  \draw [->] (input) -- ++(2.25cm, 0) -- ++(0, -6cm) -- (typer2);
   \draw [->] (typer2) -- (converter);
   \draw [->] (converter) -- (output);
   \end{tikzpicture}
@@ -170,3 +170,11 @@ This feature has a nice application in our case: not only can we enforce interpo
 \end{figure}
 
 To implement this feature, we must execute the different parsing phases separately (\autoref{fig:multi-stage-parsing}). One can observe that in a well-formed interpolator, tokens (as output by the lexer) cannot possibly overlap different string parts. That property let us to do lexing on each string part independently. From this step we can then identify all the potentially taken identifiers allowing us to safely create fresh ones. Then, all the variables are replaced by fresh schemas; still represented as tokens at this point. Finally, we can proceed to the parsing and type checking phases. The first type checking phase will assign types to all of our fresh schemas, while the second will ensure that these assigned types agree with the Scala types of the interpolated variables. A disagreement or an error at an earlier phase is mapped to a positioned Scala type error. Finally all that is left to do is substitute those schemas by their actual value, and convert the value into an expression tree. Notice that we cannot do that at compilation-time as we don't have access to the variables' values: only their type. But this makes sense: types model the range of allowed values, the rest of the information is to be discovered at runtime. Therefore the tree should be constructed at compilation-time, while the final substitution can only happen at runtime.
+
+We also studied the possibility of implementing \code{unapply} macros for pattern matching, which could be useful in a tactic language. We concluded that the implementation would be somewhat similar to \code{apply}. We could also make use of the matcher, for instance when matching partial sequents. However, the support for inlining on string interpolators \code{unapply} is currently only partial\footnote{\href{https://github.com/lampepfl/dotty/issues/8577}{github.com/lampepfl/dotty/issues/8577}}.
+
+\begin{lstlisting}[language=Scala,caption={[String interpolator unapply]{An example of the possibilities offered by unapply and string interpolators. This is not currently implemented.}},label={lst:string-interpolator-unapply}]
+formula"(?b \/ ?c) => p(?x)" match {
+  case formula"$f => $p($x)" => ...
+}
+\end{lstlisting}

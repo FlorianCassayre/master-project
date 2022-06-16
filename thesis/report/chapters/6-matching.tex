@@ -1,7 +1,7 @@
 \section{Matching}
 \label{sec:matching}
 
-Matching is the process of finding an assignment for a pattern such that when this pattern is instantiated with that assignment, the result equals the target value. Matching can be seen as a special case of unification because the patterns only appear in one side.
+Matching is the process of finding an assignment for a pattern such that when this pattern is instantiated with that assignment, the result equals the target value. Namely, given two terms $\phi$ and $\psi$, we are looking for a substitution $\sigma$ such that $\phi[\sigma] = \psi$. Matching can be seen as a special case of a more general problem called unification $\phi[\sigma] = \psi[\sigma]$, because the patterns appear only on one side \cite{Knight1989}.
 
 Most programming languages that implement pattern matching, such as Scala, disallow the reuse of pattern variables. These kinds of patterns are referred to as linear. On the other hand, non-linear patterns allow variables to appear multiple times. In that case the usually implied semantic is that all the occurrences of the same variable should be pairwise equal.
 
@@ -47,7 +47,62 @@ Because the procedure can also be used to rename bound variables, the pattern sh
 
 By convention, if a pattern variable can take more than one equivalent form, we should select the one that appears first with respect to the pre-order listing of the nodes of that tree.
 
-For a list of examples with their expected output according to this specification, refer to \autoref{tab:matching-examples}.
+\begin{table}[H]
+  \newcounter{counter}
+  \NewEnviron{example}[4]{%
+    \toks0=\expandafter{\BODY}%
+    \toks2={\refstepcounter{counter}\thecounter & $#1$ & $#2$ & $#3$ & $#4$}%
+    \xdef\TableRowContents{\the\toks2 \the\toks0 }%
+    \aftergroup\TableRowContents
+  }
+  \centering
+  \begin{tabular}{||c | c@{\hskip 0.2cm} c@{\hskip 0cm} c | c||}
+    \hline
+    \# & \textbf{Patterns} & \textbf{Values} & \textbf{Partial Assignment} & \textbf{Result} \\ [0.5ex]
+    \hline\hline
+    \begin{example}{{?a} \land b}{c \land b}{\emptyset}{\{ {?a} \mapsto c \}}\end{example} \\ \hline
+    \begin{example}{{?a} \land {?b}}{a \land b}{\{ {?a} \mapsto b \}}{\bot}\end{example} \\ \hline
+    \begin{example}{{?a}}{c \land b}{\{ {?a} \mapsto {b \land c} \}}{\{ {?a} \mapsto {b \land c} \}}\end{example} \\ \hline
+    \begin{example}{{?a}}{{?a} \land b}{\emptyset}{\{ {?a} \mapsto {{?a} \land b} \}}\end{example} \\ \hline
+    \begin{example}{{?a} \land {?a}}{(b \lor c) \land (c \lor b)}{\emptyset}{\{ {?a} \mapsto {b \lor c} \}}\end{example} \\ \hline
+    \begin{example}{{?p}(t)}{t = u}{\emptyset}{\{ {?p} \mapsto {\lambda x. x = u} \}}\end{example} \\ \hline
+    \begin{example}{{?p}({?t})}{t = u}{\emptyset}{\bot}\end{example} \\ \hline
+    \begin{example}{{?p}({?t})}{t = u}{\{ {?t} \mapsto t \}}{\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}}\end{example} \\ \hline
+    \begin{example}{{?p}({?t})}{t = u}{\{ {?p} \mapsto \lambda x. x = u \}}{\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}}\end{example} \\ \hline
+    \begin{example}{{?p}({?t}); q({?t})}{t = u; q(t)}{\emptyset}{\{ {?p} \mapsto \lambda x. x = u; {?t} \mapsto t \}}\end{example} \\ \hline
+    \begin{example}{{?f}({?a} \land b)}{(a \land b) \lor (b \land a)}{\emptyset}{\bot}\end{example} \\ \hline
+    \begin{example}{{?f}({?a} \land b); {?a}}{c \lor (b \land a); a}{\emptyset}{\{ {?a} \mapsto a, {?f} \mapsto \lambda x. c \lor x \}}\end{example} \\ \hline
+    \begin{example}{\exists x. q(x)}{\exists y. q(y)}{\emptyset}{\{ x \mapsto y \}}\end{example} \\ \hline
+    \begin{example}{{?f}(\exists x. q(x))}{(\exists y. q(y) \land (\exists z. q(z))}{\emptyset}{\{ {?f} \mapsto \exists y. q(y), x \mapsto y \}}\end{example} \\ \hline
+    \begin{example}{\exists x. {?a}}{\exists y. y = u}{\emptyset}{\bot}\end{example} \\ \hline
+    \begin{example}{\exists x. {?p}(x)}{\exists y. y = u}{\emptyset}{\{ x \mapsto y, {?p} \mapsto \lambda x. x = u \}}\end{example} \\ \hline
+    % \begin{example}{a}{a}{a}{a}\end{example} \\ \hline
+  \end{tabular}
+  \captionsetup{singlelinecheck=off}
+  \caption[Matching examples]{Selected examples to illustrate the matching procedure.
+    Patterns and values are all formulas; types of the other symbols should be inferred consequently. Detailed explanations for each example are provided below:}
+  \label{tab:matching-examples}
+\end{table}
+
+\begin{enumerate}
+\itemsep-0.1cm
+\item Simple pattern matching, ${?a}$ is assigned the value $c$, and $b$ is treated as a constant.
+\item The provided partial assignment prevents the matching from succeeding. Note that $\{ ?a \mapsto b, ?b \mapsto a \}$ would still be a valid assignment according to OCBSL but it would not be returned by our procedure.
+\item ${?a}$ must match $c \land b$ but should also satisfy the constraint $b \land c$; since both are OCBSL equivalent, the procedure succeeds.
+\item ${?a}$ is treated as a constant in the value and has nothing to do with ${?a}$ in the pattern.
+\item ${?a}$ is assigned $b \lor c$ (left branch), then checked for equivalence against $c \lor b$.
+\item All occurrences of $t$ are factored out, resulting in $\lambda x. x = u$.
+\item The problem is under-constrained; an infinite number of solutions exist.
+\item By specifying the argument, the problem is reduced to (6).
+\item By specifying the predicate, the problem is transformed into the matching of $t = u$ against pattern ${?x} = u$ (where ${?x}$ is a fresh variable).
+\item The first pattern/value pair is the same as (7), however the second pair adds the necessary constraint to reduce the problem to (8).
+\item The problem is under-constrained because the argument contains an unresolved variable.
+\item Similar to (10), the variable is resolved while handling the second pair unlocking the first one. In addition, both branches are factored because they are equivalent.
+\item This example showcases the renaming of bound/free variables.
+\item Only the first branch can benefit from the renaming of bound/free variables.
+\item Here ${?a}$ is a variable that should match a constant. However the formula $y = u$ depends on the bound variable $y$, and thus cannot match that pattern.
+\item This is a fix for (15): the bound variable appears as an argument of the predicate variable.
+\end{enumerate}
 
 \subsection{Algorithm\texorpdfstring{\footnote{The implementation of this algorithm can be found in the file \href{https://github.com/FlorianCassayre/master-project/blob/master/src/main/scala/me/cassayre/florian/masterproject/front/proof/unification/UnificationUtils.scala}{\code{UnificationUtils.scala}}.}}{Lg}}
 
@@ -64,6 +119,10 @@ The first step of the algorithm is therefore to list all schemas and variables o
 \subsubsection{Constraints collection}
 
 Pattern variables can appear as arguments of other pattern variables, which does not make it possible to solve the constraints in a single traversal. Instead, we decompose the problem into different phases, which can be mutually recursive. The first one of these is the constraints enumeration. A constraint is a triplet consisting of a pattern variable, its arguments and a target value. In this phase we traverse the pattern and value trees at the same time, in pre-order. As long as the pattern is constant, the only task done by this procedure is to ensure that both sides are structurally equal. When a pattern variable is encountered, a constraint is returned and the traversal stops for this branch. At any point, if a contradiction is detected, it is transferred back to the first caller in order to halt the procedure; we further refer to that as a \textbf{failure}.
+
+\subsubsection{Pattern to value matching}
+
+At this point we have not determined to what value each pattern corresponded to. This information may be provided explicitly but may as well be omitted. This is essentially an instance of a bipartite matching problem, however one that we cannot easily solve efficiently. The reason is because the pattern to value matching cannot be considered independent, therefore we cannot construct the bipartite graph efficiently. The solution we adopted was to enumerate all possible bipartite matching in a lazy manner, and then call the constraints resolution on each such matching until a valid solution is found. We argue that in practice the cost associated to this solution is not high as the number of premises and conclusions in a sequent remains low.
 
 \subsubsection{Constraints resolution}
 

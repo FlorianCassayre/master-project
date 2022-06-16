@@ -1,5 +1,5 @@
-\documentclass[11pt]{article} % add `twoside` for book-style margins
-\usepackage[a4paper, total={140mm, 160mm}]{geometry}
+\documentclass[12pt]{article} % add `twoside` for book-style margins
+\usepackage[a4paper, total={145mm, 170mm}]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage{booktabs}
 \usepackage{multicol}
@@ -23,11 +23,11 @@
 \usepackage[stable]{footmisc}
 \usepackage[nounderscore]{syntax}
 \usepackage{framed}
-\usepackage{etoc} % Multiple ToCs
+%\usepackage{etoc} % Multiple ToCs
 \usetikzlibrary{trees}
 \usepackage[style=numeric-comp]{biblatex}
 \addbibresource{bibliography.bib}
-\setlength{\columnsep}{4cm} % Adjust base on your name length
+\setlength{\columnsep}{3.25cm} % Adjust depending to the length of names in the cover
 
 % Draft
 \usepackage[firstpage]{draftwatermark}\SetWatermarkScale{2}
@@ -46,6 +46,7 @@
   showstringspaces=false,
   xleftmargin=0.75cm,
   basicstyle=\ttfamily,
+  captionpos=b,
 }
 
 
@@ -69,8 +70,11 @@
 \input{abstract}
 \newpage
 
-\setcounter{tocdepth}{1}
+\setcounter{tocdepth}{2}
 \tableofcontents
+\listoftables
+\listoffigures
+\lstlistoflistings
 \newpage
 
 \pagestyle{fancy}
@@ -90,14 +94,7 @@
 \input{chapters/appendix}
 \newpage
 
+\emergencystretch=1em % https://tex.stackexchange.com/a/172000
 \printbibliography[heading=bibintoc]
-\newpage
-
-\setcounter{tocdepth}{3}
-\tableofcontents
-\listoftables
-\listoffigures
-\lstlistoflistings
-\newpage
 
 \end{document}

@@ -1,8 +1,6 @@
 \newpage
-\begin{lstlisting}[language=Scala,basicstyle=\fontsize{2.5}{4}\selectfont,caption={[Sample proof (front)]{Example of a proof written in the front. The generated kernel proof is shown in \autoref{fig:lisa-proof-sample}.}},label={fig:scala-proof-sample},captionpos=b]
-val (s, t, u, v) = (SchematicFunctionLabel[0]("s"), SchematicFunctionLabel[0]("t"),
-  SchematicFunctionLabel[0]("u"), SchematicFunctionLabel[0]("v"))
-val (x, y) = (VariableLabel("x"), VariableLabel("y"))
+\begin{lstlisting}[language=Scala,basicstyle=\fontsize{9.5pt}{9.5pt}\selectfont,caption={[Sample proof (front)]{Example of a proof written in the front showing that $\vdash \mathcal{U}(\mathcal{P}({?s})) = {?s}$. The generated kernel proof is presented in \autoref{fig:lisa-proof-sample}.}},label={fig:scala-proof-sample},captionpos=b]
+val (s, t, u, v) = (SchematicFunctionLabel[0]("s"), ...)
 
 given ProofEnvironment = newSetTheoryEnvironment()
 
@@ -12,16 +10,20 @@ val thmPowerSchema: Theorem = ...
 val thmSubsetSchema: Theorem = ...
 
 val lemmaSubsetRefl = {
-  val p = ProofMode(sequent"|- (?s sub ?s) <=> ((?t in ?s) => (?t in ?s))")
+  val p = ProofMode(
+    sequent"|- (?s sub ?s) <=> ((?t in ?s) => (?t in ?s))")
   import p.*
 
   apply(elimRSubstIff(
     RuleParameters()
-      .withConnector(Notations.f, x => formula"$x <=> ((?t in ?s) => (?t in ?s))")
-      .withPredicate(Notations.a, formula"forall z. (z in ?s) => (z in ?s)")
+      .withConnector(Notations.f, x =>
+        formula"$x <=> ((?t in ?s) => (?t in ?s))")
+      .withPredicate(Notations.a,
+        formula"forall z. (z in ?s) => (z in ?s)")
   ))
   focus(1)
-  apply(rewrite(sequent"|- (?s sub ?s) <=> (forall z. (z in ?s) => (z in ?s))")
+  apply(rewrite(
+    sequent"|- (?s sub ?s) <=> (forall z. (z in ?s) => (z in ?s))")
     ~ justificationInst(thmSubsetSchema))
   apply(introRIff ~ introRImp
     ~ introLForall(RuleParameters(AssignedFunction(Notations.t, t)))
@@ -40,13 +42,17 @@ val thmUnionAny = {
   apply(elimRSubstIff(
     RuleParameters()
       .withConnector(Notations.f, identity)
-      .withPredicate(Notations.a, formula"forall z. (z in U(P(?s))) <=> (z in ?s)")
+      .withPredicate(Notations.a,
+        formula"forall z. (z in U(P(?s))) <=> (z in ?s)")
   ))
   focus(1)
 
   apply(justification(
-    thmExtSchema(AssignedFunction(Notations.t, unionSet(powerSet(s))))(AssignedFunction(Notations.u, s))
-      .rewrite(sequent"|- (forall z. (z in U(P(?s))) <=> (z in ?s)) <=> (U(P(?s)) = ?s)")
+    thmExtSchema(AssignedFunction(Notations.t,
+      unionSet(powerSet(s))))(AssignedFunction(Notations.u, s))
+      .rewrite(sequent"""
+|- (forall z. (z in U(P(?s))) <=> (z in ?s)) <=> (U(P(?s)) = ?s)
+        """)
       .display()
   ))
 
@@ -56,13 +62,15 @@ val thmUnionAny = {
   apply(RuleSubstituteRightIff(
     RuleParameters()
       .withConnector(Notations.f, x => formula"(?t in U(P(?s))) <=> $x")
-      .withPredicate(Notations.a, formula"exists y. (?t in y) /\ (y in P(?s))")
+      .withPredicate(Notations.a,
+        formula"exists y. (?t in y) /\ (y in P(?s))")
   ))
 
   apply(justificationInst(thmUnionSchema))
 
   apply(introRIff ~ introRImp
-    ~ introLExistsS(RuleParameters(AssignedFunction(Notations.t, u))) ~ introLAnd)
+    ~ introLExistsS(
+      RuleParameters(AssignedFunction(Notations.t, u))) ~ introLAnd)
 
   apply(elimLSubstIff(
     RuleParameters()
@@ -78,12 +86,14 @@ val thmUnionAny = {
   apply(elimLSubstIff(
     RuleParameters()
       .withConnector(Notations.f, identity)
-      .withPredicate(Notations.a, formula"forall z. (z in ?u) => (z in ?s)")
+      .withPredicate(Notations.a,
+        formula"forall z. (z in ?u) => (z in ?s)")
       .withPredicate(Notations.b, formula"?u sub ?s")
   ))
   focus(1)
   apply(weaken(left = Set(0), right = Set(0))
-    ~ rewrite(sequent"|- (?u sub ?s) <=> (forall z. (z in ?u) => (z in ?s))")
+    ~ rewrite(
+      sequent"|- (?u sub ?s) <=> (forall z. (z in ?u) => (z in ?s))")
     ~ justificationInst(thmSubsetSchema))
 
   apply(introLForall(RuleParameters(AssignedFunction(Notations.t, t))))
