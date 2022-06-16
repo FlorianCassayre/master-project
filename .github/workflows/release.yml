@@ -38,7 +38,7 @@ jobs:
       - name: Build thesis PDF
         uses: xu-cheng/latex-action@v2
         with:
-          working_directory: report
+          working_directory: thesis/report
           root_file: thesis.tex
           args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode -shell-escape
           extra_system_packages: inkscape
@@ -47,5 +47,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          working_directory: report
+          working_directory: thesis/report
           args: thesis.pdf

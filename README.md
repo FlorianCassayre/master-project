@@ -91,8 +91,9 @@ lazy val root = (project in file(".")).dependsOn(lisa, masterproject)
   * [`util`](src/main/scala/me/cassayre/florian/masterproject/util): some utilities for LISA
   * [`legacy`](src/main/scala/me/cassayre/florian/masterproject/legacy): old proof-of-concept implementations that are kept for reference
   * [`test`](src/main/scala/me/cassayre/florian/masterproject/test): main methods that serve as examples or test files
-* [Weekly notes](notes/weekly) relating the work done stating the future objectives
-* [Documentation](notes/documentation) about the various components
+* [Weekly notes](resources/notes/weekly) relating the work done stating the future objectives
+* [Documentation](resources/notes/documentation) about the various components
+* [Thesis](thesis) the deliverables other than the code itself
 
 ## Development
 

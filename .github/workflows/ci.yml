@@ -31,7 +31,7 @@ jobs:
       - name: Build thesis PDF
         uses: xu-cheng/latex-action@v2
         with:
-          working_directory: report
+          working_directory: thesis/report
           root_file: thesis.tex
           args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode -shell-escape
           extra_system_packages: inkscape
@@ -39,4 +39,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: thesis
-          path: report/thesis.pdf
+          path: thesis/report/thesis.pdf
