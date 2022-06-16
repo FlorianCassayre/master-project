@@ -3,7 +3,7 @@ package me.cassayre.florian.masterproject.front
 import scala.language.adhocExtensions
 
 import org.scalatest.funsuite.AnyFunSuite
-import me.cassayre.florian.masterproject.test.front.*
+import me.cassayre.florian.masterproject.legacy.test.front.*
 
 class MainTests extends AnyFunSuite {
 

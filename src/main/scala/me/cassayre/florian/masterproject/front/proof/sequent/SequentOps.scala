@@ -31,15 +31,26 @@ trait SequentOps extends SequentDefinitions {
     override def apply(s: I): IndexedSeq[S] = s.toIndexedSeq
   }
 
-  protected def any2set[S, A, T <: A](any: T)(using converter: IndexedSeqConverter[S, T]): IndexedSeq[S] = converter(any)
+  protected def any2seq[S, A, T <: A](any: T)(using converter: IndexedSeqConverter[S, T]): IndexedSeq[S] = converter(any)
 
-  extension[A, T1 <: A] (left: T1)(using IndexedSeqConverter[Formula, T1]) {
-    infix def |-[B, T2 <: B](right: T2)(using IndexedSeqConverter[Formula, T2]): Sequent = Sequent(any2set(left), any2set(right))
+  extension[T1] (left: T1)(using IndexedSeqConverter[Formula, T1]) {
+    infix def |-[T2](right: T2)(using IndexedSeqConverter[Formula, T2]): Sequent = Sequent(any2seq(left), any2seq(right))
   }
 
   object |- {
-    def unapply(left: IndexedSeq[Formula], right: IndexedSeq[Formula]): Option[Sequent] =
-      Some(Sequent(left, right))
+    def apply[T](right: T)(using IndexedSeqConverter[Formula, T]): Sequent = Sequent(IndexedSeq.empty, any2seq(right))
+    infix def unapply(sequent: Sequent): Some[(IndexedSeq[Formula], IndexedSeq[Formula])] =
+      Some((sequent.left, sequent.right))
+  }
+
+  extension[T1] (left: T1)(using IndexedSeqConverter[Formula, T1]) {
+    infix def ||-[T2](right: T2)(using IndexedSeqConverter[Formula, T2]): PartialSequent = PartialSequent(any2seq(left), any2seq(right))
+  }
+
+  object ||- {
+    def apply[T](right: T)(using IndexedSeqConverter[Formula, T]): PartialSequent = PartialSequent(IndexedSeq.empty, any2seq(right))
+    infix def unapply(sequent: PartialSequent): Some[(IndexedSeq[Formula], IndexedSeq[Formula])] =
+      Some((sequent.left, sequent.right))
   }
 
   type KernelSequent = lisa.kernel.proof.SequentCalculus.Sequent

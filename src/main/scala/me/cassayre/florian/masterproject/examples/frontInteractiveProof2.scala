@@ -1,24 +1,20 @@
-package me.cassayre.florian.masterproject.test.front
+package me.cassayre.florian.masterproject.examples
 
-import lisa.kernel.Printer
-
-import scala.util.chaining.*
 import me.cassayre.florian.masterproject.front.fol.FOL.{*, given}
-import me.cassayre.florian.masterproject.front.proof.Proof.{*, given}
 import me.cassayre.florian.masterproject.front.parser.FrontMacro.{*, given}
 import me.cassayre.florian.masterproject.front.printer.FrontPositionedPrinter.*
+import me.cassayre.florian.masterproject.front.printer.{FrontPrintStyle, KernelPrinter}
+import me.cassayre.florian.masterproject.front.proof.Proof.{*, given}
 import me.cassayre.florian.masterproject.front.theory.SetTheory.*
 
-@main def tests6(): Unit = {
+import scala.util.chaining.*
 
-  val (a, b, c) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"))
+@main def frontInteractiveProof2(): Unit = {
   val (s, t, u, v) = (SchematicFunctionLabel[0]("s"), SchematicFunctionLabel[0]("t"), SchematicFunctionLabel[0]("u"), SchematicFunctionLabel[0]("v"))
-  val (x, y, z) = (VariableLabel("x"), me.cassayre.florian.masterproject.front.fol.FOL.VariableLabel("y"), VariableLabel("z"))
 
   given ProofEnvironment = newSetTheoryEnvironment()
 
   val axExt: Axiom = axiomExtensionality.asJustified.display()
-  val axEmpty: Axiom = axiomEmpty.asJustified.display()
   val axUnion: Axiom = axiomUnion.asJustified.display()
   val axPower: Axiom = axiomPower.asJustified.display()
   val defSubset: Axiom = definitionSubset.asJustified.display()
@@ -30,8 +26,6 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     val t1 = elimRForallS(RuleParameters(AssignedFunction(Notations.t, t)))(t0).get
     t1
   }.display()
-
-  val thmEmptySchema: Theorem = elimRForallS(RuleParameters(AssignedFunction(Notations.t, s)))(axEmpty).get.display()
 
   val thmUnionSchema: Theorem = {
     val t0 = elimRForallS(RuleParameters(AssignedFunction(Notations.t, s)))(axUnion).get
@@ -51,52 +45,7 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     t1
   }.display()
 
-  // 2. Write the proof
-
-  val thmUnionEmpty = {
-    val p = ProofMode(() |- unionSet(emptySet) === emptySet)
-    import p.*
-
-    apply(elimRSubstIff(
-      RuleParameters(
-        AssignedConnector(Notations.f, LambdaConnector(x => x)),
-        AssignedPredicate(Notations.a, formula"forall z. (z in U({})) <=> (z in {})")
-      )
-    ))
-
-    focus(1)
-    apply(justificationInst(thmExtSchema))
-
-    apply(introRForallS(RuleParameters(AssignedFunction(Notations.t, s))))
-
-    apply(RuleSubstituteRightIff(
-      RuleParameters()
-        .withConnector(Notations.f, x => x <=> (s in emptySet))
-        .withPredicate(Notations.a, formula"exists y. (?s in y) /\ (y in {})")
-    ))
-
-    focus(1)
-    apply(justification(
-      thmUnionSchema(AssignedFunction(t, emptySet)).rewrite(state.goals.head).display()
-    ))
-
-    apply(introRIff)
-    apply(introRImp)
-    apply(introLExists(RuleParameters(x -> y)))
-    apply(introLAnd)
-    apply(weaken(left = Set(0), right = Set(0)))
-    apply(elimRNot)
-    apply(justificationInst(thmEmptySchema))
-
-    apply(introRImp)
-    apply(weaken(right = Set(0)))
-    apply(elimRNot)
-    apply(justification(thmEmptySchema))
-
-    asTheorem() // |- U({}) = {}
-  }
-
-  println(Printer.prettySCProof(reconstructSCProofForTheorem(thmUnionEmpty)))
+  // 2. Prove a lemma
 
   val lemmaSubsetRefl = {
     val p = ProofMode(sequent"|- (?s sub ?s) <=> ((?t in ?s) => (?t in ?s))")
@@ -122,7 +71,7 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
     asTheorem()
   }
 
-  println(Printer.prettySCProof(reconstructSCProofForTheorem(lemmaSubsetRefl)))
+  // 3. Prove the complete theorem
 
   val thmUnionAny = {
     val p = ProofMode(() |- unionSet(powerSet(s)) === s)
@@ -208,7 +157,4 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
 
     asTheorem()
   }
-
-  println(Printer.prettySCProof(reconstructSCProofForTheorem(thmUnionAny)))
-
 }

@@ -1,6 +1,7 @@
 package me.cassayre.florian.masterproject.front.printer
 
-import lisa.kernel.proof.SequentCalculus as SC
+import lisa.kernel.proof.SCProofCheckerJudgement.*
+import lisa.kernel.proof.{SCProofCheckerJudgement, SequentCalculus as SC}
 import lisa.kernel.fol.FOL
 import lisa.kernel.proof.SequentCalculus.SCProofStep
 import me.cassayre.florian.masterproject.front.*
@@ -29,7 +30,7 @@ object KernelPrinter {
     Sequent(sorted(s.left.toIndexedSeq.map(fromKernel)), sorted(s.right.toIndexedSeq.map(fromKernel)))
   }
 
-  def prettyProof(scProof: lisa.kernel.proof.SCProof, style: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, explicit: Boolean = false, error: Option[(Seq[Int], String)] = None): String = {
+  def prettyProof(scProof: lisa.kernel.proof.SCProof, style: FrontPrintStyle = FrontPrintStyle.Unicode, compact: Boolean = false, explicit: Boolean = false, judgement: SCProofCheckerJudgement = SCValidProof): String = {
     val p = FrontPrintParameters(style, compact)
     val r = KernelRuleIdentifiers(p.s)
     def prettyName(name: String): String = style match {
@@ -160,9 +161,9 @@ object KernelPrinter {
 
         val fullPath = i +: path
 
-        val prefix = error match {
-          case None => ""
-          case Some((errorPath, _)) => if(errorPath.reverse == fullPath) proofStepIndicator else proofStepNoIndicator
+        val prefix = judgement match {
+          case SCValidProof => ""
+          case SCInvalidProof(errorPath, _) => if(errorPath.reverse == fullPath) proofStepIndicator else proofStepNoIndicator
         }
 
         prefix +
@@ -186,9 +187,9 @@ object KernelPrinter {
       case _ => "\n"
     }
 
-    val errorSeq = error match {
-      case None => Seq.empty
-      case Some((path, message)) => Seq(s"Proof checker has reported an error at line ${path.mkString(".")}: $message")
+    val errorSeq = judgement match {
+      case SCValidProof => Seq.empty
+      case SCInvalidProof(path, message) => Seq(s"Proof checker has reported an error at line ${path.mkString(".")}: $message")
     }
 
     val allLinesPairs = recursivePrint(proof, Seq.empty)

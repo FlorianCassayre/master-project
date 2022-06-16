@@ -1,4 +1,4 @@
-package me.cassayre.florian.masterproject.test.front
+package me.cassayre.florian.masterproject.legacy.test.front
 
 import lisa.kernel.Printer
 import me.cassayre.florian.masterproject.front.{*, given}
@@ -9,9 +9,9 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
   given ProofEnvironment = newSetTheoryEnvironment()
 
   // Symbols
-  val (a: SchematicPredicateLabel[0], b: SchematicPredicateLabel[0], c: SchematicPredicateLabel[0]) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"))
-  val (p: SchematicPredicateLabel[2]) = SchematicPredicateLabel[2]("p")
-  val (x: SchematicFunctionLabel[0]) = SchematicFunctionLabel[0]("x")
+  val (a: SchematicPredicateLabel[0], b: SchematicPredicateLabel[0], c: SchematicPredicateLabel[0]) = (me.cassayre.florian.masterproject.front.fol.FOL.SchematicPredicateLabel[0]("a"), me.cassayre.florian.masterproject.front.fol.FOL.SchematicPredicateLabel[0]("b"), me.cassayre.florian.masterproject.front.fol.FOL.SchematicPredicateLabel[0]("c"))
+  val (p: SchematicPredicateLabel[2]) = me.cassayre.florian.masterproject.front.fol.FOL.SchematicPredicateLabel[2]("p")
+  val (x: SchematicFunctionLabel[0]) = me.cassayre.florian.masterproject.front.fol.FOL.SchematicFunctionLabel[0]("x")
 
   // A compound formula
   val f: Formula = a <=> b

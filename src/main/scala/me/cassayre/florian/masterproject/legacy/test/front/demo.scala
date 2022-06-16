@@ -1,4 +1,4 @@
-package me.cassayre.florian.masterproject.test.front
+package me.cassayre.florian.masterproject.legacy.test.front
 
 import lisa.kernel.Printer
 

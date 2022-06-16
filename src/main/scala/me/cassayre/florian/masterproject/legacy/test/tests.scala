@@ -1,4 +1,4 @@
-package me.cassayre.florian.masterproject.test
+package me.cassayre.florian.masterproject.legacy.test
 
 import lisa.kernel.fol.FOL.*
 import lisa.KernelHelpers.*
