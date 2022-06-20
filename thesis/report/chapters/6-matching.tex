@@ -73,7 +73,6 @@ By convention, if a pattern variable can take more than one equivalent form, we 
     \begin{example}{{?f}({?a} \land b)}{(a \land b) \lor (b \land a)}{\emptyset}{\bot}\end{example} \\ \hline
     \begin{example}{{?f}({?a} \land b); {?a}}{c \lor (b \land a); a}{\emptyset}{\{ {?a} \mapsto a, {?f} \mapsto \lambda x. c \lor x \}}\end{example} \\ \hline
     \begin{example}{\exists x. q(x)}{\exists y. q(y)}{\emptyset}{\{ x \mapsto y \}}\end{example} \\ \hline
-    \begin{example}{{?f}(\exists x. q(x))}{(\exists y. q(y) \land (\exists z. q(z))}{\emptyset}{\{ {?f} \mapsto \exists y. q(y), x \mapsto y \}}\end{example} \\ \hline
     \begin{example}{\exists x. {?a}}{\exists y. y = u}{\emptyset}{\bot}\end{example} \\ \hline
     \begin{example}{\exists x. {?p}(x)}{\exists y. y = u}{\emptyset}{\{ x \mapsto y, {?p} \mapsto \lambda x. x = u \}}\end{example} \\ \hline
     % \begin{example}{a}{a}{a}{a}\end{example} \\ \hline
@@ -99,9 +98,8 @@ By convention, if a pattern variable can take more than one equivalent form, we 
 \item The problem is under-constrained because the argument contains an unresolved variable.
 \item Similar to (10), the variable is resolved while handling the second pair unlocking the first one. In addition, both branches are factored because they are equivalent.
 \item This example showcases the renaming of bound/free variables.
-\item Only the first branch can benefit from the renaming of bound/free variables.
 \item Here ${?a}$ is a variable that should match a constant. However the formula $y = u$ depends on the bound variable $y$, and thus cannot match that pattern.
-\item This is a fix for (15): the bound variable appears as an argument of the predicate variable.
+\item This is a fix for (14): the bound variable appears as an argument of the predicate variable.
 \end{enumerate}
 
 \subsection{Algorithm\texorpdfstring{\footnote{The implementation of this algorithm can be found in the file \href{https://github.com/FlorianCassayre/master-project/blob/master/src/main/scala/me/cassayre/florian/masterproject/front/proof/unification/UnificationUtils.scala}{\code{UnificationUtils.scala}}.}}{Lg}}
@@ -156,8 +154,10 @@ It should be noted that in any case, $x \equiv y \implies x \Leftrightarrow y$. 
 
 The procedure is by design incomplete, i.e. there are problem instances where a matching (as we defined it) exists but would not be found. For instance, the pattern ${?a} \land b$ matches the value $b \land a$ but despite being OCBSL equivalent, it would not be detected by the algorithm. This issue could be solved relatively easily at an exponential cost by enumerating all the equivalent formulas and calling matching on them. We suspect this problem to be solvable in polynomial time, as an extension of OCBSL.
 
-\subsection{Matching rules arguments}
+\subsection{Applications}
 
-The first application of matching is to automatically infer arguments of rules. This reduces the burden of applying rules. Because rules are defined in a general way, it is particularly desirable to solve that problem using the same procedure.
+The first application of matching is to automatically infer arguments of rules (\autoref{sec:proof-framework-rules}). This reduces the burden of applying rules. Because rules are defined in a general way, it is particularly desirable to solve that problem using the same procedure.
 
 While introduction rules can usually be applied backwards without ambiguity, other rules may need some parameters to be specified explicitly. This motivates the introduction of an additional parameter: an optional partial assignment that constrains the solution space. It can also be used as a hint when the framework picked the ``wrong'' solution. It is guaranteed that the partial assignment will be subset of the returned solution, if there is any. In general, if a pattern variable appears at the target side but not at the source, then it must be specified.
+
+Because pattern variables are encoded as schemas, and since our sequent calculus provides a rule to instantiate schemas it is possible to use regular sequents as patterns. In practice we make us of this property to automatically instantiate justifications (\autoref{sec:proof-framework-justifications}).

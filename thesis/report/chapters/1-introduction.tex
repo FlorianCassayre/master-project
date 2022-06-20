@@ -1,19 +1,18 @@
 \section{Introduction}
 \label{sec:introduction}
 
-% TODO introduction
+A proof assistant is a piece of software that can assist a user in writing a particular type of proofs, one that can be verified by a machine. Proofs following this format are desirable because it suffices to show that the verification procedure is sound to automatically and irrefutably judge them. Computer-assisted theorem proving can also leverage the computational capabilities offered by machines, one of the most famous example being the proof of the \textit{four-color conjecture} \cite{Appel1989}. However, the greatest strength of proof assistants might also be their greatest weakness: they are often complex systems, which correctness is difficult to demonstrate and therefore are prone to bugs in their implementation.
+
+In this thesis we describe the design process of a front-end for the modern proof assistant LISA. Our main focus is to preserve the same soundness standards as the existing framework while making it more expressive and introducing an interactive component.
 
 The supporting source code for this project is published at the following address:
 \begin{center}
 \href{http://github.com/FlorianCassayre/master-project}{\textbf{github.com/FlorianCassayre/master-project}}\footnote{The current release is identified by commit: \code{c3499c2729730a7f807efb8676a92dcb6f8a3f8f}}
 \end{center}
 
-
-%\cite{Asperti2007}
-
 \subsection{LISA}
 
-LISA\footnote{\textbf{L}ISA \textbf{I}s \textbf{S}ets \textbf{A}utomated} is an ongoing project conducted at LARA, EPFL. It is a framework built on top of sequent calculus and set theory that enables the formalization of mathematical proofs \cite{Guilloud2022-2}.
+LISA\footnote{\textbf{L}ISA \textbf{I}s \textbf{S}ets \textbf{A}utomated} is an ongoing project conducted at the lab for automated reasoning and analysis (LARA), EPFL. It is a library built on top of sequent calculus and set theory that enables the formalization of mathematical proofs \cite{Guilloud2022-2}.
 
 \begin{figure}[H]
   $$

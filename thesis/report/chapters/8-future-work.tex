@@ -9,18 +9,16 @@ The following subsections expose known limitations of the framework, how they co
 
 Despite our efforts and the previous iterations, we have discovered a few limitations in the current version of the system and present them here along with a hint for a potential fix.
 
-Unlike the kernel, the front does not have an explicit error reporting system when writing proofs. This means that if a tactic is incorrectly applied the result of the optional will be empty but will not indicate the reason. This lack seriously hinders the usability of the framework as it is more difficult to debug proofs. The reason for such absence is because we have not yet been able to unify the tactic arguments APIs in an elegant way, thus postponing the implementation of such a feature.
+Unlike the kernel, the front does not have an explicit error reporting system when writing proofs. This means that if a tactic is incorrectly applied the result of the optional will be empty but will not indicate the reason. This lack hinders the usability of the framework as it is more difficult to debug the construction of proofs. The reason for such absence is because we have not yet been able to unify the tactic arguments APIs in an elegant way, thus postponing the implementation of such a mechanism. Similarly, the matcher does not have error reporting either; the various possible failure are all encoded as an empty option.
 
+The framework is also missing the implementation of more pre-defined tactics, which would make the framework more practical. The difficulty is to identify what are the most common sequences of steps when writing proofs, and to come up with a way to factor them out into tactics.
 
+Finally, although Scala 3 provides an indisputably more powerful language to write DSLs, we have observed that the compiler was still not entirely stable. This lead us to the discovery of several compiler bugs, and sometimes required us to adapt our code around the bogus components. These unstable behaviors can unfortunately affect the end user as our framework relies heavily on these newer features. However, we are confident that these problems will eventually fade away thanks to the fast-paced ongoing work on the compiler.
 
-% simplification
-% dedicate language
-% even better matching
-% export/import proofs
-% proof search
-% theorem search (repertoire)
-% 
+\subsection{Next steps}
 
-\subsection{Theorem search}
+The first step would be to integrate the front-end as part of a package in LISA. In particular we would like to integrate some changes into the kernel (schematic connectors, deletion of unbound variables), some other parts as core utilities (proof optimizations, DSL, parser/printer), and all the rest in a separate package. This work has been started already but is still ongoing at the time of writing.
 
-One highly desirable feature would be to perform search on proven statements, usually theorems. Such a feature could automatically eliminate goals, improving the usability of the system. For instance, one is usually not interested in knowing if the theorem $\vdash {?s} = {?s}$ exists with that specific name ${?s}$, but rather to find a theorem of the form $\vdash \_ = \_$ such that both underscores can be instantiated to a term. Although the matcher can already solve this task, it is perhaps too powerful to be reduced to a sub-linear querying algorithm and would have to be run on every candidate. Instead, we would be interested in a weaker version that provides a simple pattern matching language to efficiently find theorems that match a pattern.
+A next step would be to introduce a canonical organization of proofs, at the level of Scala. It would be natural to separate proofs of different topics into different files. If we stick to the mechanism of (Scala) imports, this could allow the creation of circular that would only be detected at runtime. Using inheritance of trait, it should be possible to prevent such a case from occurring while still allowing \textit{diamond patterns}.
+
+One highly desirable feature would be to perform search on proven statements, usually theorems. Such a feature could automatically eliminate goals, improving the usability of the system. For instance, one is usually not interested in knowing if the theorem $\vdash {?s} = {?s}$ exists with that specific name ${?s}$, but rather to find a theorem of the form $\vdash \__1 = \__1$ such that both underscores can be instantiated to a common term. Although the matcher can already solve this task, it is perhaps too powerful to be reduced to a sub-linear querying algorithm and would have to be run on every candidate. Instead, we would be interested in a weaker version that provides a simple pattern matching language to efficiently find theorems matching a specified pattern.

@@ -162,6 +162,7 @@ val autoProp = (introHypo
 \end{lstlisting}
 
 \subsection{Justifications}
+\label{sec:proof-framework-justifications}
 
 In general, proofs depend on other justifications, such as an axiom or a proven theorem. In forward mode the dependency is evident because the justifications must be passed as arguments in order to obtain the desired justification. In backward mode the reasoning is the opposite: if a goal matches exactly a justification, then it can be eliminated. However we can do more than that; for instance if a goal is equivalent to the justification with respect to the equivalence checker, then we can rewrite it on the fly. Moreover, we can also use theorems as rules and perform the required instantiation. This is depicted in \autoref{lst:proof-justifications}.
 

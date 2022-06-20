@@ -1,0 +1,109 @@
+% Crow's foot notation on tikz: https://tex.stackexchange.com/a/393568
+\tikzset{
+  zig zag to/.style={
+    to path={(\tikztostart) -| ($(\tikztostart)!#1!(\tikztotarget)$) |- (\tikztotarget) \tikztonodes}
+  },
+  zig zag to/.default=0.5pt,
+  one to many/.style={
+    one-many, zig zag to,
+  },
+  oone to many/.style={
+    oone-many, zig zag to,
+  },
+  oone to nmany/.style={
+    oone-nmany, zig zag to,
+  },
+  one to nmany/.style={
+    one-nmany, zig zag to,
+  },
+}
+\pgfarrowsdeclare{many}{many}
+{
+  \pgfarrowsleftextend{+-.5\pgflinewidth}%
+  \pgfarrowsrightextend{+.5\pgflinewidth}%
+}
+{
+  \let\pgfutil@tempdima=0.6pt%
+  \pgfsetdash{}{+0pt}%
+  \pgfsetmiterjoin%
+  \pgfpathmoveto{\pgfqpoint{0pt}{-6pt\pgfutil@tempdima}}%
+  \pgfpathlineto{\pgfqpoint{-8pt\pgfutil@tempdima}{0pt}}%
+  \pgfpathlineto{\pgfqpoint{0pt}{6pt\pgfutil@tempdima}}%
+  \pgfpathmoveto{\pgfqpoint{0pt\pgfutil@tempdima}{0pt\pgfutil@tempdima}}%
+  \pgfpathmoveto{\pgfqpoint{-8pt}{-6pt}}% 
+  \pgfpathlineto{\pgfqpoint{-8pt}{-6pt}}%  
+  \pgfpathlineto{\pgfqpoint{-8pt}{6pt}}% 
+  \pgfusepathqstroke%
+}
+\pgfarrowsdeclare{nmany}{nmany}
+{
+  \pgfarrowsleftextend{+-.5\pgflinewidth}%
+  \pgfarrowsrightextend{+.5\pgflinewidth}%
+}
+{
+  \let\pgfutil@tempdima=0.6pt%
+  \pgfsetdash{}{+0pt}%
+  \pgfsetmiterjoin%
+  \pgfpathmoveto{\pgfqpoint{0pt}{-6pt\pgfutil@tempdima}}%
+  \pgfpathlineto{\pgfqpoint{-8pt\pgfutil@tempdima}{0pt}}%
+  \pgfpathlineto{\pgfqpoint{0pt}{6pt\pgfutil@tempdima}}%
+  \pgfpathmoveto{\pgfqpoint{0pt\pgfutil@tempdima}{0pt\pgfutil@tempdima}}%
+  \pgfpathmoveto{\pgfqpoint{-8pt}{-6pt}}% 
+  \pgfpathlineto{\pgfqpoint{-8pt}{-6pt}}%  
+  %\pgfpathlineto{\pgfqpoint{-8pt}{6pt}}% 
+  \pgfusepathqstroke%
+}
+\pgfarrowsdeclare{one}{one}
+{
+  \pgfarrowsleftextend{+-.5\pgflinewidth}%
+  \pgfarrowsrightextend{+.5\pgflinewidth}%
+}
+{
+  \let\pgfutil@tempdima=0.6pt%
+  \pgfsetdash{}{+0pt}%
+  \pgfsetmiterjoin%
+  \pgfpathmoveto{\pgfqpoint{0pt\pgfutil@tempdima}{0pt\pgfutil@tempdima}}%
+  \pgfpathmoveto{\pgfqpoint{-6pt}{-6pt}}% 
+  \pgfpathlineto{\pgfqpoint{-6pt}{-6pt}}%  
+  \pgfpathlineto{\pgfqpoint{-6pt}{6pt}}% 
+  \pgfpathmoveto{\pgfqpoint{0pt\pgfutil@tempdima}{0pt\pgfutil@tempdima}}%
+  \pgfpathmoveto{\pgfqpoint{-8pt}{-6pt}}% 
+  \pgfpathlineto{\pgfqpoint{-8pt}{-6pt}}%  
+  \pgfpathlineto{\pgfqpoint{-8pt}{6pt}}%    
+  \pgfusepathqstroke%
+}
+\pgfarrowsdeclare{oone}{oone}
+{
+  \pgfarrowsleftextend{+-.5\pgflinewidth}%
+  \pgfarrowsrightextend{+.5\pgflinewidth}%
+}
+{
+  \let\pgfutil@tempdima=0.6pt%
+  \pgfsetdash{}{+0pt}%
+  \pgfsetmiterjoin%
+  \pgfpathmoveto{\pgfqpoint{0pt\pgfutil@tempdima}{0pt\pgfutil@tempdima}}%
+  \pgfpathmoveto{\pgfqpoint{-4pt}{-6pt}}%  
+  \pgfpathlineto{\pgfqpoint{-4pt}{6pt}}% 
+  \pgfpathmoveto{\pgfqpoint{0pt\pgfutil@tempdima}{0pt\pgfutil@tempdima}}%
+  \pgfpathmoveto{\pgfqpoint{-8pt}{-6pt}}%
+  \pgfpathcircle{\pgfpoint{-10pt}{0}} {3.5pt}
+  \pgfusepathqstroke%
+}
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[auto, on grid, node distance=5cm, block/.style = {draw, fill=white, rectangle, minimum height=1cm, minimum width=2cm}, none/.style = {draw=none}]
+  \node [block] (sequent) {\code{Sequent}};
+  \node [block, right = of sequent] (formula) {\code{Formula}};
+  \node [block, right = of formula] (term) {\code{Term}};
+  \node [none] at (2.5, 0.25) {\footnotesize{is made of}};
+  \node [none] at (7.5, 0.25) {\footnotesize{can combine}};
+  \node [none] at (5, 1.5) {\footnotesize{can combine other}};
+  \node [none] at (10, 1.5) {\footnotesize{combines other}};
+  \draw [one to nmany] (sequent) -- (formula);
+  \draw [oone to nmany] (formula) -- (term);
+  \draw [oone to many] (formula.north) ++(-0.6, 0) |- ++(0, 0.75) |- ++(1.2, 0) -| ++(0, -0.75);
+  \draw [one to nmany] (term.north) ++(-0.6, 0) |- ++(0, 0.75) |- ++(1.2, 0) -| ++(0, -0.75);
+  \end{tikzpicture}
+  \caption[First-order logic relationships]{First-order logic relationships presented in \textit{crow's foot notation}. Each relation corresponds to at least one syntactic combinator.}
+  \label{fig:fol-erd}
+\end{figure}
