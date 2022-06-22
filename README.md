@@ -9,7 +9,7 @@
 This repository hosts the work related to my Master Project (PDM) at [LARA](https://lara.epfl.ch/w/).
 This includes source code, writeup and any other significant resource related to the project.
 
-Project title: ***A Proof System for LISA***
+Project title: ***A front-end for the LISA proof assistant***
 
 Dates: **21.02.2022** to **24.06.2022**
 

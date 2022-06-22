@@ -3,9 +3,9 @@
 
 Matching is the process of finding an assignment for a pattern such that when this pattern is instantiated with that assignment, the result equals the target value. Namely, given two terms $\phi$ and $\psi$, we are looking for a substitution $\sigma$ such that $\phi[\sigma] = \psi$. Matching can be seen as a special case of a more general problem called unification $\phi[\sigma] = \psi[\sigma]$, because the patterns appear only on one side \cite{Knight1989}.
 
-Most programming languages that implement pattern matching, such as Scala, disallow the reuse of pattern variables. These kinds of patterns are referred to as linear. On the other hand, non-linear patterns allow variables to appear multiple times. In that case the usually implied semantic is that all the occurrences of the same variable should be pairwise equal.
+Most programming languages that implement pattern matching, such as Scala, disallow the reuse of pattern variables. These kinds of restricted patterns are referred to as linear. On the other hand, non-linear patterns allow variables to appear multiple times. In that case the usually implied semantic is that all the occurrences of the same variable should be pairwise equal.
 
-In this framework we relax the notion of equality for non-linear pattern variables by allowing them to be equivalent with respect the equivalence checker implemented in LISA: the orthocomplemented bisemilattices (OCBSL) equivalence checker \cite{Guilloud2022}. This leads to an ambiguity in the assignment because by construction a variable can only be assigned a single value; thus not only will the resulting assignment may not lead to an instantiation that is structurally equal to the target, but it is also unclear which assigned value to choose. To address these ambiguities, we define deterministic rules that are not necessarily practical but are required to exhibit consistent behavior over different execution contexts.
+In this framework we relax the notion of equality for non-linear pattern variables by allowing them to be equivalent with respect the equivalence checker implemented in LISA: the orthocomplemented bisemilattices (OCBSL) equivalence checker \cite{Guilloud2022}. This leads to an ambiguity in the assignment because by construction a variable can only be assigned a single value; thus not only may the resulting assignment not lead to an instantiation that is structurally equal to the target, but it is also unclear which assigned value to choose. To address these ambiguities, we define deterministic rules that are not necessarily intended to be practical but are required to exhibit consistent behavior over different execution contexts.
 
 \subsection{Terminology}
 
@@ -15,7 +15,7 @@ Formally, a matching is characterized by the following elements:
 A \textbf{tree} refers to either a term, a formula or a sequent.
 \end{definition}
 
-The type of a tree is known and gives its nature (term, formula or sequent).
+The type of a tree is known and indicates its nature (term, formula or sequent).
 
 \begin{definition}[Pattern variable and constant]
 A \textbf{pattern variable} is a term or a formula represented as a schema or a bound/free variable.
@@ -41,7 +41,7 @@ Patterns are referred to as the left hand side, and values as the right hand sid
 
 \subsection{Specification}
 
-The goal is to find an assignment for the sequence of patterns such that when it is instantiated it becomes equivalent to the sequence of values. Each pattern is matched against the value located at the same index in the sequence. The matching is successful if all the patterns can be resolved without reaching a contradiction. The matching fails if a contradiction is reached, or if the problem is under-constrained (solution space is infinite). If a solution is returned, then it should always be a superset of the provided partial assignment. By default the partial assignment is the empty set.
+The goal is to find an assignment for the sequence of patterns such that when it is instantiated it becomes equivalent to the sequence of values. Each pattern is matched against the value located at the same index in the sequence. The matching is successful if all the patterns can be resolved without reaching a contradiction. The matching fails if a contradiction is reached, or if the problem is under-constrained (solution space is infinite, or problem is ill-posed). If a solution is returned, then it should always be a superset of the provided partial assignment. By default the partial assignment is the empty set.
 
 Because the procedure can also be used to rename bound variables, the pattern should not declare a bound variable more than once. Moreover, no free variable can reuse the name of a bound variable, regardless the scope. Apart from these restrictions, all pattern variables can appear any number of times in the pattern. In addition, pattern variables can appear as arguments of other pattern variables (without any limitation on the depth).
 
@@ -96,7 +96,7 @@ By convention, if a pattern variable can take more than one equivalent form, we 
 \item By specifying the predicate, the problem is transformed into the matching of $t = u$ against pattern ${?x} = u$ (where ${?x}$ is a fresh variable).
 \item The first pattern/value pair is the same as (7), however the second pair adds the necessary constraint to reduce the problem to (8).
 \item The problem is under-constrained because the argument contains an unresolved variable.
-\item Similar to (10), the variable is resolved while handling the second pair unlocking the first one. In addition, both branches are factored because they are equivalent.
+\item Similarly to (10), the variable is resolved while handling the second pair unlocking the first one. In addition, both branches are factored because they are equivalent.
 \item This example showcases the renaming of bound/free variables.
 \item Here ${?a}$ is a variable that should match a constant. However the formula $y = u$ depends on the bound variable $y$, and thus cannot match that pattern.
 \item This is a fix for (14): the bound variable appears as an argument of the predicate variable.
@@ -110,21 +110,21 @@ We should initially check that the inputs are well-formed. For instance the patt
 
 \subsubsection{Fresh names}
 
-Schemas and variables have a different meaning depending whether they appear in the pattern or in the value. One of the requirements was to avoid extending the first order logic package with new datatypes. To disambiguate both meanings there are two options. The first one consists of defining a new intermediate representation that is exclusive to patterns. The alternative approach is to rename schemas and variable in such a way that we can distinguish them from each other. The second option was chosen as the implementation is significantly shorter.
+Schemas and variables have a different meaning depending whether they appear in the pattern or in the value. One of the requirements was to avoid extending the first order logic package with new datatypes. To disambiguate both meanings there are two options. The first one consists of defining a new intermediate representation that is exclusive to patterns. The alternative approach is to rename schemas and variable in such a way that we can distinguish them from each other. The second option was chosen not only because its implementation is significantly shorter, but because it also simplified some use cases as schemas were designed to be instantiated.
 
-The first step of the algorithm is therefore to list all schemas and variables on both sides, and then to rename all schemas and pattern variables by freshly generated identifiers. The mapping should be kept because we will use it to restore the original names at the end. The mapping also serves as a predicate to determine whether a name is a pattern variable or a constant.
+The first step of the algorithm is therefore to list all schemas and variables on both sides, and then to rename them by freshly generated identifiers. The mapping between the original names and the fresh ones should be kept because we will use it to restore the names at the end. The mapping also serves as a predicate to determine whether a name is a pattern variable or a constant.
 
 \subsubsection{Constraints collection}
 
-Pattern variables can appear as arguments of other pattern variables, which does not make it possible to solve the constraints in a single traversal. Instead, we decompose the problem into different phases, which can be mutually recursive. The first one of these is the constraints enumeration. A constraint is a triplet consisting of a pattern variable, its arguments and a target value. In this phase we traverse the pattern and value trees at the same time, in pre-order. As long as the pattern is constant, the only task done by this procedure is to ensure that both sides are structurally equal. When a pattern variable is encountered, a constraint is returned and the traversal stops for this branch. At any point, if a contradiction is detected, it is transferred back to the first caller in order to halt the procedure; we further refer to that as a \textbf{failure}.
+Pattern variables can appear as arguments of other pattern variables, which does not make it possible to solve the constraints in a single traversal. Instead, we decompose the problem into different phases, which can be mutually recursive. The first one of these being the constraints collection phase. A constraint is a triplet consisting of a pattern variable, its arguments and a target value. In this phase we traverse the pattern and value trees at the same time, in pre-order. As long as a pattern node is constant, the only liability of this procedure is to ensure that both sides are structurally equal. When a pattern variable is encountered, a constraint is returned and the traversal stops for this branch. At any point, if a contradiction is detected, it is transferred back to the first caller in order to halt the procedure; we further refer to that as a \textbf{failure}.
 
 \subsubsection{Pattern to value matching}
 
-At this point we have not determined to what value each pattern corresponded to. This information may be provided explicitly but may as well be omitted. This is essentially an instance of a bipartite matching problem, however one that we cannot easily solve efficiently. The reason is because the pattern to value matching cannot be considered independent, therefore we cannot construct the bipartite graph efficiently. The solution we adopted was to enumerate all possible bipartite matching in a lazy manner, and then call the constraints resolution on each such matching until a valid solution is found. We argue that in practice the cost associated to this solution is not high as the number of premises and conclusions in a sequent remains low.
+At this point we have not determined to what value each pattern corresponded to. This information may be provided explicitly but may as well be omitted. This can be seen as an instance of a bipartite matching problem, however one that we cannot easily solve efficiently. The reason is because the pattern to value matching cannot be considered independent, therefore we cannot construct the bipartite graph efficiently. The solution we adopted was to enumerate all possible bipartite matching instances in a lazy manner, and then call the constraints resolution on each such matching until a valid solution is found. We argue that in practice the cost associated to this solution is not high as the number of premises and conclusions in a sequent remains low.
 
 \subsubsection{Constraints resolution}
 
-After collecting the constraints the objective of the next phase is to attempt to resolve them. We say that a constraint is resolved as soon as the pattern variable it represents has been assigned a value in this context, and that value is compatible with the constraint's. For that, the constraints are processed in the order they appear; by assumption these constraints were listed in pre-order. However, not all constraints can be immediately solved: sometimes the resolution of a constraint may unlock another constraint. Therefore while there remains unsolved constraints the procedure picks the first constraints that can be solved. If none exists, that means the problem is under-constrained and the procedure returns a failure. Although the current implementation of the resolution phase does not create additional constraints, other implementations that may want to return a result for under-constrained instances has the possibility to produce and return additional constraints. In that case the new constraints are inserted at the same position in the sequence.
+After collecting the constraints the objective of the next phase is to attempt to resolve them. We say that a constraint is resolved as soon as the pattern variable it represents has been assigned a value in this context, and that value is compatible with the constraint's. For that, the constraints are processed in the order they appear; by assumption these constraints were listed in pre-order. However, not all constraints can be immediately solved: sometimes the resolution of a constraint may unlock another constraint. Therefore while there remains unsolved constraints the procedure picks the first constraints that can be solved. If none exists, that means the problem is under-constrained and the procedure returns a failure. Although the current implementation of the resolution phase does not create additional constraints, other implementations that may want to return a result for under-constrained instances has the possibility to produce and return such additional constraints. In that case the new constraints are inserted at the same position in the sequence.
 
 In this phase a constraint can be solved if and only if all the pattern variables in the pattern's arguments have been assigned a value with respect to the current context. As a consequence, all constraints represented by nullary schemas or variables can be solved immediately.
 
@@ -132,11 +132,11 @@ Once a constraint satisfying the above condition has been located, we can procee
 
 If the pattern variable is already assigned a value, we instantiate this assignment with the instantiated arguments and compare it against the value for equivalence. If we cannot prove that they are equivalent we return a failure, otherwise we do not do anything and carry on.
 
-If the pattern variable does not have an assigned value we must assign one to it. If applicable we generate fresh schemas for the arguments of this assignment. We then apply a greedy factoring algorithm to replace all occurrences of the instantiated arguments by their associated schema. Again, we traverse the tree in pre-order to satisfy the specification, and then find the first instantiated argument that is equivalent to this node. The factoring procedure cannot fail: an special case could be that no value is factored, however it is still a valid solution.
+If the pattern variable does not have an assigned value we must assign one to it. If applicable we generate fresh schemas for the arguments of this assignment. We then apply a greedy factoring algorithm to replace all occurrences of the instantiated arguments by their associated schema. Again, we traverse the tree in pre-order to satisfy the specification, and then find the first instantiated argument that is equivalent to this node. The factoring procedure cannot fail: a special case could be that no value is factored, however that is still a valid solution.
 
 \subsubsection{Conclusion}
 
-If all the constraints have been solved, we can return that solution after restoring the original pattern variable names.
+If all the constraints have been solved, we can return the assignment as a solution after restoring the original pattern variable names.
 
 \subsection{Analysis}
 
@@ -147,12 +147,12 @@ The above procedure is polynomial but could be implemented more efficiently by a
   {a \equiv b} \implies {x[a \mapsto b] \equiv x} \tag{\textsc{Substitution}}
 \end{gather}
 
-It is easy to see that these properties hold for logical equivalence. For the substitution property of OCBSL equivalence, because $a \equiv b$, both $a$ and $b$ reduce to a common normal form $n$. Therefore $x[a \mapsto b] \equiv x$ is the same problem as $x[a \mapsto b][\{a, b\} \mapsto n] \equiv x[\{a, b\} \mapsto n]$ which is a tautology. For transitivity we have that $\{x, y\}$ have a normal form $n_1$, $\{y, z\}$ a normal form $n_2$, $\{x, z\}$ a normal form $n_3$. Because $y$ has a normal form equal to $n_1$ and $n_2$ it must be the case that $n_1 = n_2$; therefore $n_1 = n_2 = n_3$.
+It is easy to see that these properties hold for logical equivalence. For the substitution property of OCBSL equivalence, since $a \equiv b$, both $a$ and $b$ reduce to a common normal form $n$. Therefore $x[a \mapsto b] \equiv x$ is the same problem as $x[a \mapsto b][\{a, b\} \mapsto n] \equiv x[\{a, b\} \mapsto n]$ which is a logical tautology. For transitivity we have that $\{x, y\}$ have a normal form $n_1$, $\{y, z\}$ a normal form $n_2$, $\{x, z\}$ a normal form $n_3$. Because $y$ has a normal form equal to $n_1$ and $n_2$ it must be the case that $n_1 = n_2$; therefore $n_1 = n_2 = n_3$.
 It should be noted that in any case, $x \equiv y \implies x \Leftrightarrow y$. Therefore, even though a resolved pattern may not be checked for equivalence (e.g. if a weaker or alternative checker is used), it is still expected to be logically equivalent.
 
 \subsection{Limitations and extensions}
 
-The procedure is by design incomplete, i.e. there are problem instances where a matching (as we defined it) exists but would not be found. For instance, the pattern ${?a} \land b$ matches the value $b \land a$ but despite being OCBSL equivalent, it would not be detected by the algorithm. This issue could be solved relatively easily at an exponential cost by enumerating all the equivalent formulas and calling matching on them. We suspect this problem to be solvable in polynomial time, as an extension of OCBSL.
+The procedure is by design incomplete, i.e. there are problem instances where a matching (as we defined it) exists but would not be found. For instance, the pattern ${?a} \land b$ matches the value $b \land a$ but despite being OCBSL equivalent, it would not be detected by the algorithm. This issue could be solved relatively easily at an exponential cost by enumerating all the equivalent formulas and calling matching on them. We suspect this problem to be solvable in polynomial time, as an extension of OCBSL, but we could not come up with an algorithm to demonstrate it.
 
 \subsection{Applications}
 

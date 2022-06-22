@@ -3,7 +3,7 @@
 
 \subsection{Grammar}
 
-At the time of writing this thesis, LISA does not have a formalized concrete syntax grammar for its language but rather a simple printer that is used to display proofs in a more readable way. In this project I defined a grammar for the first-order logic language with sequents of the front-end (\autoref{fig:grammar}). The grammar is designed to be unambiguous so that we could use it for serialization/persistence later on, and is as close as possible to the original printer of LISA. The main challenge in designing a grammar for our language is due to the fact that the distinction between terms and formulas is made early on, in other words it is not possible to construct ill-typed trees. This subtlety opens the door to potential ambiguities where it is unclear if a node should be interpreted as a term or a formula. The front-end avoids thanks to a carefully designed grammar and a type checker that serves at the same time as a resolver.
+At the time of writing this thesis, LISA does not have a formalized concrete syntax grammar for its language but rather a simple printer that is used to display proofs in a more readable way. In this project I defined a grammar for the first-order logic language with sequents of the front-end (\autoref{fig:grammar}). Unlike the former printer, the grammar is designed to be unambiguous so that we could use it for serialization/persistence later on, and is as close as possible to the original printer of LISA. The main challenge in designing a grammar for our language is due to the fact that the distinction between terms and formulas is made early on, in other words it is not possible to construct ill-typed trees. This subtlety opens the door to potential ambiguities where it is unclear if a node should be interpreted as a term or a formula. The front-end avoids this issue thanks to a carefully designed grammar and a type checker that resolves an intermediate representation into well-typed trees.
 
 \begin{figure}[H]
   \centering
@@ -49,13 +49,13 @@ At the time of writing this thesis, LISA does not have a formalized concrete syn
   (((<term> `;')* `...') | <terms>)
   \end{grammar}
   \end{framed}
-  \caption[BNF grammar]{BNF grammar for the front. The rules for precedence are the usual ones. The current system uses an extended syntax which simply adds convenient aliases for common symbols in set theory (empty, singleton and pair sets, constants, etc.).}
+  \caption[BNF grammar]{BNF grammar for the front. The precedence of operators is the usual one. The current system uses an extended syntax, not shown here, which simply adds convenient aliases for common symbols of set theory (empty, singleton and pair sets, constants, etc.).}
   \label{fig:grammar}
 \end{figure}
 
 \subsection{Parsing}
 
-A parser for this grammar was written using \code{scala-parser-combinators} \cite{Moors2008}, a recursive-descent parsing library for Scala. The parser alone is not sufficient to generate the final trees; an intermediate phase called \textbf{resolution} performs type checking and resolves the intermediate representation into its final form. The procedure is dictated by the rules listed in \autoref{fig:typing-rules}. Given the type of the top-level term, we can recover all the remaining types in the tree and thus reconstruct the final representation of the tree.
+A parser for this grammar was written using \code{scala-parser-combinators} \cite{Moors2008}, a recursive-descent parsing library for Scala. The parser alone is not sufficient to generate the final trees; an intermediate phase called \textbf{resolution} performs type checking and resolves the intermediate representation into its final form. The procedure is dictated by the rules listed in \autoref{fig:typing-rules}. Given the type of the top-level term, we can show by induction that it is possible to recover all the remaining types in the tree, and thus reconstruct the final representation of the tree.
 
 \begin{figure}[H]
   \centering
@@ -81,7 +81,7 @@ A parser for this grammar was written using \code{scala-parser-combinators} \cit
   \frac{}{\Gamma, x \vdash x: \mathcal{T}} \tag{\textsc{Variable}}
   \end{gather}
   \end{framed}
-  \caption[Type inference rules]{Type inference rules. $\mathcal{T}$, $\mathcal{F}$ and $\mathcal{S}$ represent term, formula and sequent types respectively. The metasymbol $x$ represents identifiers, while $t$ represents parsed terms. An optional question mark symbol can precede identifiers. It can be shown that given a top-level formula, it is always possible to unambiguously type all the children terms.}
+  \caption[Type inference rules]{Type inference rules. $\mathcal{T}$, $\mathcal{F}$ and $\mathcal{S}$ represent term, formula and sequent types respectively. The meta symbol $x$ represents identifiers, while $t$ represents parsed terms. An optional question mark symbol can precede identifiers. Given a well-formed top-level formula, it is always possible to unambiguously type all the children terms.}
   \label{fig:typing-rules}
 \end{figure}
 
@@ -116,18 +116,18 @@ We also implemented a printer and parser for kernel proofs (\autoref{fig:grammar
 \subsection{Compile-time string interpolation}
 \label{sec:parsing-printing-string-interpolation}
 
-While the parser was originally designed for runtime usage, it can also be used by the compiler at compilation-time. This is possible thanks to the fact that the Scala 3 allows multi-stage metaprogramming. That enables the user to manipulate values (\code{T}), expressions for these values (\code{Expr[T]}) or even expressions of expressions for these values (\code{Expr[Expr[T]]}); all within the same program.
+While the parser was originally designed for runtime usage, it can also be used by the compiler at compilation-time. This is possible thanks to the fact that the Scala 3 allows multi-stage metaprogramming. The user can manipulate values (\code{T}), expressions for these values (\code{Expr[T]}) or even expressions of expressions for these values (\code{Expr[Expr[T]]}); all within the same program.
 
-The idea was to exploit this mechanism to guarantee safe parsing at compile-time. Thus, if the user attempts to parse an invalid string literal, the compiler would raise an error. The implementation of that feature is relatively straight forward and is done within a macro. First we extract the string literal value from the expression, then we call our parser on it and finally convert the resulting tree to an expression (that is, in the meta-level converting \code{T} to \code{Expr[T]}). The last step requires defining conversion methods for all ADT members.
+The idea was to exploit this mechanism to guarantee safe parsing at compile-time. Thus, if the user attempts to parse an invalid string literal, the compiler would raise a type error. The implementation of that feature is relatively straight forward and is done within a macro. First we extract the string literal value from the expression, then we call our parser on it and finally convert the resulting tree to an expression (at the meta-level, that is converting a \code{T} to an \code{Expr[T]}). The last step requires defining conversion methods for all ADT members.
 
-It turns out we can do better than that. Scala offers a feature called string interpolators which additionally allows variables to be ``inserted'' within the string literal (\autoref{fig:string-interpolation-general}). Moreover, it only works on string literals thus guaranteeing the recovery of the value at compile-time.
+It turns out we can do better than that. Scala offers a feature called \textit{string interpolator} which additionally allows variables to be ``inserted'' within the string literal (\autoref{fig:string-interpolation-general}). Moreover, it only works on string literals thus guaranteeing the recovery of the value at compile-time.
 
 \begin{lstlisting}[language=Scala,caption={[String interpolation general example]{Simple demonstration of the string interpolation mechanism in Scala. The \code{s} interpolator simply calls \code{toString} on each variable passed and concatenates all the parts together.}},label={fig:string-interpolation-general},captionpos=b]
 val s1: String = "world"
 val s2: String = s"Hello $s1!" // Hello world!
 \end{lstlisting}
 
-This feature has a nice application in our case: not only can we enforce interpolated variables to be terms or formulas but we can also check their type with respect to the context they appear in. For instance, in the expression \code{formula"\$a /\textbackslash\ b"}, the variable \code{a} cannot be a term (in fact, it must be a formula). In addition to terms and formulas, we may also allow the interpolation of labels which is very useful to express names dynamically, e.g. \code{formula"\$p(s)"}. Notice that the previous expression is structurally different from \code{formula"\${p(term"s")}"}, although it leads to the same formula.
+This feature has a nice application in our case: not only can we enforce interpolated variables to be terms or formulas but we can also check their type with respect to the context they appear in. For instance, in the expression \code{formula"\$a /\textbackslash\ b"}, the variable \code{a} cannot be a term (in fact, it must be a formula). In addition to terms and formulas, we may also allow the interpolation of labels which is very useful to bind names dynamically, e.g. \code{formula"\$p(s)"}. Notice that the previous expression is structurally different from \code{formula"\${p(term"s")}"}, although it results in the same formula.
 
 \begin{figure}[H]
   \centering
@@ -170,7 +170,7 @@ This feature has a nice application in our case: not only can we enforce interpo
   \label{fig:multi-stage-parsing}
 \end{figure}
 
-To implement this feature, we must execute the different parsing phases separately (\autoref{fig:multi-stage-parsing}). One can observe that in a well-formed interpolator, tokens (as output by the lexer) cannot possibly overlap different string parts. That property let us to do lexing on each string part independently. From this step we can then identify all the potentially taken identifiers allowing us to safely create fresh ones. Then, all the variables are replaced by fresh schemas; still represented as tokens at this point. Finally, we can proceed to the parsing and type checking phases. The first type checking phase will assign types to all of our fresh schemas, while the second will ensure that these assigned types agree with the Scala types of the interpolated variables. A disagreement or an error at an earlier phase is mapped to a positioned Scala type error. Finally all that is left to do is substitute those schemas by their actual value, and convert the value into an expression tree. Notice that we cannot do that at compilation-time as we don't have access to the variables' values: only their type. But this makes sense: types model the range of allowed values, the rest of the information is to be discovered at runtime. Therefore the tree should be constructed at compilation-time, while the final substitution can only happen at runtime.
+To implement this feature, we must execute the different parsing phases separately (\autoref{fig:multi-stage-parsing}). One can observe that in a well-formed interpolator, tokens (as output by the lexer) cannot possibly overlap different string parts. That property let us do lexing on each string part independently. From this step we can then identify all the potentially taken identifiers allowing us to safely create fresh ones. Then, all the variables are replaced by fresh schemas; still represented as tokens at this point. Finally, we can proceed to the parsing and type checking phases. The first type checking phase will assign types to all of our fresh schemas, while the second will ensure that these assigned types agree with the Scala types of the interpolated variables. A disagreement or an error at an earlier phase is mapped to a positioned Scala type error. Finally all that is left to do is substitute those schemas by their actual value, and convert the value into an expression tree. Notice that we cannot do that at compilation-time as we don't have access to the variables' values: only their type. But this makes sense: types model the range of allowed values, the rest of the information is to be discovered at runtime. Therefore the tree should be constructed at compilation-time, while the final substitution must happen at runtime.
 
 We also studied the possibility of implementing \code{unapply} macros for pattern matching, which could be useful in a tactic language. We concluded that the implementation would be somewhat similar to \code{apply}. We could also make use of the matcher, for instance when matching partial sequents. However, the support for inlining on string interpolators \code{unapply} is currently only partial\footnote{\href{https://github.com/lampepfl/dotty/issues/8577}{github.com/lampepfl/dotty/issues/8577}}.
 

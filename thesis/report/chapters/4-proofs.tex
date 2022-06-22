@@ -1,32 +1,34 @@
 \section{Proofs}
 \label{sec:proofs}
 
-LCF-like proof systems are notorious for the simplicity of their implementation, which makes them desirable foundational systems [citation needed]. However they also become a limiting factor in terms of usability, assuming they are used bare (that is without an overlay). For example incomplete proofs cannot be constructed, despite being useful in practice. Another example, which is a consequence of the former: proofs must be constructed in the forward direction only, meaning that the conclusion is dictated by the final construction (the last step) instead of being stated in advance as it is often done with pen and paper proofs.
+LCF-like proof systems are notorious for the simplicity of their implementation, which makes them desirable foundational systems \cite{Paulson2019}. However they also become a limiting factor in terms of usability, assuming they are used bare (that is without an overlay). For example incomplete proofs cannot be constructed, despite being useful in practice. Another example, which is a consequence of the former: proofs must be constructed in the forward direction only, meaning that the conclusion is dictated by the final construction (the last step) instead of being stated in advance as it is often done with pen and paper proofs.
+
+\subsection{Terminology}
 
 \begin{definition}[Justified statement]
-A \textbf{justified statement} is a sequent that is understood to be true within a theory. Axioms, theorems and definitions are examples of justified statements.
+A \textbf{justified statement} of a theory is a sequent that is accepted by that theory. Axioms, theorems and definitions are examples of justified statements.
 \end{definition}
 
-In LISA and in our system, sequents are the base logical construct. They carry a meaning that is at least as strong as formulas because any formula $\mathcal{F}$ can be encoded as $\vdash \mathcal{F}$. That is how axiomatic formulas are encoded.
+In LISA and in our system, sequents are the base meta logical construct. They carry a meaning that is at least as strong as formulas because any formula $\mathcal{F}$ can be encoded as $\vdash \mathcal{F}$. This is also how axiomatic formulas are encoded.
 
 \begin{definition}[Theory]
 A \textbf{theory} (or \textbf{environment}) is a global context that contains a set of justified statements. It is constructed with an initial set of axioms and can be used to translate proofs into theorems and definitions.
 \end{definition}
 
-The concept of theories is a formalization of mathematical theories. Namely it is a context with some axioms and definitions that one can use without proving. In our framework, axioms must be defined in advance (it is not possible to add more later). This provides more control over the critical parts of the system, in particular it ensures that an instance of a theory will have exactly those axioms and not more. Theorems can be obtained by providing a proof that depends on other justified statements of this theory. Definitions require a proof of uniqueness. These aspects are similar to the kernel's \code{RunningTheory}. Remark that a theory is stateful as one can always add more definitions to it.
+The concept of theories is a formalization of mathematical theories. Namely it is a context with some axioms and definitions that one can use without proving. In our framework, axioms must be defined in advance (it is not possible to add more later). This provides more control over the critical parts of the system, in particular it ensures that an instance of a theory will have exactly those axioms and not more. Theorems can be obtained by providing a proof that depends on other justified statements of this theory. Definitions require a proof of uniqueness. These aspects are similar to the kernel's \code{RunningTheory}. Remark that a theory is stateful as one is allowed to add more definitions to it.
 
 \begin{definition}[Proof direction]
 A \textbf{forward proof} is a proof where the conclusion of each proof step is a justified statement.
-A \textbf{backward proof} is a forward proof with the proof steps reversed.
+A \textbf{backward proof} is a forward proof reversed, but for which only the final conclusion is a justified statement.
 \end{definition}
 
-Forward proofs are conservative: when moving from one state to another the environment becomes strictly more rich. It is not the case for backward proofs, as it is possible to end up with proof states that are (provably) unprovable. One can observe that kernel proofs can easily be adapted to satisfy the forward reasoning definition, by transforming every proof step into an ordered sequence of proofs having one proof step. Moreover one can also see that forward and backward proofs are dual of each other. Backward proofs motivate the introduction of the following concepts, inspired by existing frameworks.
+Forward proofs are conservative: when moving from one state to another the environment becomes strictly more rich. It is not the case for backward proofs, as it is possible to end up with proof states that are unprovable (and provably so). One can observe that kernel proofs can easily be adapted to satisfy the definition of forward reasoning, by transforming a proof having $n$ steps into $n$ proofs of one step and as many justified statements. Moreover one can also notice that valid forward and backward proofs are dual of each other. Backward proofs motivate the introduction of the following concepts, inspired by existing frameworks.
 
 \begin{definition}[Proof mode]
 The \textbf{proof mode} is a contextualized representation of a backward proof.
 \end{definition}
 
-The proof mode is stateful: commands can be applied to update the internal state. The history of commands is also stored and is used to later generate the kernel proof.
+The proof mode is stateful: commands can be applied to update the internal state. The history of commands is also stored and is used to later produce a kernel proof.
 
 \begin{definition}[Proof goal]
 In proof mode, a \textbf{proof goal} corresponds to a sequent that remains to be proven.
@@ -38,11 +40,11 @@ A proof goal corresponds to an open branch. It is worth noting that proof goals 
 In proof mode, the \textbf{proof state} is a stack of proof goals.
 \end{definition}
 
-To enter proof mode it is required to provide an initial proof goal that will serve as an initial state to this proof mode. A statement is said to be proven once the proof state becomes empty, or in other words once all proof goals have been eliminated. Thus, proof modes with empty proof states should produce a valid kernel proof.
+To enter proof mode it is required to provide an initial proof goal that will serve as an initial state to this proof mode. A statement is said to be proven once the proof state becomes empty, or in other words once all proof goals have been eliminated. Thus, proof modes having an empty proof state should produce a valid kernel proof.
 
-Regarding the representation of the proof state as a stack, it is motivated by the fact that the order of the goals is arbitrary as it does not affect the realization of the proof. With that model in mind, the \textbf{current goal} naturally refers to the goal at the top of the stack. Therefore, by convention it is natural to choose to push new goals to the top of the stack since those are most likely to be proven next by the user.
+Regarding the representation of the proof state as a stack, it is motivated by the fact that the order of the goals is arbitrary as does not affect the realization of the proof. With that model in mind, the \textbf{current goal} intuitively refers to the goal at the top of the stack. Therefore, by convention it is natural to choose to push new goals to the top of the stack since those are the most likely to be proven next by the user.
 
-\begin{lstlisting}[language=Scala,caption={[Tactical proof]{Example of a tactical proof.}},label={lst:proof-interaction},captionpos=b]
+\begin{lstlisting}[language=Scala,caption={[Backward proof]{Example of a backward proof.}},label={lst:proof-interaction},captionpos=b]
 val theorem: Theorem = {
   val p = ProofMode(sequent"|- (!?a \/ ?b) <=> (?a => ?b)")
 
@@ -72,7 +74,7 @@ val theorem: Theorem = {
   \draw [->, shorten >= 0.5mm] (state3.east) -- ++(1.25, 0) node[fill=white]{I.L.$\Rightarrow$} -- (state4);
   \draw [->, shorten >= 0.5mm] (state4.east) -- ++(1.25, 0) node[fill=white]{Solve} -- (state5);
   \end{tikzpicture}
-  \caption[Tactical proof interaction]{Representation of the interaction of the tactical proof from \autoref{lst:proof-interaction}. The boxes represent the successive proof states and the edges correspond to the tactics applied.}
+  \caption[Tactical proof interaction]{Representation of the interaction of the backward proof from \autoref{lst:proof-interaction}. The boxes represent the successive proof states and the transitions correspond to the tactics applied.}
   \label{fig:proof-interaction}
 \end{figure}
 
@@ -82,7 +84,7 @@ val theorem: Theorem = {
 A \textbf{tactic} is a partial function that maps parameters and proof states to proof states and partial kernel proofs.
 \end{definition}
 
-Informally, a tactic transforms a proof state into a new state, and the result of this transformation has a representation in terms of kernel proof steps. The former describes how the state evolves in the front while the latter does the synchronization with the kernel.
+Informally, a tactic transforms a proof state into a new proof state, and the result of this transformation has a representation in terms of kernel proof steps. The former describes how the state evolves in the front while the latter does the synchronization with the kernel. Both are stored in the proof mode following a successful application of the tactic.
 
 Tactics can be categorized into more specific functions, for instance most tactics only work on a single goal by replacing it by zero or more new goals. Other tactics may only reorganize the proof, for instance by reordering goals.
 
@@ -122,15 +124,15 @@ Patterns are essentially sequents in which the schemas should be interpreted as 
   \end{prooftree}
   $$
   }
-  \caption[Correspondence between front rules and kernel steps]{Correspondence between front rules and kernel steps. The framed sequents represent the corresponding input and output of the rule.}
+  \caption[Correspondence between front rules and kernel steps]{Correspondence between a front rule and its kernel steps. The framed sequents represent the corresponding input and output of the rule.}
   \label{fig:example-rule}
 \end{figure}
 
-Rule are by themselves not tactics, however a rule can be instantiated to obtain a tactic. In fact, since rules are made of patterns they could be applied in different ways on a same context. The parameters are there disambiguate the application of that rule. For instance they specify what formula of the sequent correspond to what pattern, and what variable assignment should be used. In proof mode, we are therefore trying to match the conclusion pattern of a rule against a proof goal. Successfully applying a rule replaces the current goal by a number of goals equal to the number of premises of that rule. Any formula that does not appear in the pattern will appear as is the new goals. Formally, an instantiated rule with premises $\vec{\phi_1} \vdash \vec{\psi_1}; ...; \vec{\phi_n} \vdash \vec{\psi_n}$ and conclusion $\vec{\phi_0} \vdash \vec{\psi_0}$ applied on a goal $\Gamma, \vec{\phi_0} \vdash \vec{\psi_0}, \Delta$ will replace this goal by the new goals $\Gamma, \vec{\phi_1} \vdash \vec{\psi_1}, \Delta; ...; \Gamma, \vec{\phi_n} \vdash \vec{\psi_n}, \Delta$.
+Rule are by themselves not tactics, however a rule can be instantiated to obtain a tactic. In fact, since rules are made of patterns they could be applied in different ways on a same context. The parameters are needed to disambiguate the application of that rule. For instance they specify what formula of the sequent correspond to what pattern, and what variable assignment should be used. In proof mode, we are therefore trying to match the conclusion pattern of a rule against a proof goal. Successfully applying a rule replaces the current goal by a number of goals equal to the number of premises of that rule. Any formula that does not appear in the pattern will appear as is in the new goals. Formally, an instantiated rule with premises $\Sigma_1 \vdash \Pi_1 \hspace{0.5em} ; \hspace{0.5em} ... \hspace{0.5em} ; \hspace{0.5em} \Sigma_n \vdash \Pi_n$ and conclusion $\Sigma_0 \vdash \Pi_0$ applied on a goal $\Gamma, \Sigma_0 \vdash \Pi_0, \Delta$ will replace it by the new goals $\Gamma, \Sigma_1 \vdash \Pi_1, \Delta \hspace{0.5em} ; \hspace{0.5em} ... \hspace{0.5em} ; \hspace{0.5em} \Gamma, \Sigma_n \vdash \Pi_n, \Delta$.
 
-Rules may also be applied forward in a very similar fashion: this time we are matching the premises against a sequence of justified statements, to obtain a new justified statement. Using the same notation as previously, justifications $\Gamma_1, \vec{\phi_1} \vdash \vec{\psi_1}, \Delta_1; ...; \Gamma_n, \vec{\phi_n} \vdash \vec{\psi_n}, \Delta_n$ will generate the new theorem $\Gamma_1 \cup ... \cup \Gamma_n, \vec{\phi_0} \vdash \vec{\psi_0}, \Delta_1 \cup ... \cup \Delta_n$. In practice, since the front stores sequents as pairs of indexed sequences of formulas, the union operation is a concatenation operation followed by the removal of duplicate formulas.
+Rules may also be applied forward in a very similar fashion: this time we are matching the premises against a sequence of justified statements, to obtain a new justified statement. Using the same notation as previously, justifications $\Gamma_1, \Sigma_1 \vdash \Pi_1, \Delta_1 \hspace{0.5em} ; \hspace{0.5em} ... \hspace{0.5em} \hspace{0.5em} ; \hspace{0.5em} \Gamma_n, \Sigma_n \vdash \Pi_n, \Delta_n$ will generate the new theorem $\Gamma_1, ..., \Gamma_n, \Sigma_0 \vdash \Pi_0, \Delta_1, ..., \Delta_n$. In practice, since the front stores sequents as pairs of indexed sequences of formulas, the union operation is a concatenation operation followed by the removal of duplicate formulas.
 
-Most of the kernel's proof steps can be translated into rules, and several kernel proof steps can be represented by a single rule. \autoref{fig:example-rule} shows an example rule and its translation in the kernel. The explanation on how patterns are matched against values can be found in \autoref{sec:matching}.
+Most of the kernel's proof steps can be translated into rules, and several kernel proof steps can be represented by a single rule. \autoref{fig:example-rule} shows an example rule and its translation in the kernel. The specification for the matching of patterns against values can be found in \autoref{sec:matching}.
 
 \subsection{Tactics combinators}
 
@@ -150,7 +152,7 @@ Although impractical, tactics can call other tactics when they are applied. Inst
   \label{tab:tactics-combinators}
 \end{table}
 
-These combinators make it possible to conveniently write simple routines, for instance a propositional solver (\autoref{lst:solver-combinators}). Remark that this particular procedure is deterministic and runs in exponential time in the worst case. The argument for the former is a proof by induction on the structure of the goal, while the argument for the latter is a pathological case (e.g. a sequence of conjunctions on the right side). More efficient heuristics could be used to slightly improve the runtime and the length of the proofs, however as per \cite{Krajicek1994} there exists tautologies that cannot be proven in less than an exponential number of LISA's sequent calculus steps (even with the cut rule).
+These combinators make it possible to conveniently write simple routines, for instance a propositional solver (\autoref{lst:solver-combinators}). Remark that this particular procedure is deterministic and runs in exponential time in the worst case. The argument for the former is a proof by induction on the structure of the goal, while the argument for the latter is a pathological case (e.g. a sequence of conjunctions on the right side). More efficient heuristics could be used to slightly improve the runtime and the length of the proofs, however as per \cite{Krajicek1994} there exists tautologies that cannot be proven in less than an exponential number of LISA's sequent calculus steps, even if the cut rule was used.
 
 \begin{lstlisting}[language=Scala,caption={[Propositional solver]{A propositional solver written using exclusively rules and tactic combinators.}},label={lst:solver-combinators},captionpos=b]
 val autoProp = (introHypo
@@ -181,15 +183,52 @@ p.apply(justificationInst(
 val theorem = p.asTheorem()
 \end{lstlisting}
 
-At line 5, the tactic \code{justificationInst} takes a justification as parameter and performs all the necessary rewrites and instantiations. Here we pass it a theorem of the form $\vdash \neg({?s} \in \emptyset)$ (lines 6-9); which matches with the current goal $\vdash \neg(\emptyset \in \emptyset), {?a}$. ${?s}$ is instantiated to $\emptyset$, and ${?a}$ is removed as part of a weakening step.
+At line 5, the tactic \code{justificationInst} takes a justification as parameter and performs all the necessary rewrites and instantiations. Here we pass it a theorem of the form $\vdash \neg({?s} \in \emptyset)$ (lines 6-9); which matches against the current goal $\vdash \neg(\emptyset \in \emptyset), {?a}$. ${?s}$ is instantiated to $\emptyset$, and ${?a}$ is removed as part of a weakening step.
 
 \subsection{Proof-level state transformations}
 
 Because the proof mode is meant to be interactive, it implements commands to interact with the history, for instance to cancel an applied tactic or to restart the proof. While these features aren't particularly sophisticated they provide an interface for interactivity; the most primitive example of such an interface being the REPL\footnote{REPL: Read-Eval-Print Loop, a generic term to describe an environment that can interpret code interactively.}.
 
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[box/.style = {draw, rectangle, minimum width=2cm, minimum height=0.75cm}, label/.style = {fill=white, inner sep=1,outer sep=1}, node distance = 1cm and 0.5cm]
+  \node[box, densely dotted] (mutator) {Proof-level mutator};
+  \node[box, below left = of mutator] (cancel) {Cancel};
+  \node[box, below = of mutator] (reset) {Reset};
+  \node[box, densely dotted, below right = of mutator] (tactic) {Tactic};
+  \node[box, densely dotted, below left = of reset] (tactic-goal) {Tactic goal};
+  \node[box, right = of tactic-goal] (focus) {Focus};
+  \node[box, right = of focus] (repeat) {Repeat};
+  \node[box, right = of repeat] (fallback) {Fallback};
+  \node[box, right = of fallback] (combine) {Sequence};
+  \node[box, draw=none, right = of combine] (ellipsis-1) {...};
+  \node[box, densely dotted, below = of tactic-goal] (tactic-functional) {Tactic functional};
+  \node[box, right = of tactic-functional] (tactic-justify) {Tactic justify};
+  \node[box, below = of tactic-functional] (rule) {Applied rule};
+  \node[box, right = of rule] (solver) {Solver};
+  \node[box, draw=none, right = of solver] (ellipsis-3) {...};
+  \draw (cancel) |- ($(reset)!0.5!(mutator)$);
+  \draw[->] (reset) -- (mutator);
+  \draw (tactic) |- ($(reset)!0.5!(mutator)$);
+  \draw[<-] (tactic) -- ++(0, -0.9) -| (tactic-goal);
+  \draw (focus) -- ++(0, 0.87);
+  \draw (repeat) -- ++(0, 0.87);
+  \draw (fallback) -- ++(0, 0.87);
+  \draw (combine) -- ++(0, 0.87);
+  \draw (tactic) ++(0, -0.9) -| (ellipsis-1);
+  \draw[->] (tactic-functional) -- (tactic-goal);
+  \draw (tactic-justify) |- ($(tactic-functional)!0.5!(tactic-goal)$);
+  \draw[->] (rule) -- (tactic-functional);
+  \draw (solver) -- ++(0, 0.88);
+  \draw (ellipsis-3) |- ($(rule)!0.5!(tactic-functional)$);
+  \end{tikzpicture}
+  \caption[Hierarchy of tactics]{Hierarchy of tactics and relation with proof-level mutators.}
+  \label{fig:front-tactic}
+\end{figure}
+
 \subsection{Mixing proof styles}
 
-Our framework allows both forward and backward to be used. The most common use case is to transform a justification to eliminate a goal. Some rules are also more commonly used in a mode than another. For example, instantiation rules are more intuitively understood when used forward while weakening rules are more naturally used backward.
+Our framework allows both forward and backward to be used. The most common use case is to transform a justification to eliminate a goal. Some rules are also more commonly used in a mode than another. For example, instantiation rules are more intuitively understood when used forward while weakening rules are generally used backward.
 
 \begin{figure}[H]
   \centering
