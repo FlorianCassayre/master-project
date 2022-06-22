@@ -15,10 +15,10 @@ trait SequentOps extends SequentDefinitions {
   given[S]: IndexedSeqConverter[S, EmptyTuple] with {
     override def apply(t: EmptyTuple): IndexedSeq[S] = IndexedSeq.empty
   }
-  given[S, H <: S, T <: Tuple, C1] (using converter: IndexedSeqConverter[S, T]): IndexedSeqConverter[S, H *: T] with {
+  given[S, H <: S, T <: Tuple] (using converter: IndexedSeqConverter[S, T]): IndexedSeqConverter[S, H *: T] with {
     override def apply(t: H *: T): IndexedSeq[S] = t.head +: converter(t.tail)
   }
-  given givenTupleValueConversion[S, H, T <: Tuple, C1] (using tupleConverter: IndexedSeqConverter[S, T], valueConverter: Conversion[H, S]): IndexedSeqConverter[S, H *: T] with {
+  given givenTupleValueConversion[S, H, T <: Tuple] (using tupleConverter: IndexedSeqConverter[S, T], valueConverter: Conversion[H, S]): IndexedSeqConverter[S, H *: T] with {
     override def apply(t: H *: T): IndexedSeq[S] = valueConverter(t.head) +: tupleConverter(t.tail)
   }
   given[S, T <: S]: IndexedSeqConverter[S, T] with {
