@@ -1,9 +1,9 @@
 package me.cassayre.florian.masterproject.legacy
 
 import lisa.kernel.fol.FOL.*
-import lisa.KernelHelpers.*
-import lisa.kernel.Printer
-import lisa.kernel.Printer.*
+import utilities.Helpers.*
+import utilities.Printer
+import utilities.Printer.*
 import lisa.kernel.proof.SequentCalculus.{Hypothesis, Sequent, Weakening, sequentToFormula}
 import lisa.kernel.proof.{RunningTheory, SCProof, SCProofChecker}
 import lisa.settheory.AxiomaticSetTheory

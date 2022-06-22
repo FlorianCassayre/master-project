@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.front.proof.state
 
-import lisa.kernel.Printer
+import utilities.Printer
 import lisa.kernel.proof.{RunningTheory, SCProof, SCProofChecker}
 import lisa.kernel.proof.RunningTheoryJudgement.*
 import lisa.kernel.proof.SequentCalculus.{SCSubproof, sequentToFormula}
@@ -31,8 +31,8 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
 
     override def contains(sequent: Sequent): Boolean = proven.contains(sequent)
 
-    def belongsToTheory(label: ConstantFunctionLabel[?]): Boolean = runningTheory.isAcceptedFunctionLabel(toKernel(label))
-    def belongsToTheory(label: ConstantPredicateLabel[?]): Boolean = runningTheory.isAcceptedPredicateLabel(toKernel(label))
+    def belongsToTheory(label: ConstantFunctionLabel[?]): Boolean = runningTheory.isSymbol(toKernel(label))
+    def belongsToTheory(label: ConstantPredicateLabel[?]): Boolean = runningTheory.isSymbol(toKernel(label))
     def belongsToTheory(term: Term): Boolean =
       functionsOf(term).collect { case f: ConstantFunctionLabel[?] => f }.forall(belongsToTheory)
     def belongsToTheory(formula: Formula): Boolean =
@@ -53,7 +53,7 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
           Seq(
             "Error: the theorem was found to produce an invalid proof; this could indicate a problem with a tactic or a bug in the implementation",
             "The produced proof is shown below for reference:",
-            Printer.prettySCProof(scProof, judgement)
+            Printer.prettySCProof(judgement)
           ).mkString("\n")
         )
       }
@@ -62,7 +62,7 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
       val justifications = justificationPairs.map { case (justification, _) => justification }
 
       val kernelJustifications = justificationPairs.map { case (_, kernelJustification) => kernelJustification }
-      val kernelTheorem = runningTheory.proofToTheorem(s"t${proven.size}", scProof, kernelJustifications) match {
+      val kernelTheorem = runningTheory.makeTheorem(s"t${proven.size}", scProof.conclusion, scProof, kernelJustifications) match {
         case ValidJustification(result) => result
         case InvalidJustification(_, _) => throw new Error // Should have been caught before
       }
@@ -169,7 +169,7 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
         Seq(
           "Error: the reconstructed proof was found to be invalid; this could indicate a bug in the implementation of this very method",
           "The reconstructed proof is shown below for reference:",
-          Printer.prettySCProof(scProof, judgement)
+          Printer.prettySCProof(judgement)
         ).mkString("\n")
       )
     }

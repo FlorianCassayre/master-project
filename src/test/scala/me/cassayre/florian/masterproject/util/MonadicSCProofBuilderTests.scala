@@ -2,8 +2,8 @@ package me.cassayre.florian.masterproject.util
 
 import scala.language.adhocExtensions
 
-import lisa.KernelHelpers.*
-import lisa.kernel.Printer
+import utilities.Helpers.*
+import utilities.Printer
 import lisa.kernel.fol.FOL.*
 import lisa.kernel.proof.*
 import lisa.kernel.proof.SequentCalculus.*

@@ -6,7 +6,7 @@ import me.cassayre.florian.masterproject.legacy.GoalBasedProofSystem.*
 import java.util.Scanner
 import scala.util.{Failure, Success, Try}
 import lisa.kernel.fol.FOL.*
-import lisa.kernel.Printer
+import utilities.Printer
 import lisa.kernel.proof.{RunningTheory, SCProofChecker}
 import lisa.settheory.AxiomaticSetTheory
 
@@ -126,7 +126,7 @@ object GoalBasedProofSystemREPL {
                             .println(prettyFrame(prettyProofState(newState.proofState)))
                             .println()
                             .println("All goals have been proven, the proof will now be reconstructed below:")
-                            .println(Printer.prettySCProof(proof, judgement))
+                            .println(Printer.prettySCProof(judgement))
                             .println()
                             .println(
                               if(judgement.isValid)

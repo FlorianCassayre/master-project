@@ -1,8 +1,8 @@
 package me.cassayre.florian.masterproject.util
 
+import lisa.kernel.fol.FOL
 import lisa.kernel.proof.{SCProof, SequentCalculus}
 import lisa.kernel.proof.SequentCalculus.*
-import lisa.settheory.AxiomaticSetTheory.Axiom
 
 /**
  * The proof builder API, a helper to build kernel proofs.
@@ -38,7 +38,7 @@ object SCProofBuilder {
     infix def by(premises: Int*): SCImplicitProofStep = SCImplicitProofStep(s, premises, Seq.empty)
     infix def by(step: SCProofStep): SCExplicitProofStep = SCExplicitProofStep(step)
     infix def justifiedBy(sequents: Sequent*): SCImplicitProofStep = SCImplicitProofStep(s, Seq.empty, sequents)
-    infix def justifiedBy(axiom: Axiom): SCImplicitProofStep = SCImplicitProofStep(s, Seq.empty, Seq(Sequent(Set.empty, Set(axiom))))
+    infix def justifiedBy(axiom: FOL.Formula): SCImplicitProofStep = SCImplicitProofStep(s, Seq.empty, Seq(Sequent(Set.empty, Set(axiom))))
     def justified: SCImplicitProofStep = SCImplicitProofStep(s, Seq.empty, Seq(s))
   }
 

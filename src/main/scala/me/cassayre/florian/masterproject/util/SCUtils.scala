@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.util
 
-import lisa.kernel.Printer
+import utilities.Printer
 import lisa.kernel.fol.FOL.*
 import lisa.kernel.proof.SequentCalculus.*
 import lisa.kernel.proof.SCProof

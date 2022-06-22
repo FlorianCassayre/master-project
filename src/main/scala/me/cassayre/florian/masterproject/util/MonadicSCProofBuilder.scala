@@ -1,7 +1,7 @@
 package me.cassayre.florian.masterproject.util
 
 import lisa.kernel.fol.FOL.*
-import lisa.KernelHelpers.*
+import utilities.Helpers.*
 import lisa.kernel.proof.SCProof
 import lisa.kernel.proof.SequentCalculus.*
 import me.cassayre.florian.masterproject.util.SCProofBuilder.{*, given}

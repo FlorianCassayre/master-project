@@ -6,7 +6,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 import me.cassayre.florian.masterproject.front.proof.Proof.*
 import lisa.kernel.proof.SCProofChecker
-import lisa.kernel.Printer
+import utilities.Printer
 
 class ProofTests extends AnyFunSuite {
 
@@ -21,7 +21,7 @@ class ProofTests extends AnyFunSuite {
       assert(result.nonEmpty)
       val scProof = result.get._1
       val judgement = SCProofChecker.checkSCProof(scProof)
-      println(Printer.prettySCProof(scProof, judgement))
+      println(Printer.prettySCProof(judgement))
       println()
       assert(judgement.isValid)
       assert(scProof.imports.isEmpty)

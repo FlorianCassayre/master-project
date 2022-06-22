@@ -1,0 +1,103 @@
+package me.cassayre.florian.masterproject.legacy.test.front
+
+import lisa.kernel.Printer
+
+import scala.util.chaining.*
+import me.cassayre.florian.masterproject.front.{*, given}
+
+@main def tmp(): Unit = {}
+/*val (a, b, c) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"))
+
+@main def tmp(): Unit = {
+  import me.cassayre.florian.masterproject.front.theory.SetTheory.*
+
+  val (s, t, u) = (SchematicFunctionLabel[0]("s"), SchematicFunctionLabel[0]("t"), SchematicFunctionLabel[0]("u"))
+  val (x, y, z) = (VariableLabel("x"), VariableLabel("y"), VariableLabel("z"))
+
+  given ProofEnvironment = newSetTheoryEnvironment()
+
+  val axExt: Axiom = axiomExtensionality.asJustified.display()
+  val axEmpty: Axiom = axiomEmpty.asJustified.display()
+  val axUnion: Axiom = axiomUnion.asJustified.display()
+
+  // 1. Generalize universal quantifiers
+
+  val thmExtSchema: Theorem = {
+    val t0 = elimRForallS(
+      RuleParameters()
+        .withPredicate(Notations.p, x => forall(y, forall(z, (z in x) <=> (z in y)) <=> (x === y)))
+        .withFunction(Notations.t, s())
+    )(axExt).get
+
+    val t1 = elimRForallS(
+      RuleParameters()
+        .withPredicate(Notations.p, y => forall(z, (z in s) <=> (z in y)) <=> (s === y))
+        .withFunction(Notations.t, t())
+    )(t0).get
+
+    t1
+  }.display()
+
+  val thmEmptySchema: Theorem = elimRForallS(
+    RuleParameters()
+      .withPredicate(Notations.p, x => !(x in emptySet))
+      .withFunction(Notations.t, s())
+  )(axEmpty).get.display()
+
+  val thmUnionSchema: Theorem = {
+    val t0 = elimRForallS(
+      RuleParameters()
+        .withPredicate(Notations.p, x => forall(z, (x in unionSet(z)) <=> exists(y, (x in y) /\ (y in z))))
+        .withFunction(Notations.t, s())
+    )(axUnion).get
+    val t1 = elimRForallS(
+      RuleParameters()
+        .withPredicate(Notations.p, z => (s in unionSet(z)) <=> exists(y, (s in y) /\ (y in z)))
+        .withFunction(Notations.t, t())
+    )(t0).get
+    t1
+  }.display()
+
+  val _ = {
+    val p = ProofMode(() |- unionSet(emptySet) === emptySet)
+    import p.*
+
+    apply(elimRSubstIff(
+      RuleParameters()
+        .withConnector(Notations.f, identity)
+        .withPredicate(Notations.a, formula"forall z. (z in U({})) <=> (z in {})")
+    ))
+
+    focus(1)
+    val _ = thmExtSchema(Notations.s, unionSet(emptySet))(Notations.t, emptySet)
+
+    apply(justification) // Uses the previously proved theorem
+
+    apply(introRForallS(
+      RuleParameters()
+        .withPredicate(Notations.p, z => formula"\ $z. ($z in U({})) <=> ($z in {})")
+        .withFunction(Notations.t, s())
+    ))
+
+    apply(RuleSubstituteRightIff(
+      RuleParameters()
+        .withConnector(Notations.f, x => x <=> (s in emptySet))
+        .withPredicate(Notations.a, formula"exists y. (?s in y) /\ (y in {})")
+    ))
+
+    focus(1)
+    val _ = thmUnionSchema(t, emptySet).rewrite(state.goals.head).get.display()
+    apply(justification)
+
+    apply(introRIff)
+    apply(introRImp)
+    apply(introLExists(
+      RuleParameters()
+        .withPredicate(Notations.p, y => (s in y) /\ (y in emptySet))
+    ))
+
+    apply(introLAnd)
+
+  }
+
+}*/

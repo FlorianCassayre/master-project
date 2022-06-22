@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.legacy.unification
 
-import lisa.kernel.Printer
+import utilities.Printer
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 
 import scala.annotation.tailrec

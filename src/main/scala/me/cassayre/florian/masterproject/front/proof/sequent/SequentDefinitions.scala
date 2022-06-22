@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.front.proof.sequent
 
-import lisa.kernel.Printer
+import utilities.Printer
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 
 trait SequentDefinitions {

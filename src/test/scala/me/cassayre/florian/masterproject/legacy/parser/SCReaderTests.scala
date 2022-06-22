@@ -2,7 +2,7 @@ package me.cassayre.florian.masterproject.legacy.parser
 
 import scala.language.adhocExtensions
 
-import lisa.kernel.Printer
+import utilities.Printer
 import lisa.kernel.proof.SCProofChecker
 import org.scalatest.funsuite.AnyFunSuite
 

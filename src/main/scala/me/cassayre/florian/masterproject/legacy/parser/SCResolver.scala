@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.legacy.parser
 
-import lisa.kernel.Printer
+import utilities.Printer
 import me.cassayre.florian.masterproject.legacy.parser.SCParsed.*
 import lisa.kernel.fol.FOL.*
 import lisa.kernel.proof.SCProof

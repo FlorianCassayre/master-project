@@ -2,8 +2,8 @@ package me.cassayre.florian.masterproject.util
 
 import scala.language.adhocExtensions
 
-import lisa.KernelHelpers.*
-import lisa.kernel.Printer
+import utilities.Helpers.*
+import utilities.Printer
 import lisa.kernel.fol.FOL.*
 import lisa.kernel.proof.*
 import lisa.kernel.proof.SequentCalculus.*
@@ -166,7 +166,7 @@ class SCProofStepFinderTests extends AnyFunSuite {
       Try(proofBuilder.build) match {
         case Success(proof) =>
           SCProofChecker.checkSCProof(proof) match {
-            case SCValidProof => // OK
+            case SCValidProof(_) => // OK
               println(testname)
               println(Printer.prettySCProof(proof))
               println()
@@ -178,7 +178,7 @@ class SCProofStepFinderTests extends AnyFunSuite {
                   assert(view.exists(filter), s"The proof step finder was not able to find the step '$testname'")
                 case SCExplicitProofStep(step) => assert(false)
               }
-            case invalid: SCInvalidProof => throw new AssertionError(s"The reconstructed proof for '$testname' is incorrect:\n${Printer.prettySCProof(proof, invalid)}")
+            case invalid: SCInvalidProof => throw new AssertionError(s"The reconstructed proof for '$testname' is incorrect:\n${Printer.prettySCProof(invalid)}")
           }
         case Failure(exception) => throw new AssertionError(s"Couldn't reconstruct the proof for '$testname'", exception) // Couldn't reconstruct this proof
       }

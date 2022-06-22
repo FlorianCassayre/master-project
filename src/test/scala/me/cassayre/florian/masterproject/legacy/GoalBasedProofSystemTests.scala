@@ -3,8 +3,8 @@ package me.cassayre.florian.masterproject.legacy
 import scala.language.adhocExtensions
 
 import lisa.kernel.fol.FOL.*
-import lisa.KernelHelpers.*
-import lisa.kernel.Printer
+import utilities.Helpers.*
+import utilities.Printer
 import lisa.kernel.proof.{RunningTheory, SCProofChecker}
 import lisa.settheory.AxiomaticSetTheory
 import me.cassayre.florian.masterproject.legacy.GoalBasedProofSystem.*
@@ -33,7 +33,7 @@ class GoalBasedProofSystemTests extends AnyFunSuite {
     val judgement = SCProofChecker.checkSCProof(proof)
 
     // For some output
-    println(Printer.prettySCProof(proof, judgement))
+    println(Printer.prettySCProof(judgement))
     println()
 
     assert(judgement.isValid, "The validity of the reconstructed proof couldn't be certified")

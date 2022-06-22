@@ -1,9 +1,9 @@
 package me.cassayre.florian.masterproject.legacy.test
 
 import lisa.kernel.fol.FOL.*
-import lisa.KernelHelpers.*
+import utilities.Helpers.*
 import me.cassayre.florian.masterproject.legacy.GoalBasedProofSystem.*
-import lisa.kernel.Printer
+import utilities.Printer
 import lisa.kernel.proof.SCProofChecker
 import lisa.settheory.AxiomaticSetTheory
 

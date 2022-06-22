@@ -1,7 +1,7 @@
 package me.cassayre.florian.masterproject.examples
 
 import lisa.kernel.fol.FOL.*
-import lisa.KernelHelpers.*
+import utilities.Helpers.*
 import lisa.kernel.proof.SequentCalculus.*
 import lisa.kernel.proof.{SCProof, SCProofChecker}
 import me.cassayre.florian.masterproject.front.printer.KernelPrinter
@@ -17,7 +17,7 @@ import me.cassayre.florian.masterproject.util.SCUtils
   def testProofOptimization(proof: SCProof): Unit = {
     val originalChecked = SCProofChecker.checkSCProof(proof)
     println("Original proof:")
-    println(KernelPrinter.prettyProof(proof, judgement = originalChecked))
+    println(KernelPrinter.prettyJudgedProof(originalChecked))
 
     assert(originalChecked.isValid)
 
@@ -25,7 +25,7 @@ import me.cassayre.florian.masterproject.util.SCUtils
     val optimizedChecked = SCProofChecker.checkSCProof(optimized)
     println()
     println("Simplified proof:")
-    println(KernelPrinter.prettyProof(optimized, judgement = optimizedChecked))
+    println(KernelPrinter.prettyJudgedProof(optimizedChecked))
 
     assert(proof.conclusion == optimized.conclusion) // The conclusion must remain the same
     assert(optimizedChecked.isValid) // The proof must still be valid

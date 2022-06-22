@@ -1,7 +1,7 @@
 package me.cassayre.florian.masterproject.legacy.test.front
 
 import me.cassayre.florian.masterproject.front.{*, given}
-import lisa.kernel.Printer
+import utilities.Printer
 import lisa.kernel.proof.SCProofChecker
 
 @main def tests(): Unit = {
@@ -37,7 +37,7 @@ import lisa.kernel.proof.SCProofChecker
     case Some((proof, theorems)) =>
       val judgement = SCProofChecker.checkSCProof(proof)
 
-      println(Printer.prettySCProof(proof, judgement))
+      println(Printer.prettySCProof(judgement))
 
       println()
       if(theorems.nonEmpty) {

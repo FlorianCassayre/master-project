@@ -1,6 +1,6 @@
 package me.cassayre.florian.masterproject.legacy.meta
 
-import lisa.kernel.Printer
+import utilities.Printer
 import lisa.kernel.proof.{SCProof, SCProofChecker, SequentCalculus}
 import me.cassayre.florian.masterproject.front.fol.FOL.*
 import me.cassayre.florian.masterproject.legacy.parser.SCReader.*
