@@ -10,6 +10,14 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
 
   type ReconstructRule = PartialFunction[(lisa.kernel.proof.SequentCalculus.Sequent, UnificationContext), IndexedSeq[SCProofStep]]
 
+  /**
+   * The parameters to instantiate a rule into a tactic (see [[RuleTactic]]).
+   * @param selectors the correspondence between patterns and values, can be partial 
+   * @param functions a partial assignment of functions
+   * @param predicates a partial assignment of predicates
+   * @param connectors a partial assignment of connectors
+   * @param variables a partial assignment of free variables
+   */
   case class RuleParameters(
     selectors: Map[Int, SequentSelector] = Map.empty,
     functions: Seq[AssignedFunction] = Seq.empty,
@@ -74,6 +82,11 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     }.headOption
   }
 
+  /**
+   * An instantiated rule. Note that the parameters can be incorrect, in that case the tactic will always fail.
+   * @param rule the original rule
+   * @param parameters the parameters used for the instantiation
+   */
   case class RuleTactic private[RuleDefinitions](rule: Rule, parameters: RuleParameters) extends TacticGoalFunctional {
     override def apply(proofGoal: Sequent): Option[(IndexedSeq[Sequent], ReconstructSteps)] = {
       applyRuleInference(parameters, IndexedSeq(rule.conclusion), rule.hypotheses, IndexedSeq(proofGoal)).flatMap {
@@ -86,6 +99,11 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     override def toString: String = s"${rule.getClass.getSimpleName}(...)"
   }
 
+  /**
+   * An rule is an object specifying a type of transformation on a justified statement or a proof goal.
+   * It is characterized by a sequence of premises (also known as hypotheses) and a conclusion; all patterns.
+   * It must also define a reconstruction function, in order to translate it to kernel proof steps.
+   */
   sealed abstract class Rule {
     def hypotheses: IndexedSeq[PartialSequent]
     def conclusion: PartialSequent
@@ -131,6 +149,9 @@ trait RuleDefinitions extends ProofEnvironmentDefinitions with UnificationUtils 
     }
   }
 
+  /**
+   * A constructor for [[Rule]].
+   */
   open class RuleBase(override val hypotheses: IndexedSeq[PartialSequent], override val conclusion: PartialSequent, override val reconstruct: ReconstructRule) extends Rule
 
   given Conversion[Rule, RuleTactic] = _()

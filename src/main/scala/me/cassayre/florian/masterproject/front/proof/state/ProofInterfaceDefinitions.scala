@@ -12,6 +12,12 @@ trait ProofInterfaceDefinitions extends ProofEnvironmentDefinitions {
     (Seq(bottomAndTop) ++ Seq.fill(verticalPadding)(bottomAndTopMargin) ++ linesMargin ++ Seq.fill(verticalPadding)(bottomAndTopMargin) ++ Seq(bottomAndTop)).mkString("\n")
   }
 
+  /**
+   * The proof mode represents an interface for [[ProofModeState]].
+   * It is stateful, and as such should be mutated using the commands available, e.g. [[apply]].
+   * It is interactive, in the sense that the command applications print information in the standard output.
+   * When no proof goal remains, a theorem can be obtained with [[asTheorem]].
+   */
   case class ProofMode private(private var currentState: ProofModeState) {
     def state: ProofState = currentState.state
     def proving: ProofState = currentState.proving

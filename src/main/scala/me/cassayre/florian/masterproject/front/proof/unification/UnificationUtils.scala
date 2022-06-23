@@ -7,6 +7,11 @@ import scala.collection.View
 
 trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
 
+  /**
+   * Whether a collection of patterns is legal (e.g. no malformed formulas, no clashing variables, ...)
+   * @param patterns the patterns to check
+   * @return whether the patterns are legal or not
+   */
   def isLegalPatterns(patterns: IndexedSeq[PartialSequent]): Boolean = {
     lazy val boundVariables = patterns.flatMap(declaredBoundVariablesOfSequent)
 
@@ -20,6 +25,14 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
     noMalformedFormulas && noClashingBoundVariablePatterns && noConflictingBoundFreeVariables
   }
 
+  /**
+   * Inflates patterns using a context.
+   * @param patternsTo the patterns to inflate
+   * @param valuesFrom the values on the other side
+   * @param ctx the assignment
+   * @param indices the indices of the formulas that have been matched in the values
+   * @return the inflated values
+   */
   private def inflateValues(
     patternsTo: IndexedSeq[PartialSequent],
     valuesFrom: IndexedSeq[Sequent],
@@ -67,6 +80,10 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
 
   private type Context = Set[(VariableLabel, VariableLabel)]
 
+  /**
+   * A constraint represents an equation between a label and a pattern.
+   * The constraint can be resolved as soon as the pattern can be fully instantiated to a value.
+   */
   private enum Constraint {
     case SchematicFunction(label: SchematicFunctionLabel[?], args: Seq[Term], value: Term, ctx: Context)
     case SchematicPredicate(label: SchematicPredicateLabel[?], args: Seq[Term], value: Formula, ctx: Context)
@@ -324,6 +341,19 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
     }
   }
 
+  /**
+   * Solves a matching (one-sided unification) problem.
+   * The result if any is an assignment for the patterns such that they become equivalent to the values.
+   * An optional partial assignment can be provided to help or constraint the matching.
+   * Additionally, it is possible to provide other patterns. In that case, the resulting sequents
+   * will also include all the unmatched formulas.
+   * @param patterns the patterns
+   * @param values the value
+   * @param otherPatterns other patterns
+   * @param partialAssignment the partial assignment (or empty if none)
+   * @param formulaIndices the correspondence between patterns and values in the sequents
+   * @return an option containing the inflated other patterns and the assignment
+   */
   def unifyAndResolve(
     patterns: IndexedSeq[PartialSequent],
     values: IndexedSeq[Sequent],
@@ -482,6 +512,13 @@ trait UnificationUtils extends UnificationDefinitions with SequentDefinitions {
 
   type SequentSelector = (IndexedSeq[Int], IndexedSeq[Int])
 
+  /**
+   * A helper method designed to enumerate all possible correspondences between patterns and values.
+   * @param map an optional partial correspondence (or empty if none)
+   * @param patterns the patterns
+   * @param values the values
+   * @return a lazy list of correspondences
+   */
   def matchIndices(map: Map[Int, SequentSelector], patterns: IndexedSeq[PartialSequent], values: IndexedSeq[Sequent]): View[IndexedSeq[SequentSelector]] = {
     require(patterns.size == values.size)
     // Normally `pattern` shouldn't be empty, but this function works regardless

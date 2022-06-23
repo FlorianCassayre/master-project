@@ -4,6 +4,9 @@ import me.cassayre.florian.masterproject.front.printer.FrontPositionedPrinter
 import me.cassayre.florian.masterproject.front.proof.state.*
 import me.cassayre.florian.masterproject.front.proof.predef.*
 
+/**
+ * The proof package.
+ */
 object Proof
   extends ProofInterfaceDefinitions
   with PredefRulesDefinitions with PredefTacticsDefinitions with PredefCombinedDefinitions {

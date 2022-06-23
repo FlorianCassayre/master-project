@@ -8,6 +8,9 @@ trait SequentDefinitions {
   protected def pretty(sequent: Sequent): String
   protected def pretty(sequent: PartialSequent): String
 
+  /**
+   * The base sequent object; used to represent both the concrete sequent and its partial counterpart.
+   */
   sealed abstract class SequentBase {
     val left: IndexedSeq[Formula]
     val right: IndexedSeq[Formula]
@@ -15,10 +18,22 @@ trait SequentDefinitions {
     def formulas: IndexedSeq[Formula] = left ++ right
   }
 
+  /**
+   * A sequent is a pair of indexable collections of formulas.
+   * @param left the left hand side of this sequent
+   * @param right the right hand side of this sequent
+   */
   final case class Sequent(left: IndexedSeq[Formula], right: IndexedSeq[Formula]) extends SequentBase {
     override def toString: String = pretty(this)
   }
 
+  /**
+   * A partial sequent is a representation of a sequent where only a part of the formulas are known.
+   * @param left the left hand side of this partial sequent
+   * @param right the right hand side of this partial sequent
+   * @param partialLeft whether the left hand side is partial
+   * @param partialRight whether the right hand side is partial
+   */
   final case class PartialSequent(left: IndexedSeq[Formula], right: IndexedSeq[Formula], partialLeft: Boolean = true, partialRight: Boolean = true) extends SequentBase {
     override def toString: String = pretty(this)
   }

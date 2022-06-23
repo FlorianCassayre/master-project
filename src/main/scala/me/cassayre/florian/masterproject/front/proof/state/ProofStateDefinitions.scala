@@ -8,11 +8,22 @@ import me.cassayre.florian.masterproject.front.proof.sequent.{SequentDefinitions
 
 trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
 
+  /**
+   * A proof in the front.
+   * It corresponds to an initial state represented a sequence of goals, and a sequence of tactics to be applied.
+   * Note that the tactics do not necessarily eliminate all goals.
+   * @param initialState the initial state
+   * @param steps the tactics
+   */
   case class Proof(initialState: ProofState, steps: Seq[Tactic])
   object Proof {
     def apply(goals: Sequent*)(steps: Tactic*): Proof = Proof(ProofState(goals.toIndexedSeq), steps)
   }
 
+  /**
+   * The proof state is a sequence of proof goals, which are themselves sequents.
+   * @param goals the goals in this state
+   */
   final case class ProofState(goals: IndexedSeq[Sequent]) {
     override def toString: String =
       ((if (goals.nonEmpty) s"${goals.size} goal${if (goals.sizeIs > 1) "s" else ""}" else "[zero goals]") +:
@@ -26,6 +37,9 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
   type MutatorResult = Option[ProofModeState]
   private[ProofStateDefinitions] type TacticResult = Option[Seq[(AppliedTactic, ProofStateSnapshot)]]
 
+  /**
+   * A general class that describes a mutation on the proof mode state.
+   */
   sealed abstract class ProofModeStateMutator {
     def applyMutator(proofModeState: ProofModeState): MutatorResult
   }
@@ -42,6 +56,10 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
       Some(proofModeState.copy(steps = Seq.empty))
   }
 
+  /**
+   * A tactic is a function that can transform a proof state into a new proof state.
+   * When applied it returns an [[AppliedTactic]] object along with the new state.
+   */
   sealed abstract class Tactic extends ProofModeStateMutator {
     override final def applyMutator(proofModeState: ProofModeState): MutatorResult =
       applySnapshot(proofModeState.lastSnapshot, proofModeState.environment).map(steps => proofModeState.withNewSteps(steps))
@@ -109,6 +127,9 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     }
   }
 
+  /**
+   * A particular case of tactic that works on a single goal.
+   */
   sealed abstract class TacticGoal extends Tactic {
     override private[ProofStateDefinitions] def applySnapshot(snapshot: ProofStateSnapshot, env: ProofEnvironment): TacticResult = {
       (snapshot.proofState.goals, snapshot.shadowProofState) match {
@@ -194,6 +215,15 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
 
   private[ProofStateDefinitions] case class AppliedTactic(id: Int, tactic: Tactic, reconstruct: ReconstructSteps, isTheorem: Boolean, toClose: Map[Int, Justified])
 
+  /**
+   * The proof mode state represents a backward proof builder.
+   * It is initialized by specifying a sequent (the starting goal).
+   * Applied tactics may be appended using the method [[withNewSteps]].
+   * See [[reconstructSCProof]] for the conversion of this object into a kernel proof.
+   * @param initialSnapshot
+   * @param steps
+   * @param environment
+   */
   case class ProofModeState private[ProofStateDefinitions](
     private[ProofStateDefinitions] val initialSnapshot: ProofStateSnapshot,
     private[ProofStateDefinitions] val steps: Seq[Seq[(AppliedTactic, ProofStateSnapshot)]], // Steps are in reverse direction (the first element is the latest)
@@ -217,6 +247,12 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     def tactics: Seq[Tactic] = steps.reverse.flatten.map { case (AppliedTactic(_, tactic, _, _, _), _) => tactic }
   }
 
+  /**
+   * Evaluates a proof by converting tactics to applied tactics.
+   * @param proof the proof to evaluate
+   * @param environment the environment
+   * @return an optional final proof mode state after applying all the tactics
+   */
   def evaluateProof(proof: Proof)(environment: ProofEnvironment): Option[ProofModeState] = {
     def applyTactics(tactics: Seq[Tactic], proofModeState: ProofModeState): Option[ProofModeState] = tactics match {
       case tactic +: rest =>
@@ -229,6 +265,12 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     applyTactics(proof.steps, initialProofModeState(proof.initialState.goals*)(environment))
   }
 
+  /**
+   * Reconstructs a kernel proof from an instance of a [[ProofModeState]].
+   * The passed mode can still contain goals, in that case they be included as imports.
+   * @param proofModeState the proof mode to use
+   * @return the final proof, and a mapping from imports to the theorems used
+   */
   def reconstructSCProof(proofModeState: ProofModeState): (SCProof, Map[Int, Sequent]) = {
     val proofEnvironment = proofModeState.environment
     // Each proof goal that is created (or updated) will be given a unique id
@@ -301,6 +343,9 @@ trait ProofStateDefinitions extends SequentDefinitions with SequentOps {
     isSequentWellFormed(sequent) && schematicConnectorsOfSequent(sequent).isEmpty && environment.belongsToTheory(sequent) // TODO is printable
   }
 
+  /**
+   * A helper module that provides common symbols for usage in rules.
+   */
   object Notations {
     val (a, b, c, d, e) = (SchematicPredicateLabel[0]("a"), SchematicPredicateLabel[0]("b"), SchematicPredicateLabel[0]("c"), SchematicPredicateLabel[0]("d"), SchematicPredicateLabel[0]("e"))
     val (s, t, u) = (SchematicFunctionLabel[0]("s"), SchematicFunctionLabel[0]("t"), SchematicFunctionLabel[0]("u"))

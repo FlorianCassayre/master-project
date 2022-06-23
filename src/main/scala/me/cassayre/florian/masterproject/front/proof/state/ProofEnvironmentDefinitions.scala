@@ -11,6 +11,11 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
 
   import scala.collection.mutable
 
+  /**
+   * The proof environment represents a mutable context with axioms and theorems.
+   * It is analogous to the kernel's [[RunningTheory]], but adapted to the front and with additional safety guarantees and utilities.
+   * @param runningTheory the kernel's theory
+   */
   final class ProofEnvironment private[front](
     private[ProofEnvironmentDefinitions] val runningTheory: RunningTheory, // For now, doesn't need to be generically typed
   ) extends ReadableProofEnvironment {
@@ -94,17 +99,30 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
 
   def newEmptyEnvironment(): ProofEnvironment = new ProofEnvironment(new RunningTheory)
 
+  /**
+   * A justified statement with respect to a theory is a sequent that is accepted by this theory.
+   */
   sealed abstract class Justified extends ReadableJustified {
     private[proof] val environment: ProofEnvironment
     def sequent: Sequent
     final def sequentAsKernel: lisa.kernel.proof.SequentCalculus.Sequent = sequentToKernel(sequent)
   }
 
+  /**
+   * An axiom is a justified statement that is admitted without a proof.
+   * It is guaranteed that this sequent has exactly one conclusion and no assumptions.
+   * @param formula the original formula
+   */
   case class Axiom private[ProofEnvironmentDefinitions](private[proof] val environment: ProofEnvironment, formula: Formula) extends Justified {
     override def sequent: Sequent = () |- formula
     override def toString: String = s"Axiom: $sequent"
   }
 
+  /**
+   * A theorem is a justified statement which has an associated proof depending on other justified statements.
+   * @param proof the proof of this theorem
+   * @param justifications the dependencies of this theorem (= assumptions)
+   */
   case class Theorem private[ProofEnvironmentDefinitions](
     private[proof] val environment: ProofEnvironment,
     sequent: Sequent,
@@ -114,6 +132,7 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
   }
 
 
+  // Borrowed from past work: https://github.com/FlorianCassayre/competitive-scala
   private def topologicalSort[U](start: U, adjacency: Map[U, Set[U]]): Seq[U] = {
     def dfs(stack: Seq[(U, Set[U])], marks: Map[U, Boolean], sorted: Seq[U]): (Map[U, Boolean], Seq[U]) = {
       stack match {
@@ -134,8 +153,19 @@ trait ProofEnvironmentDefinitions extends ProofStateDefinitions {
     sorted
   }
 
+  /**
+   * Converts a theorem into a kernel proof where the imports are the assumption of that theorem.
+   * @param theorem the theorem to convert
+   * @return a kernel proof
+   */
   def reconstructPartialSCProofForTheorem(theorem: Theorem): SCProof = theorem.proof // (that's it)
 
+  /**
+   * Converts a theorem into a kernel proof where the imports are all axioms of that theory.
+   * Essentially inlines all dependent theorems recursively into a single, fat proof.
+   * @param theorem the theorem to convert
+   * @return a kernel proof
+   */
   def reconstructSCProofForTheorem(theorem: Theorem): SCProof = {
     // Inefficient, no need to traverse/reconstruct the whole graph
     val environment = theorem.environment

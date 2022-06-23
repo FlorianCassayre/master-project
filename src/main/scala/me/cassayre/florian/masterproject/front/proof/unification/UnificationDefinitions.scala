@@ -4,6 +4,13 @@ import me.cassayre.florian.masterproject.front.fol.FOL.*
 
 trait UnificationDefinitions {
 
+  /**
+   * An assignment for a unification problem instance.
+   * @param predicates the assigned predicates
+   * @param functions the assigned functions
+   * @param connectors the assigned connectors
+   * @param variables the assigned variables
+   */
   case class UnificationContext(
     predicates: Map[SchematicPredicateLabel[?], LambdaPredicate[?]] = Map.empty,
     functions: Map[SchematicFunctionLabel[?], LambdaFunction[?]] = Map.empty,
@@ -28,6 +35,13 @@ trait UnificationDefinitions {
     def assignedConnectors: Seq[AssignedConnector] = connectors.map { case (k, v) => AssignedConnector.unsafe(k, v) }.toSeq
   }
 
+  /**
+   * A helper object that represents a renaming.
+   * @param predicates the renamed predicates
+   * @param functions the renamed functions
+   * @param connectors the renamed connectors
+   * @param variables the renamed free variables
+   */
   case class RenamingContext(
     predicates: Seq[RenamedPredicateSchema] = Seq.empty,
     functions: Seq[RenamedFunctionSchema] = Seq.empty,
