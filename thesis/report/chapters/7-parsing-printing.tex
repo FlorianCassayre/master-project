@@ -130,8 +130,10 @@ val s2: String = s"Hello $s1!" // Hello world!
 This feature has a nice application in our case: not only can we enforce interpolated variables to be terms or formulas but we can also check their type with respect to the context they appear in. For instance, in the expression \code{formula"\$a /\textbackslash\ b"}, the variable \code{a} cannot be a term (in fact, it must be a formula). In addition to terms and formulas, we may also allow the interpolation of labels which is very useful to bind names dynamically, e.g. \code{formula"\$p(s)"}. Notice that the previous expression is structurally different from \code{formula"\${p(term"s")}"}, although it results in the same formula.
 
 \begin{figure}[H]
+  \captionsetup[subfigure]{margin=0cm}
   \centering
-  \subfloat[\centering Runtime parsing \label{fig:parsing-runtime}]{
+  \begin{subfigure}{0.25\linewidth}
+  \centering
   % Runtime
   \begin{tikzpicture}[auto, on grid, node distance=1.5cm and 2cm, block/.style = {draw, fill=white, rectangle, minimum height=1cm, minimum width=2cm}, none/.style = {draw=none}]
   \node [none] (input) {$\small\code{String}\normalsize$};
@@ -144,9 +146,12 @@ This feature has a nice application in our case: not only can we enforce interpo
   \draw [->] (parser) -- (typer1);
   \draw [->] (typer1) -- (output);
   \end{tikzpicture}
-  }%
+  \caption{Runtime parsing}
+  \label{fig:parsing-runtime}
+  \end{subfigure}
   \qquad\qquad
-  \subfloat[\centering Compile-time parsing, with variable interpolation \label{fig:parsing-compile-time}]{
+  \begin{subfigure}{0.4\linewidth}
+  \centering
   % Compile-time
   \begin{tikzpicture}[auto, on grid, node distance=1.5cm and 2.25cm, block/.style = {draw, fill=white, rectangle, minimum height=1cm, minimum width=2cm}, none/.style = {draw=none}]
   \node [none] (input) {$\small\code{Expr[StringContext]}\normalsize$};
@@ -165,8 +170,10 @@ This feature has a nice application in our case: not only can we enforce interpo
   \draw [->] (typer2) -- (converter);
   \draw [->] (converter) -- (output);
   \end{tikzpicture}
-  }%
-  \caption[Parsing phases]{Phases for regular runtime parsing (\ref{fig:parsing-compile-time}) and compile-time string interpolation (\ref{fig:parsing-runtime}). \code{T} is one of \code{Sequent}, \code{Formula} or \code{Term}, depending on the interpolator that was called.}
+  \caption{Compile-time parsing, with variable interpolation}
+  \label{fig:parsing-compile-time}
+  \end{subfigure}
+  \caption[Parsing phases]{Phases for regular runtime parsing (a) and compile-time string interpolation (b). \code{T} is one of \code{Sequent}, \code{Formula} or \code{Term}, depending on the interpolator that was called.}
   \label{fig:multi-stage-parsing}
 \end{figure}
 

@@ -1,236 +1,209 @@
-@article{Paulson2019,
-  author = {Lawrence C. Paulson and Tobias Nipkow and Makarius Wenzel},
-  title = {From LCF to Isabelle/HOL},
-  year = {2019},
-  issue_date = {Dec 2019},
-  publisher = {Springer-Verlag},
-  address = {Berlin, Heidelberg},
-  volume = {31},
-  number = {6},
-  issn = {0934-5043},
-  doi = {10.1007/s00165-019-00492-1},
-  abstract = {Interactive theorem provers have developed dramatically over the past four decades, from primitive beginnings to today’s powerful systems. Here, we focus on Isabelle/HOL and its distinctive strengths. They include automatic proof search, borrowing techniques from the world of first order theorem proving, but also the automatic search for counterexamples. They include a highly readable structured language of proofs and a unique interactive development environment for editing live proof documents. Everything rests on the foundation conceived by Robin Milner for Edinburgh LCF: a proof kernel, using abstract types to ensure soundness and eliminate the need to store proofs. Compared with the research prototypes of the 1970s, Isabelle is a practical and versatile tool. It is used by system designers, mathematicians and many others.},
-  journal = {Form. Asp. Comput.},
-  month = {12},
-  pages = {675–698},
-  numpages = {24},
-  keywords = {Isabelle, LCF, Interactive theorem proving, HOL}
-}
-
-@article{Yushkovskiy2018,
-  author    = {Artem Yushkovskiy and
-               Stavros Tripakis},
-  title     = {Comparison of Two Theorem Provers: Isabelle/HOL and Coq},
-  journal   = {CoRR},
-  volume    = {abs/1808.09701},
-  year      = {2018},
-  eprinttype = {arXiv},
-  eprint    = {1808.09701},
-  timestamp = {Mon, 03 Sep 2018 13:36:40 +0200},
-  biburl    = {https://dblp.org/rec/journals/corr/abs-1808-09701.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
-}
-
-@incollection{Harrison2014,
-  author    = {John Harrison and
-               Josef Urban and
-               Freek Wiedijk},
-  editor    = {J{\"{o}}rg H. Siekmann},
-  title     = {History of Interactive Theorem Proving},
-  booktitle = {Computational Logic},
-  series    = {Handbook of the History of Logic},
-  volume    = {9},
-  pages     = {135--214},
-  publisher = {Elsevier},
-  year      = {2014},
-  doi       = {10.1016/B978-0-444-51624-4.50004-6},
-  timestamp = {Thu, 05 Sep 2019 14:51:32 +0200},
-  biburl    = {https://dblp.org/rec/series/hhl/HarrisonUW14.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
-}
-
-@book{Wenzel2021,
-  title = {The Isabelle/Isar Reference Manual},
-  author = {Makarius Wenzel},
-  year = {2021},
-  url = {https://isabelle.in.tum.de/dist/Isabelle2021-1/doc/isar-ref.pdf}
-}
-
-@book{Nipkow2021,
-  title = {A Proof Assistant for Higher-Order Logic},
-  author = {Tobias Nipkow and Lawrence C. Paulson and Markus Wenzel},
-  year = {2021},
-  url = {https://isabelle.in.tum.de/doc/tutorial.pdf}
-}
-
-@article{Milner1984,
-  author = {Robin Milner},
-  title = {The use of machines to assist in rigorous proof},
-  journal = {Philosophical Transactions of the Royal Society of London. Series A, Mathematical and Physical Sciences},
-  volume = {312},
-  number = {1522},
-  pages = {411-422},
-  year = {1984},
-  doi = {10.1098/rsta.1984.0067},
-  abstract = {A methodology for computer assisted proof is presented with an example. A central ingredient in the method is the presentation of tactics (or strategies) in an algorithmic metalanguage. Further, the same language is also used to express combinators, by which simple elementary tactics - which often correspond to the inference rules of the logic employed - are combined into more complex tactics, which may even be strategies complete for a class of problems. However, the emphasis is not upon completeness but upon providing a metalogical framework within which a user may express his insight into proof methods and may delegate routine (but error-prone) work to the computer. This method of tactic composition is presented at the start of the paper in the form of an elementary theory of goal-seeking. A second ingredient of the methodology is the stratification of machine-assisted proof by an ancestry graph of applied theories, and the example illustrates this stratification. In the final section, some recent developments and applications of the method are cited.}
-}
-
-@article{Martelli1982,
-  author = {Alberto Martelli and Ugo Montanari},
-  title = {An Efficient Unification Algorithm},
-  year = {1982},
-  issue_date = {April 1982},
-  publisher = {Association for Computing Machinery},
-  address = {New York, NY, USA},
-  volume = {4},
-  number = {2},
-  issn = {0164-0925},
-  doi = {10.1145/357162.357169},
-  journal = {ACM Trans. Program. Lang. Syst.},
-  month = {apr},
-  pages = {258–282},
-  numpages = {25}
-}
-
-@inproceedings{Guilloud2022,
-  author = {Simon Guilloud and Viktor Kunčak},
-  title = {Equivalence Checking for Orthocomplemented Bisemilattices in Log-Linear Time},
-  booktitle = {Proceedings of the 28th International Conference on Tools and Algorithms for the Construction and Analysis of Systems (TACAS 2022, Munich, Germany, April 2-7)},
-  pages = {196-214},
-  year = {2022},
-  series = {LNCS~13244},
-  publisher = {Springer},
-  pdf = {https://link.springer.com/content/pdf/10.1007/978-3-030-99527-0.pdf},
-  keyword = {Equivalence Checking},
-}
-
-@inproceedings{Stirling2010,
-  author = {Colin Stirling},
-  title = {Introduction to Decidability of Higher-Order Matching},
-  year = {2010},
-  isbn = {3642120318},
-  publisher = {Springer-Verlag},
-  address = {Berlin, Heidelberg},
-  doi = {10.1007/978-3-642-12032-9_1},
-  abstract = {Higher-order unification is the problem given an equation t=u containing free variables is there a solution substitution θ such that tθ and uθ have the same normal form? The terms t and u are from the simply typed lambda calculus and the same normal form is with respect to βη-equivalence. Higher-order matching is the particular instance when the term u is closed; can t be pattern matched to u? Although higher-order unification is undecidable, higher-order matching was conjectured to be decidable by Huet [2]. Decidability was shown in [7] via a game-theoretic analysis of β-reduction when component terms are in η-long normal form.In the talk we outline the proof of decidability. Besides the use of games to understand β-reduction, we also emphasize how tree automata can recognize terms of simply typed lambda calculus as developed in [1, 3-6].},
-  booktitle = {Proceedings of the 13th International Conference on Foundations of Software Science and Computational Structures},
-  location = {Paphos, Cyprus},
-  series = {FOSSACS'10}
-}
-
-@software{Cassayre2020,
-  author       = {Florian Cassayre},
-  title        = {Theorem proving framework in Scala},
-  month        = jun,
-  year         = 2020,
-  publisher    = {Zenodo},
-  version      = {1.0},
-  doi          = {10.5281/zenodo.4284080},
-}
-
-@misc{Guilloud2022-2,
-  url={https://github.com/epfl-lara/lisa/blob/main/LISA Reference Manual.pdf},
-  title={LISA Reference Manual},
-  publisher={GitHub},
-  author={Simon Guilloud and Florian Cassayre and Viktor Kunčak},
-  year={2022}
-}
-
-@article{Krajicek1994,
-  title={Lower bounds to the size of constant-depth propositional proofs},
-  volume={59},
-  DOI={10.2307/2275250},
-  number={1},
-  journal={Journal of Symbolic Logic},
-  publisher={Cambridge University Press},
-  author={Jan Krajíček},
-  year={1994},
-  pages={73–86}
-}
-
-@book{Mendelson2015,
-  place={BOCA RATON},
-  title={Introduction to mathematical logic},
-  edition={6},
-  publisher={Chapman \& Hall/CRC},
-  author={Elliott Mendelson},
-  year={2015},
-  isbn={978-0-429-16209-1}
-}
-
-@inproceedings{Asperti2007,
-  author    = {Andrea Asperti and
-               Claudio Sacerdoti Coen and
-               Enrico Tassi and
-               Stefano Zacchiroli},
-  editor    = {Thorsten Altenkirch and
-               Conor McBride},
-  title     = {Crafting a Proof Assistant},
-  booktitle = {Types for Proofs and Programs, International Workshop, {TYPES} 2006,
-               Nottingham, UK, April 18-21, 2006, Revised Selected Papers},
-  series    = {Lecture Notes in Computer Science},
-  volume    = {4502},
-  pages     = {18--32},
-  publisher = {Springer},
-  year      = {2006},
-  doi       = {10.1007/978-3-540-74464-1\_2},
-  timestamp = {Tue, 14 May 2019 10:00:42 +0200},
-  biburl    = {https://dblp.org/rec/conf/types/AspertiCTZ06.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
-}
-
-@article{Barras1999,
-  title={The Coq proof assistant reference manual},
-  author={Barras, Bruno and Boutin, Samuel and Cornes, Cristina and Courant, Judica{\"e}l and Coscoy, Yann and Delahaye, David and de Rauglaudre, Daniel and Filli{\^a}tre, Jean-Christophe and Gim{\'e}nez, Eduardo and Herbelin, Hugo and others},
-  journal={INRIA, version},
-  volume={6},
-  number={11},
-  year={1999}
-}
-
-@inproceedings{Kuncak2021,
-  title={Stainless verification system tutorial},
-  author={Viktor Kunčak and Jad Hamza},
-  booktitle={2021 Formal Methods in Computer Aided Design (FMCAD)},
-  pages={2--7},
-  year={2021},
-  organization={IEEE}
-}
-
-@article{Moors2008,
-  title={Parser combinators in Scala},
-  author={Moors, Adriaan and Piessens, Frank and Odersky, Martin},
-  journal={CW Reports},
-  volume={54},
-  year={2008},
-  publisher={Department of Computer Science, KU Leuven; Leuven, Belgium}
-}
-
-@article{Knight1989,
-  author    = {Kevin Knight},
-  title     = {Unification: {A} Multidisciplinary Survey},
-  journal   = {{ACM} Comput. Surv.},
-  volume    = {21},
-  number    = {1},
-  pages     = {93--124},
-  year      = {1989},
-  doi       = {10.1145/62029.62030},
-  timestamp = {Wed, 14 Nov 2018 10:31:46 +0100},
-  biburl    = {https://dblp.org/rec/journals/csur/Knight89.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
-}
-
 @book{Appel1989,
-  title={Every planar map is four colorable},
-  author={Appel, Kenneth I and Haken, Wolfgang},
-  volume={98},
-  year={1989},
-  publisher={American Mathematical Soc.}
+	title        = {Every planar map is four colorable},
+	author       = {Appel, Kenneth I and Haken, Wolfgang},
+	year         = 1989,
+	publisher    = {American Mathematical Soc.},
+	volume       = 98
 }
-
+@inproceedings{Asperti2007,
+	title        = {Crafting a Proof Assistant},
+	author       = {Andrea Asperti and Claudio Sacerdoti Coen and Enrico Tassi and Stefano Zacchiroli},
+	year         = 2006,
+	booktitle    = {Types for Proofs and Programs, International Workshop, {TYPES} 2006, Nottingham, UK, April 18-21, 2006, Revised Selected Papers},
+	publisher    = {Springer},
+	series       = {Lecture Notes in Computer Science},
+	volume       = 4502,
+	pages        = {18--32},
+	doi          = {10.1007/978-3-540-74464-1\_2},
+	editor       = {Thorsten Altenkirch and Conor McBride},
+	timestamp    = {Tue, 14 May 2019 10:00:42 +0200},
+	biburl       = {https://dblp.org/rec/conf/types/AspertiCTZ06.bib},
+	bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
 @phdthesis{Ayers2021,
-  title={A Tool for Producing Verified, Explainable Proofs},
-  author={Ayers, Edward},
-  year={2021},
-  school={University of Cambridge}
+	title        = {A Tool for Producing Verified, Explainable Proofs},
+	author       = {Ayers, Edward},
+	year         = 2021,
+	school       = {University of Cambridge}
+}
+@article{Barras1999,
+	title        = {The Coq proof assistant reference manual},
+	author       = {Barras, Bruno and Boutin, Samuel and Cornes, Cristina and Courant, Judica{\"e}l and Coscoy, Yann and Delahaye, David and de Rauglaudre, Daniel and Filli{\^a}tre, Jean-Christophe and Gim{\'e}nez, Eduardo and Herbelin, Hugo and others},
+	year         = 1999,
+	journal      = {INRIA, version},
+	volume       = 6,
+	number       = 11
+}
+@software{Cassayre2020,
+	title        = {Theorem proving framework in Scala},
+	author       = {Florian Cassayre},
+	year         = 2020,
+	month        = jun,
+	publisher    = {Zenodo},
+	doi          = {10.5281/zenodo.4284080},
+	version      = {1.0}
+}
+@inproceedings{Guilloud2022,
+	title        = {Equivalence Checking for Orthocomplemented Bisemilattices in Log-Linear Time},
+	author       = {Simon Guilloud and Viktor Kunčak},
+	year         = 2022,
+	booktitle    = {Proceedings of the 28th International Conference on Tools and Algorithms for the Construction and Analysis of Systems (TACAS 2022, Munich, Germany, April 2-7)},
+	publisher    = {Springer},
+	series       = {LNCS~13244},
+	pages        = {196--214},
+	pdf          = {https://link.springer.com/content/pdf/10.1007/978-3-030-99527-0.pdf},
+	keyword      = {Equivalence Checking}
+}
+@misc{Guilloud2022-2,
+	title        = {LISA Reference Manual},
+	author       = {Simon Guilloud and Florian Cassayre and Viktor Kunčak},
+	year         = 2022,
+	publisher    = {GitHub},
+	url          = {https://github.com/epfl-lara/lisa/blob/main/LISA Reference Manual.pdf}
+}
+@incollection{Harrison2014,
+	title        = {History of Interactive Theorem Proving},
+	author       = {John Harrison and Josef Urban and Freek Wiedijk},
+	year         = 2014,
+	booktitle    = {Computational Logic},
+	publisher    = {Elsevier},
+	series       = {Handbook of the History of Logic},
+	volume       = 9,
+	pages        = {135--214},
+	doi          = {10.1016/B978-0-444-51624-4.50004-6},
+	editor       = {J{\"{o}}rg H. Siekmann},
+	timestamp    = {Thu, 05 Sep 2019 14:51:32 +0200},
+	biburl       = {https://dblp.org/rec/series/hhl/HarrisonUW14.bib},
+	bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+@article{Knight1989,
+	title        = {Unification: {A} Multidisciplinary Survey},
+	author       = {Kevin Knight},
+	year         = 1989,
+	journal      = {{ACM} Comput. Surv.},
+	volume       = 21,
+	number       = 1,
+	pages        = {93--124},
+	doi          = {10.1145/62029.62030},
+	timestamp    = {Wed, 14 Nov 2018 10:31:46 +0100},
+	biburl       = {https://dblp.org/rec/journals/csur/Knight89.bib},
+	bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+@article{Krajicek1994,
+	title        = {Lower bounds to the size of constant-depth propositional proofs},
+	author       = {Jan Krajíček},
+	year         = 1994,
+	journal      = {Journal of Symbolic Logic},
+	publisher    = {Cambridge University Press},
+	volume       = 59,
+	number       = 1,
+	pages        = {73–86},
+	doi          = {10.2307/2275250}
+}
+@inproceedings{Kuncak2021,
+	title        = {Stainless verification system tutorial},
+	author       = {Viktor Kunčak and Jad Hamza},
+	year         = 2021,
+	booktitle    = {2021 Formal Methods in Computer Aided Design (FMCAD)},
+	pages        = {2--7},
+	organization = {IEEE}
+}
+@article{Martelli1982,
+	title        = {An Efficient Unification Algorithm},
+	author       = {Alberto Martelli and Ugo Montanari},
+	year         = 1982,
+	month        = {apr},
+	journal      = {ACM Trans. Program. Lang. Syst.},
+	publisher    = {Association for Computing Machinery},
+	address      = {New York, NY, USA},
+	volume       = 4,
+	number       = 2,
+	pages        = {258–282},
+	doi          = {10.1145/357162.357169},
+	issn         = {0164-0925},
+	issue_date   = {April 1982},
+	numpages     = 25
+}
+@book{Mendelson2015,
+	title        = {Introduction to mathematical logic},
+	author       = {Elliott Mendelson},
+	year         = 2015,
+	publisher    = {Chapman \& Hall/CRC},
+	isbn         = {978-0-429-16209-1},
+	place        = {BOCA RATON},
+	edition      = 6
+}
+@article{Milner1984,
+	title        = {The use of machines to assist in rigorous proof},
+	author       = {Robin Milner},
+	year         = 1984,
+	journal      = {Philosophical Transactions of the Royal Society of London. Series A, Mathematical and Physical Sciences},
+	volume       = 312,
+	number       = 1522,
+	pages        = {411--422},
+	doi          = {10.1098/rsta.1984.0067},
+	abstract     = {A methodology for computer assisted proof is presented with an example. A central ingredient in the method is the presentation of tactics (or strategies) in an algorithmic metalanguage. Further, the same language is also used to express combinators, by which simple elementary tactics - which often correspond to the inference rules of the logic employed - are combined into more complex tactics, which may even be strategies complete for a class of problems. However, the emphasis is not upon completeness but upon providing a metalogical framework within which a user may express his insight into proof methods and may delegate routine (but error-prone) work to the computer. This method of tactic composition is presented at the start of the paper in the form of an elementary theory of goal-seeking. A second ingredient of the methodology is the stratification of machine-assisted proof by an ancestry graph of applied theories, and the example illustrates this stratification. In the final section, some recent developments and applications of the method are cited.}
+}
+@article{Moors2008,
+	title        = {Parser combinators in Scala},
+	author       = {Moors, Adriaan and Piessens, Frank and Odersky, Martin},
+	year         = 2008,
+	journal      = {CW Reports},
+	publisher    = {Department of Computer Science, KU Leuven; Leuven, Belgium},
+	volume       = 54
+}
+@book{Nipkow2021,
+	title        = {A Proof Assistant for Higher-Order Logic},
+	author       = {Tobias Nipkow and Lawrence C. Paulson and Markus Wenzel},
+	year         = 2021,
+	url          = {https://isabelle.in.tum.de/doc/tutorial.pdf}
+}
+@article{Paulson2019,
+	title        = {From LCF to Isabelle/HOL},
+	author       = {Lawrence C. Paulson and Tobias Nipkow and Makarius Wenzel},
+	year         = 2019,
+	month        = 12,
+	journal      = {Form. Asp. Comput.},
+	publisher    = {Springer-Verlag},
+	address      = {Berlin, Heidelberg},
+	volume       = 31,
+	number       = 6,
+	pages        = {675–698},
+	doi          = {10.1007/s00165-019-00492-1},
+	issn         = {0934-5043},
+	issue_date   = {Dec 2019},
+	abstract     = {Interactive theorem provers have developed dramatically over the past four decades, from primitive beginnings to today’s powerful systems. Here, we focus on Isabelle/HOL and its distinctive strengths. They include automatic proof search, borrowing techniques from the world of first order theorem proving, but also the automatic search for counterexamples. They include a highly readable structured language of proofs and a unique interactive development environment for editing live proof documents. Everything rests on the foundation conceived by Robin Milner for Edinburgh LCF: a proof kernel, using abstract types to ensure soundness and eliminate the need to store proofs. Compared with the research prototypes of the 1970s, Isabelle is a practical and versatile tool. It is used by system designers, mathematicians and many others.},
+	numpages     = 24,
+	keywords     = {Isabelle, LCF, Interactive theorem proving, HOL}
+}
+@inproceedings{Stirling2010,
+	title        = {Introduction to Decidability of Higher-Order Matching},
+	author       = {Colin Stirling},
+	year         = 2010,
+	booktitle    = {Proceedings of the 13th International Conference on Foundations of Software Science and Computational Structures},
+	location     = {Paphos, Cyprus},
+	publisher    = {Springer-Verlag},
+	address      = {Berlin, Heidelberg},
+	series       = {FOSSACS'10},
+	doi          = {10.1007/978-3-642-12032-9_1},
+	isbn         = 3642120318,
+	abstract     = {Higher-order unification is the problem given an equation t=u containing free variables is there a solution substitution θ such that tθ and uθ have the same normal form? The terms t and u are from the simply typed lambda calculus and the same normal form is with respect to βη-equivalence. Higher-order matching is the particular instance when the term u is closed; can t be pattern matched to u? Although higher-order unification is undecidable, higher-order matching was conjectured to be decidable by Huet [2]. Decidability was shown in [7] via a game-theoretic analysis of β-reduction when component terms are in η-long normal form.In the talk we outline the proof of decidability. Besides the use of games to understand β-reduction, we also emphasize how tree automata can recognize terms of simply typed lambda calculus as developed in [1, 3-6].}
+}
+@book{Wenzel2021,
+	title        = {The Isabelle/Isar Reference Manual},
+	author       = {Makarius Wenzel},
+	year         = 2021,
+	url          = {https://isabelle.in.tum.de/dist/Isabelle2021-1/doc/isar-ref.pdf}
+}
+@article{Yushkovskiy2018,
+	title        = {Comparison of Two Theorem Provers: Isabelle/HOL and Coq},
+	author       = {Artem Yushkovskiy and Stavros Tripakis},
+	year         = 2018,
+	journal      = {CoRR},
+	volume       = {abs/1808.09701},
+	eprinttype   = {arXiv},
+	eprint       = {1808.09701},
+	timestamp    = {Mon, 03 Sep 2018 13:36:40 +0200},
+	biburl       = {https://dblp.org/rec/journals/corr/abs-1808-09701.bib},
+	bibsource    = {dblp computer science bibliography, https://dblp.org}
 }

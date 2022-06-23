@@ -14,7 +14,7 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows,positioning,calc}
 \usepackage{float}
-\usepackage{subfig}
+\usepackage{subcaption}
 \usepackage{ebproof}
 \usepackage[english,french,main=english]{babel}
 \usepackage{listings}
@@ -23,14 +23,14 @@
 \usepackage[stable]{footmisc}
 \usepackage[nounderscore]{syntax}
 \usepackage{framed}
-%\usepackage{etoc} % Multiple ToCs
+\usepackage[margin=1cm]{caption}
 \usetikzlibrary{trees}
 \usepackage[style=numeric-comp]{biblatex}
 \addbibresource{bibliography.bib}
 \setlength{\columnsep}{3.25cm} % Adjust depending to the length of names in the cover
 
 % Draft
-\usepackage[firstpage]{draftwatermark}\SetWatermarkScale{2}
+%\usepackage[firstpage]{draftwatermark}\SetWatermarkScale{2}
 
 \let\oldemptyset\emptyset
 \let\emptyset\varnothing
@@ -55,7 +55,9 @@
 \newtheorem{definition}{Definition}[section]
 \newtheorem{theorem}{Theorem}
 
-\pagenumbering{gobble}
+\pagenumbering{arabic}
+
+\thispagestyle{empty}
 \input{cover}
 \newpage
 
@@ -64,7 +66,6 @@
 \addtolength{\topmargin}{-0.5cm}
 \setlength{\headsep}{0.5cm}
 
-\pagenumbering{arabic}
 \newpage
 
 \input{abstract}

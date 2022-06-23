@@ -5,7 +5,7 @@ A proof assistant is a piece of software that can assist a human user in writing
 
 In this thesis we describe the design process of a front-end for the modern proof assistant LISA. Our main focus is to preserve the same soundness standards as the existing framework while making it more expressive and interactive. The supporting source code for this project is published at the following address:
 \begin{center}
-\href{http://github.com/FlorianCassayre/master-project}{\textbf{github.com/FlorianCassayre/master-project}}\footnote{The current release is identified by commit: \code{c3499c2729730a7f807efb8676a92dcb6f8a3f8f}}
+\href{http://github.com/FlorianCassayre/master-project}{\textbf{github.com/FlorianCassayre/master-project}}\footnote{The current release is identified by commit number: \code{30b0c340e94c6e981d3115c554ab9bc97f8b8971}}
 \end{center}
 
 \subsection{LISA}
@@ -47,6 +47,6 @@ LISA\footnote{\textbf{L}ISA \textbf{I}s \textbf{S}ets \textbf{A}utomated} is an 
   \label{fig:simple-lisa-proof}
 \end{figure}
 
-A proof in this system is a directed acyclic graph of proof steps. Each such step corresponds to the application of an inference rule, and is characterized by its conclusion expressed as a sequent, and some premises. A sequent is a pair of sets of formulas, noted $\phi_1, \phi_2, ..., \phi_n \vdash \psi_1, \psi_2, ..., \psi_m$ or $\Gamma \vdash \Delta$, and can be interpreted in conventional logic as a conjunction of premises implying a disjunction of conclusions. That said, the actual semantic is controlled by the inference rules provided by the system. Proofs can optionally have ``imports'', sequents that can be used as premises, and proofs may also be nested for organization purposes. Figures \ref{fig:simple-lisa-proof-graph} and \ref{fig:simple-lisa-proof} showcase a formal proof in LISA. Notice that a directed acyclic graph can always be represented in a linear fashion, but not necessarily as a tree (unless we duplicate forward edges).
+A proof in this system is a directed acyclic graph of proof steps. Each such step corresponds to the application of an inference rule, and is characterized by its conclusion expressed as a sequent, and some premises. A sequent is a pair of sets of formulas, noted $\phi_1, \phi_2, ..., \phi_n \vdash \psi_1, \psi_2, ..., \psi_m$ or $\Gamma \vdash \Delta$, and can be interpreted in conventional logic as a conjunction of premises implying a disjunction of conclusions. That said, the actual semantic is controlled by the inference rules provided by the system. Proofs can optionally have ``imports'': sequents that are used as premises but do not come from any step. Proofs may also be nested for organization purposes. Figures \ref{fig:simple-lisa-proof-graph} and \ref{fig:simple-lisa-proof} showcase a formal proof in LISA. Notice that a directed acyclic graph can always be represented in a linear fashion, but not necessarily as a tree (unless we duplicate forward edges).
 
 Currently LISA only exists as a Scala library, therefore the proofs are described using Scala code. For further technical details about LISA, we refer the reader to the official manual \cite{Guilloud2022-2}.

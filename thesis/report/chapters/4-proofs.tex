@@ -69,7 +69,7 @@ val theorem: Theorem = {
   \node [block, below = of state2, text centered] (state5) {(no goals)};
   \draw [->, shorten >= 0.5mm] -- ++(0, 1.5) node[fill=white]{Prove $\vdash \neg{?a} \lor {?b} \Leftrightarrow {?a} \Rightarrow {?b}$} -- (state0);
   \draw [->, shorten >= 0.5mm] (state0.east) -- ++(1.25, 0) node[fill=white]{I.R.$\Leftrightarrow$} -- (state1);
-  \draw [->, shorten >= 0.5mm] (state1.east) -- ++(1.25, 0) node[fill=white]{Focus (2)} -- (state2);
+  \draw [->, shorten >= 0.5mm] (state1.east) -- ++(1.25, 0) node[fill=white]{Focus (1)} -- (state2);
   \draw [->, shorten >= 0.5mm] (state2.south) |- ++(0, -0.55) |- ++(-5.95, 0) node[fill=white]{I.R.$\Rightarrow$} -| (state3.north);
   \draw [->, shorten >= 0.5mm] (state3.east) -- ++(1.25, 0) node[fill=white]{I.L.$\Rightarrow$} -- (state4);
   \draw [->, shorten >= 0.5mm] (state4.east) -- ++(1.25, 0) node[fill=white]{Solve} -- (state5);
