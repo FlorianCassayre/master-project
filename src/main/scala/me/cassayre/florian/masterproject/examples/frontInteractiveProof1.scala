@@ -1,5 +1,7 @@
 package me.cassayre.florian.masterproject.examples
 
+import lisa.kernel.proof.SCProofChecker
+
 import scala.util.chaining.*
 import me.cassayre.florian.masterproject.front.fol.FOL.{*, given}
 import me.cassayre.florian.masterproject.front.proof.Proof.{*, given}
@@ -56,4 +58,11 @@ import me.cassayre.florian.masterproject.front.theory.SetTheory.*
 
     p.asTheorem()
   }
+
+  println("=== Reconstruction ===")
+  println("(t0):")
+  println(KernelPrinter.prettyJudgedProof(SCProofChecker.checkSCProof(reconstructSCProofForTheorem(t0))))
+  println()
+  println("(t1):")
+  println(KernelPrinter.prettyJudgedProof(SCProofChecker.checkSCProof(reconstructSCProofForTheorem(t1))))
 }

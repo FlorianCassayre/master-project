@@ -1,5 +1,6 @@
 package me.cassayre.florian.masterproject.examples
 
+import lisa.kernel.proof.SCProofChecker
 import me.cassayre.florian.masterproject.front.fol.FOL.{*, given}
 import me.cassayre.florian.masterproject.front.parser.FrontMacro.{*, given}
 import me.cassayre.florian.masterproject.front.printer.FrontPositionedPrinter.*
@@ -157,4 +158,7 @@ import scala.util.chaining.*
 
     asTheorem()
   }
+
+  println("=== Reconstruction ===")
+  println(KernelPrinter.prettyJudgedProof(SCProofChecker.checkSCProof(reconstructSCProofForTheorem(thmUnionAny))))
 }

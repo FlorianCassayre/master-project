@@ -21,9 +21,7 @@ import scala.util.chaining.*
     val theorem: Theorem = ProofMode(sequent).tap(_(propositionalSolver)).asTheorem()
     val scProof: SCProof = reconstructSCProofForTheorem(theorem)
 
-    println(KernelPrinter.prettyProof(scProof))
-    println()
-    assert(SCProofChecker.checkSCProof(scProof).isValid)
+    println(KernelPrinter.prettyJudgedProof(SCProofChecker.checkSCProof(scProof)))
   }
 
   testSolve(sequent"?a |- ?a")
