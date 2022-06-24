@@ -3,7 +3,7 @@ lazy val root = (project in file("."))
     commonSettings,
     name := "master-project",
     organization := "me.cassayre.florian",
-    version := "0.2.0",
+    version := "1.0.0",
     versionScheme := Some("semver-spec"),
     scalaVersion := "3.2.1-RC1-bin-20220619-4cb967f-NIGHTLY",
     scalacOptions ++= Seq(

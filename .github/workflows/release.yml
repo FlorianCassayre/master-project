@@ -42,10 +42,10 @@ jobs:
           root_file: thesis.tex
           args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode -shell-escape
           extra_system_packages: inkscape
+      - run: mv thesis/report/thesis.pdf thesis.pdf
       - name: Upload the artifacts
         uses: skx/github-action-publish-binaries@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          working_directory: thesis/report
           args: thesis.pdf

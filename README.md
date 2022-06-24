@@ -61,6 +61,7 @@ The table below indicates the version compatibility (= value of `$COMMIT`):
 
 | `master-project` |                   `lisa`                   |
 |:----------------:|:------------------------------------------:|
+|     `1.0.0`      | `3ae1c204df54e780ab7565070575b421b119f684` |
 |     `0.2.0`      | `eacb9c06aa2975b9ae2bc993847c597eb3c54995` | 
 |     `0.1.0`      | `eacb9c06aa2975b9ae2bc993847c597eb3c54995` |
 
