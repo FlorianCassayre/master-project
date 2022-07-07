@@ -9,3 +9,7 @@
 *.xml
 svg-inkscape
 *.pdf
+*.nav
+*.out
+*.snm
+*.lol
