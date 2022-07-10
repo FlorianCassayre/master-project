@@ -1,7 +1,47 @@
 \documentclass{beamer}
+
+\usepackage{ifthen}
+\usepackage{xparse}
+\ExplSyntaxOn
+\NewDocumentCommand{\getenv}{om}
+{
+  \sys_get_shell:nnN { kpsewhich ~ --var-value ~ #2 } { } \l_tmpa_tl
+  \tl_trim_spaces:N \l_tmpa_tl
+  \IfNoValueTF { #1 }
+  {\tl_use:N \l_tmpa_tl}
+  {\tl_set_eq:NN #1 \l_tmpa_tl}
+}
+\NewExpandableDocumentCommand{\ifstringsequalTF}{mmmm}
+{
+  \str_if_eq:eeTF { #1 } { #2 } { #3 } { #4 }
+}
+\ExplSyntaxOff
+
+% Available mode: slides-only, notes-only, slides-notes-interlaced, slides-notes-dual (default)
+\getenv[\BEAMERMODE]{BEAMERMODE}
+\ifstringsequalTF{\BEAMERMODE}{slides-only}
+{}
+{
+  \ifstringsequalTF{\BEAMERMODE}{notes-only}
+  {\setbeameroption{show only notes}}
+  {
+    \ifstringsequalTF{\BEAMERMODE}{slides-notes-interlaced}
+    {\setbeameroption{show notes}}
+    {\setbeameroption{show notes on second screen=right}} % Default
+  }
+}
+
 \usetheme{CambridgeUS}
+
 \usepackage{svg}
 \usepackage{amsmath}
+\usepackage{listings}
+\usepackage{ebproof}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usetikzlibrary{shadows.blur}
+\usetikzlibrary{shapes.symbols}
 \usepackage[utf8]{inputenc}
 
 % Source: https://www.epfl.ch/about/overview/wp-content/uploads/2020/06/EPFL-brand-guidelines.pdf
@@ -17,22 +57,83 @@
 \setbeamercolor*{palette tertiary}{bg=epfl-groseille, fg=white}
 %\setbeamercolor*{palette quaternary}{bg=blue, fg=green}
 
-\title[Master Thesis]{A front-end for LISA}
+\setbeamertemplate{section in toc}[sections numbered]
+\setbeamertemplate{subsection in toc}[subsections numbered] % (unused)
+
+% Adapted from https://tex.stackexchange.com/a/4199
+\makeatletter
+\newcommand*\idstyle{%
+  \expandafter\id@style\the\lst@token\relax
+}
+\def\id@style#1#2\relax{%
+  \ifcat#1\relax\else
+    \ifnum`#1=\uccode`#1%
+      \color{epfl-canard}
+    \fi
+  \fi
+}
+\makeatother
+
+\lstset{
+  language=Scala,
+  showstringspaces=false,
+  %xleftmargin=0.75cm,
+  basicstyle=\ttfamily,
+  captionpos=b,
+  commentstyle=\color{epfl-perle}\textit,
+  stringstyle=\color{epfl-groseille},
+  keywordstyle=\color{epfl-rouge},
+  identifierstyle=\color{epfl-taupe}\idstyle,%\color{epfl-leman},
+}
+
+\newcommand{\code}{\texttt}
+
+
+\title[Master Thesis]{A front-end for the LISA proof assistant}
 \subtitle{Master Thesis}
 \author{Florian Cassayre}
 \date{June 2022}
 
 \institute[EPFL]{École polytechnique fédérale de Lausanne}
 \date{2022-07-21}
-\titlegraphic{\leavevmode\smash{\raisebox{5.9cm}{\includesvg[width=3cm]{figures/epfl-logo}}}}
+\titlegraphic{
+  \leavevmode\smash{\raisebox{5.75cm}{\includesvg[width=3cm]{figures/epfl-logo}}}
+  %\leavevmode\smash{Laboratory for Automated Reasoning and Analysis}
+}
 
 \begin{document}
 
-\frame{\titlepage}
-
 \begin{frame}
-\frametitle{My title}
-My text on the first slide.
+\maketitle
+
+\begin{columns}[onlytextwidth]
+\begin{column}{0.3333333\textwidth}
+\scriptsize Supervisor \\
+\small Prof. Viktor Kunčak
+\end{column}
+\begin{column}{0.3333333\textwidth}
+\scriptsize Assistant \\
+\small Simon Guilloud
+\end{column}
+\begin{column}{0.3333333\textwidth}
+\scriptsize External expert \\
+\small Prof. Jasmin Blanchette
+\end{column}
+\end{columns}
+
 \end{frame}
+
+%\frame{\titlepage}
+
+\note{
+Introduction notes
+}
+
+\input{chapters/0-outline}
+\input{chapters/1-lisa}
+\input{chapters/2-proofs}
+\input{chapters/3-matching}
+\input{chapters/4-dsl}
+\input{chapters/5-conclusion}
 
 \end{document}

@@ -26,8 +26,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          submodules: recursive
       - name: Build thesis PDF
         uses: xu-cheng/latex-action@v2
         with:
@@ -40,3 +38,21 @@ jobs:
         with:
           name: thesis
           path: thesis/report/thesis.pdf
+  presentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build presentation PDF (slides only)
+        uses: xu-cheng/latex-action@v2
+        with:
+          working_directory: thesis/presentation
+          root_file: presentation.tex
+          args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode -shell-escape
+          extra_system_packages: inkscape
+        env:
+          BEAMERMODE: slides-only
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: presentation
+          path: thesis/presentation/presentation.pdf
