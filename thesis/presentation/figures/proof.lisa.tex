@@ -1,0 +1,10 @@
+\footnotesize
+$\begin{array}{rlll}
+0 & \text{Hypo.}~                  & {?b} \vdash \neg{?a}; {?b}                                    & [{?b}] \\
+1 & \text{Hypo.}~                  & {?a} \vdash {?a}; {?b}                                        & [{?a}] \\
+2 & \text{Right}~{\neg}~1          & \vdash \neg{?a}; {?a}; {?b}                                   & [{?a}] \\
+3 & \text{Left}~{\Rightarrow}~2, 0 & {?a} \Rightarrow {?b} \vdash \neg{?a}; {?b}                   & [{?a}; {?b}] \\
+4 & \text{Right}~{\lor}~3          & {?a} \Rightarrow {?b} \vdash \neg{?a} \lor {?b}               & [\neg{?a}; {?b}] \\
+5 & \text{Right}~{\Rightarrow}~4   & \vdash ({?a} \Rightarrow {?b}) \Rightarrow \neg{?a} \lor {?b} & [{?a} \Rightarrow {?b}; \neg{?a} \lor {?b}]
+\end{array}$
+\normalsize

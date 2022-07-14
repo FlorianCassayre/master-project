@@ -1,1 +1,186 @@
 \section{LISA}
+
+\begin{frame}{Proof assistants}
+\framesubtitle{Formal proof verification}
+
+Automatically verifies the validity of a proof
+
+\vspace{0.5cm}
+
+\centering
+\begin{tikzpicture}[
+block/.style={rectangle, draw, very thick, fill=gray!5, minimum width=60, minimum height=30},
+none/.style={draw=none},
+]
+\node[none] (input) {Formal proof};
+\node[block] (verifier) [right = of input] {Verifier};
+\node[none] (output-true) [above right = of verifier] {$\top$};
+\node[none] (output-false) [below right = of verifier] {$\bot$};
+
+\draw[->] (input) -- (verifier);
+\draw[->] (verifier.north) |- (output-true);
+\draw[->] (verifier.south) |- (output-false);
+\end{tikzpicture}
+
+\end{frame}
+
+\note{
+\begin{itemize}
+\item Before anything else, I will clarify the notion of proof assistants. The main objective in the area of automated reasoning is to formalize the notion of a proof such that it can be verified mechanically by a computerized program.
+\item The core piece
+\end{itemize}
+}
+
+\begin{frame}{Proof assistants}
+\framesubtitle{Formal proof generation}
+
+The assistant helps in producing such a proof
+
+\vspace{0.75cm}
+
+\centering
+\scalebox{0.8}{\begin{tikzpicture}[
+block/.style={rectangle, draw, very thick, fill=gray!5, minimum width=60, minimum height=30},
+none/.style={draw=none},
+]
+\node[none] (user) {User interaction};
+\node[block] (assistant) [right = of user] {Assistant};
+\node[none] (input) [right = of assistant] {Formal proof};
+\node[block] (verifier) [right = of input] {Verifier};
+\node[none] (output-true) [above right = of verifier] {$\top$};
+\node[none] (output-false) [below right = of verifier] {\color{gray}$\bot$};
+
+\draw[->] (user) -- (assistant);
+\draw[->] (assistant.north) -- ++(0cm, 1.25cm) -| (user.north);
+\draw[->] (assistant) -- (input);
+\draw[->] (input) -- (verifier);
+\draw[->] (verifier.north) |- (output-true);
+\draw[->, densely dotted] (verifier.south) |- (output-false);
+\end{tikzpicture}}
+
+\end{frame}
+
+\note{
+\begin{itemize}
+\item Proof assistants use proof verifiers, however they are also able to provide feedback.
+\item These formal proofs are not always straightforward to write. The proof assistant comes into play to address this limitation.
+\end{itemize}
+}
+
+\begin{frame}{LISA}
+
+\begin{itemize}
+\item LISA is a proof assistant designed at LARA\footnote{\href{http://github.com/epfl-lara/lisa}{github.com/epfl-lara/lisa}} (2021 $\rightarrow$ now)
+\item First-order logic and sequent calculus
+\item Set theory (ZFC) as an axiomatic foundation
+\item Scala 2 and 3
+\end{itemize}
+
+\end{frame}
+
+\note{
+\begin{itemize}
+\item LISA is a proof assistant designed in this laboratory, which development started last year.
+\item It stands out from other existing software by using different foundations: in particular it relies on an adaptation of Gentzen's sequent calculus over first-order logic, and uses axioms of set theory. It is also written in Scala and is meant to be used within Scala.
+\end{itemize}
+}
+
+\begin{frame}{LISA}
+\framesubtitle{Sequents and inference rules}
+
+\centering
+$$
+\phi_1, ..., \phi_n \vdash \psi_1, ..., \psi_m \ \text{can be interpreted as} \left(\bigwedge_{i=1}^n \phi_i \right) \Rightarrow \left(\bigvee_{i=1}^m \psi_i \right)
+$$
+
+\vspace{0.75cm}
+
+Examples of inference rules:
+
+$$
+\begin{prooftree}
+\hypo{\vphantom{\Gamma}}
+\infer1[Hypothesis]{\Gamma, \phi \vdash \phi, \Delta}
+\end{prooftree}
+\qquad\qquad
+\begin{prooftree}
+\hypo{\Gamma, \phi \vdash \Delta}
+\hypo{\Sigma, \psi \vdash \Pi}
+\infer2[Left $\vee$]{\Gamma, \Sigma, \phi \vee \psi \vdash \Delta, \Pi}
+\end{prooftree}
+$$
+$$
+\begin{prooftree}
+\hypo{\Gamma \vdash \phi [x \mapsto t], \Delta}
+\infer1[Right $\exists$]{\Gamma \vdash \exists x. \phi, \Delta}
+\end{prooftree}
+\qquad\qquad
+\begin{prooftree}
+\hypo{\Gamma \vdash \Delta}
+\infer1[Inst. Pred.]{(\Gamma \vdash \Delta) [{?p} \mapsto \phi(\Psi)]}
+\end{prooftree}
+$$
+
+\vspace{0.75cm} % Otherwise not centered
+
+\end{frame}
+
+\note{
+\begin{itemize}
+\item In LISA statements are expressed as sequents. A sequent is basically characterized by a pair of sets of formulas, which have the following interpretation in regular logic.
+\item Then, there is also a pre-defined set of inference rules which states how one can conclude logical tautologies.
+\item For instance, the hypothesis rule allows you to always conclude a sequent containing the same formula on either side.
+\item Or, to obtain a disjunction as an hypothesis you must prove two other propositions.
+\end{itemize}
+}
+
+\begin{frame}{LISA}
+\framesubtitle{Proof}
+
+\begin{itemize}
+\item
+Proof tree:\\[0.4cm]
+{\centering \input{figures/proof.tree} \par}
+\vspace{0.5cm}
+\item
+Proof represented in LISA:\\[0.4cm]
+{\centering \input{figures/proof.lisa} \par}
+\end{itemize}
+
+\end{frame}
+
+\note{Everything you want}
+
+\begin{frame}{LISA}
+\framesubtitle{Beyond proof trees}
+
+\begin{itemize}
+\item Proofs can be converted into theorems
+\item Further proofs can use axioms and existing theorems as premises
+\end{itemize}
+
+\end{frame}
+
+\note{Everything you want bis}
+
+\begin{frame}[fragile]
+\frametitle{LISA}
+
+\begin{lstlisting}
+package net.debasishg.snippet.cake
+
+import java.util.{Date, Calendar}
+object cake {
+
+  sealed trait Currency
+  case object USD extends Currency
+  case object EUR extends Currency
+  case object AUD extends Currency
+
+  val baseCurrency: Currency = USD
+  val test_abc = 0
+}
+
+\end{lstlisting}
+
+\end{frame}

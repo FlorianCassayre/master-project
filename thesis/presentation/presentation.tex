@@ -44,6 +44,8 @@
 \usetikzlibrary{shapes.symbols}
 \usepackage[utf8]{inputenc}
 
+%\usefonttheme[onlymath]{serif} % Use the same font as article
+
 % Source: https://www.epfl.ch/about/overview/wp-content/uploads/2020/06/EPFL-brand-guidelines.pdf
 \definecolor{epfl-rouge}{RGB}{255,0,0}
 \definecolor{epfl-groseille}{RGB}{181,31,31}
@@ -57,8 +59,30 @@
 \setbeamercolor*{palette tertiary}{bg=epfl-groseille, fg=white}
 %\setbeamercolor*{palette quaternary}{bg=blue, fg=green}
 
+\setbeamercolor{itemize item}{fg=epfl-groseille}
+\setbeamercolor{itemize subitem}{fg=epfl-leman}
+\setbeamercolor{itemize subsubitem}{fg=epfl-taupe}
+
+\setbeamertemplate{itemize item}[circle]
+\setbeamertemplate{itemize subitem}[square]
+\setbeamertemplate{itemize subsubitem}[triangle]
+
 \setbeamertemplate{section in toc}[sections numbered]
 \setbeamertemplate{subsection in toc}[subsections numbered] % (unused)
+
+% Section slide
+% Does not use \AtBeginSection
+\newcommand{\makesection}[1]{
+  \begin{frame}
+  \vfill
+  \centering
+  \begin{beamercolorbox}[sep=8pt,center,shadow=true,rounded=true]{title}
+    \usebeamerfont{title}\insertsectionnumber. \insertsectionhead\par%
+  \end{beamercolorbox}
+  \vfill
+  \note{#1}
+  \end{frame}
+}
 
 % Adapted from https://tex.stackexchange.com/a/4199
 \makeatletter
@@ -84,53 +108,35 @@
   stringstyle=\color{epfl-groseille},
   keywordstyle=\color{epfl-rouge},
   identifierstyle=\color{epfl-taupe}\idstyle,%\color{epfl-leman},
+  escapeinside={(@}{@)},
 }
+
+\beamertemplatenavigationsymbolsempty % Remove navigation bar
+\setbeamercovered{transparent} % Make future content transparent
 
 \newcommand{\code}{\texttt}
 
+\let\oldemptyset\emptyset
+\let\emptyset\varnothing
+
+% Contents
 
 \title[Master Thesis]{A front-end for the LISA proof assistant}
 \subtitle{Master Thesis}
 \author{Florian Cassayre}
 \date{June 2022}
 
-\institute[EPFL]{École polytechnique fédérale de Lausanne}
+\institute[EPFL]{École polytechnique fédérale de Lausanne \\ School of Computer Science \\ \vspace{0.5cm}\includesvg[width=4cm]{figures/epfl-logo}}
 \date{2022-07-21}
-\titlegraphic{
-  \leavevmode\smash{\raisebox{5.75cm}{\includesvg[width=3cm]{figures/epfl-logo}}}
-  %\leavevmode\smash{Laboratory for Automated Reasoning and Analysis}
-}
+\day=21\relax
+\month=07\relax
+\year=2022\relax
 
 \begin{document}
 
-\begin{frame}
-\maketitle
-
-\begin{columns}[onlytextwidth]
-\begin{column}{0.3333333\textwidth}
-\scriptsize Supervisor \\
-\small Prof. Viktor Kunčak
-\end{column}
-\begin{column}{0.3333333\textwidth}
-\scriptsize Assistant \\
-\small Simon Guilloud
-\end{column}
-\begin{column}{0.3333333\textwidth}
-\scriptsize External expert \\
-\small Prof. Jasmin Blanchette
-\end{column}
-\end{columns}
-
-\end{frame}
-
-%\frame{\titlepage}
-
-\note{
-Introduction notes
-}
-
+\input{cover}
 \input{chapters/0-outline}
-\input{chapters/1-lisa}
+\input{chapters/1-introduction}
 \input{chapters/2-proofs}
 \input{chapters/3-matching}
 \input{chapters/4-dsl}

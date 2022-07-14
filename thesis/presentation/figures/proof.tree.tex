@@ -1,0 +1,12 @@
+\footnotesize
+\begin{prooftree}
+\hypo{}
+\infer1[$\text{Hypo.}$]{{?a} \vdash {?a}; {?b}}
+\infer1[$\text{Right}~{\neg}$]{\vdash \neg{?a}; {?a}; {?b}}
+\hypo{}
+\infer1[$\text{Hypo.}$]{{?b} \vdash \neg{?a}; {?b}}
+\infer2[$\text{Left}~{\Rightarrow}$]{{?a} \Rightarrow {?b} \vdash \neg{?a}; {?b}}
+\infer1[$\text{Right}~{\lor}$]{{?a} \Rightarrow {?b} \vdash \neg{?a} \lor {?b}}
+\infer1[$\text{Right}~{\Rightarrow}$]{\vdash ({?a} \Rightarrow {?b}) \Rightarrow \neg{?a} \lor {?b}}
+\end{prooftree}
+\normalsize

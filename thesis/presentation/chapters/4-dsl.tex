@@ -1,1 +1,68 @@
 \section{DSL features}
+
+\makesection{
+\begin{itemize}
+\item .
+\end{itemize}
+}
+
+\begin{frame}[fragile]
+\frametitle{DSL features}
+
+\onslide<1>
+
+\begin{lstlisting}
+val a = SchematicPredicateLabel[0]("a")
+
+a /\ (!a ==> a): Formula (@\onslide<2-3>@)
+
+val t = SchematicFunctionLabel[0]("t") (@\onslide<2>@)
+val p = SchematicPredicateLabel[1]("p")
+
+p(t): Formula
+p(t, t): Formula // error (@\onslide<3>@)
+
+val f = LambdaFunction[1](t1 => t1)
+f(t): Term
+\end{lstlisting}
+
+\only<1>{\note{
+\begin{itemize}
+\item The framework I designed also defines its own domain specific language, that provides additional compile-time guarantees to that of LISA's making it safer at usage.
+\item For instance, the labels have their arity encoded as a singleton type. A singleton type has the special property that it can be translated into a value at compilation time: here "0" is a literal type, which is also singleton.
+\item The motivation for that is to enforce the correct number of arguments. "a" does not expect any argument here.
+\end{itemize}
+}}
+
+\only<2>{\note{
+\begin{itemize}
+\item This is illustrated in that second example. "p" expects one argument. Passing more than one argument will trigger a type error.
+\end{itemize}
+}}
+
+\only<3>{\note{
+\begin{itemize}
+\item Finally, 
+\end{itemize}
+}}
+
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{String interpolation}
+\framesubtitle{Thanks to multi-stage programming}
+
+\begin{lstlisting}
+val f1: Formula = formula"?a /\ (!?a => ?a)"
+
+sequent"?a |- $f1; ?a"
+\end{lstlisting}
+
+\note{
+\begin{itemize}
+\item The framework also defines a language for sequents and formulas, which can be parsed and printed. Without entering into the details I will present an interesting language feature that is used; that is string interpolation.
+\item In Scala string interpolation is a syntactic sugar that allows us to translate a string into something else. The particularity is that the string can contain Scala expressions as well.
+\end{itemize}
+}
+
+\end{frame}

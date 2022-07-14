@@ -1,1 +1,252 @@
 \section{Matching}
+
+\makesection{
+\begin{itemize}
+\item .
+\end{itemize}
+}
+
+\subsection{Examples}
+
+% Matching 1
+
+\begin{frame}{Matching}
+\framesubtitle{Example 1: structural matching}
+
+\setbeamercovered{} % This frame only
+
+Example: $({?a} \lor {?b})[\sigma] = a \lor (b \Rightarrow a)$
+
+\vspace{0.5cm}
+
+(read: \textit{matching the pattern ${?a} \lor {?b}$ on the value $a \lor (b \Rightarrow a)$})
+
+\vspace{0.25cm}
+\centering
+
+\begin{tikzpicture}[draw=none, node distance = 1cm and 0.5cm]
+
+\node (p-or) {$\lor$};
+\node (p) at (0, 0.75) {Pattern};
+\node (p-a) [below left = of p-or] {${?a}$};
+\node (p-b) [below right = of p-or] {${?b}$};
+
+\node (v-or) at (5, 0) {$\vphantom{?}\lor$};
+\node (v) at (5, 0.75) {Value};
+\node (v-a1) [below left = of v-or] {$\vphantom{?}a$};
+\node (v-ba) [below right = of v-or] {$\vphantom{?}\Rightarrow$};
+\node (v-b) [below left = of v-ba] {$\vphantom{?}b$};
+\node (v-a2) [below right = of v-ba] {$\vphantom{?}a$};
+
+\draw (p-a) -- (p-or);
+\draw (p-b) -- (p-or);
+
+\draw (v-a1) -- (v-or);
+\draw (v-ba) -- (v-or);
+\draw (v-b) -- (v-ba);
+\draw (v-a2) -- (v-ba);
+
+\only<2> { % Dotted
+\draw[dotted] (p-a) to [out=330,in=210] (v-a1);
+\draw[postaction={draw,dotted,line width=0.4pt,black}][line width=2mm,white] (p-b) to [out=330,in=210] (v-ba);
+}
+
+\end{tikzpicture}
+
+\vspace{0.25cm}
+
+\only<2>{
+Result: $\{ {?a} \mapsto a, {?b} \mapsto {b \Rightarrow a} \}$
+}
+
+\only<1>{\note{
+\begin{itemize}
+\item The problem of matching consists of finding an assignment for a set of variables such that when instantiated the pattern equals the value. As part of my work I implemented an opinionated matcher for sequents.
+\item Here is a standard example with formulas. The pattern is as follows, "a" and "b" are pattern variables for which we are trying to find an assignment with respect to the right value.
+\end{itemize}
+}}
+
+\only<2>{\note{
+\begin{itemize}
+\item In that case, it is relatively straightforward because we only have to deconstruct the constant symbols, and we eventually obtain the following assignment.
+\end{itemize}
+}}
+
+\end{frame}
+
+% Matching 2
+
+\begin{frame}{Matching}
+\framesubtitle{Example 2: structural disagreement}
+
+\setbeamercovered{}
+
+Example: $\neg{?a}[\sigma] = a \lor b$.
+
+\vspace{0.5cm}
+\centering
+
+\begin{tikzpicture}[draw=none, node distance = 1cm and 0.5cm]
+
+\node (p-not) {$\neg$};
+\node (p) at (0, 0.75) {Pattern};
+\node (p-a) [below = of p-not] {${?a}$};
+
+\node (v-or) at (4, 0) {$\vphantom{?}\lor$};
+\node (v) at (4, 0.75) {Value};
+\node (v-a) [below left = of v-or] {$\vphantom{?}a$};
+\node (v-b) [below right = of v-or] {$\vphantom{?}b$};
+
+\draw (p-a) -- (p-or);
+
+\draw (v-a) -- (v-or);
+\draw (v-b) -- (v-or);
+
+\only<2>{ % Dotted
+\draw[dotted] (p-not) -- (v-or);
+\node[fill=white, inner sep=0,outer sep=0] (cross) at ($(p-not)!0.5!(v-or)$) {\Huge $\color{epfl-rouge}\times$};
+}
+
+\end{tikzpicture}
+
+\vspace{0.5cm}
+
+\only<2>{
+Result: $\bot$
+}
+
+\only<1>{\note{
+\begin{itemize}
+\item Here is another simple example.
+\end{itemize}
+}}
+
+\only<2>{\note{
+\begin{itemize}
+\item In that case there is no possible assignment because the constant symbols disagree.
+\end{itemize}
+}}
+
+\end{frame}
+
+% Matching 3
+
+\begin{frame}{Matching}
+\framesubtitle{Example 3: non-linear matching}
+
+\setbeamercovered{}
+
+Example: $({?a} \lor {?a})[\sigma] = (a \land b) \lor (b \land a)$.
+
+\vspace{0.5cm}
+\centering
+
+\begin{tikzpicture}[draw=none, node distance = 1cm and 0.5cm]
+
+\node (p-or) {$\lor$};
+\node (p) at (0, 0.75) {Pattern};
+\node (p-a1) [below left = of p-or] {${?a}$};
+\node (p-a2) [below right = of p-or] {${?a}$};
+
+\node (v-a1) [below right = of p-a2] {$\vphantom{?}a$};
+\node (v-ab) [above right = of v-a1] {$\vphantom{?}\land$};
+\node (v-b1) [below right = of v-ab] {$\vphantom{?}b$};
+\node (v-b2) [right = of v-b1] {$\vphantom{?}b$};
+\node (v-ba) [above right = of v-b2] {$\vphantom{?}\land$};
+\node (v-a2) [below right = of v-ba] {$\vphantom{?}a$};
+
+
+\node (v-or) at (4.625, 0) {$\vphantom{?}\lor$};
+\node (v) at (4.625, 0.75) {Value};
+
+\only<2>{ % Dotted
+\draw[dotted] (v-ab) -- (v-ba);
+\draw[dotted] (p-a1) to [out=330,in=210] (v-ab);
+\draw[postaction={draw,dotted,line width=0.4pt,black}][line width=2mm,white] (p-a2) to [out=330,in=210] (v-ba);
+}
+
+\draw (p-a1) -- (p-or);
+\draw (p-a2) -- (p-or);
+
+\draw (v-ab) -- (v-or);
+\draw (v-ba) -- (v-or);
+\draw[postaction={draw,line width=0.4pt,black}][line width=2mm,white] (v-a1) -- (v-ab);
+\draw[postaction={draw,line width=0.4pt,black}][line width=2mm,white] (v-b1) -- (v-ab);
+\draw (v-b2) -- (v-ba);
+\draw (v-a2) -- (v-ba);
+
+\end{tikzpicture}
+
+\vspace{0.5cm}
+
+\only<2>{
+Result: $\{ {?a} \mapsto a \land b \}$
+}
+
+\only<1>{\note{
+\begin{itemize}
+\item Here is a third example, this time observe that the pattern contains twice the same variable. This is known as a non-linear pattern.
+\end{itemize}
+}}
+
+\only<2>{\note{
+\begin{itemize}
+\item .
+\end{itemize}
+}}
+
+\end{frame}
+
+% Equivalence
+
+\subsection{Equivalence aware matching}
+
+\begin{frame}{Non-linear matching}
+\framesubtitle{Allowing repetition of pattern variables}
+
+LISA uses an equivalence checker based on orthocomplemented bisemilattices.
+
+Equivalence-checking procedure, noted $\equiv$, with the following properties:
+\begin{gather*}
+(a \equiv b) \implies (a \Leftrightarrow b) \tag{Equivalence} \\[0.25cm]
+(a \equiv b) \land (b \equiv c) \implies (a \equiv c) \tag{Transitivity} \\[0.25cm]
+(a \equiv b) \implies (c[a \mapsto b] \equiv c) \tag{Substitution}
+\end{gather*}
+
+\vspace{0.5cm}
+
+Claim: these properties allow us to perform non-linear matching modulo $\equiv$-equivalence
+
+\note{
+\begin{itemize}
+\item Now the question arises as to what should happen in the case of pattern variable appearing multiple times. In our use case, such situation can happen so we must handle it.
+\item Because LISA relies on an equivalence checker
+\end{itemize}
+}
+
+\end{frame}
+
+\subsection{First-order matching}
+
+\begin{frame}{First-order matching}
+\framesubtitle{Pattern variables with arity $> 0$}
+
+\centering
+
+\begin{tabular}{ccc|c}
+Pattern & Value & Hint & Result \\[0.2cm]
+\hline\hline
+\rule{0pt}{1.25\normalbaselineskip}
+${?p}(t)$ & $t = u$ & $\emptyset$ & $\{ {?p} \mapsto \lambda x. x = u \}$ \\[0.25cm]
+${?p}({?t})$ & $t = u$ & $\emptyset$ & $\bot$ \\[0.25cm]
+${?p}({?t})$ & $t = u$ & $\{ {?t} \mapsto t \}$ & $\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}$ \\[0.25cm]
+${?p}({?t})$ & $t = u$ & $\{ {?p} \mapsto \lambda x. x = u \}$ & $\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}$
+\end{tabular}
+
+\note{
+\begin{itemize}
+\item . 
+\end{itemize}
+}
+
+\end{frame}

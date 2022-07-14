@@ -1,1 +1,163 @@
 \section{Proofs}
+
+\makesection{
+\begin{itemize}
+\item .
+\end{itemize}
+}
+
+\subsection{Patterns}
+
+\newcommand{\Cphi}{{\color{epfl-rouge}\phi}}
+\newcommand{\Ca}{{\color{epfl-rouge!70}{?a}}}
+\newcommand{\Cpsi}{{\color{epfl-leman}\psi}}
+\newcommand{\Cb}{{\color{epfl-leman!70}{?b}}}
+\newcommand{\Cx}{{\color{epfl-canard}x}}
+\newcommand{\Cp}{{\color{epfl-rouge!70}{?p}}}
+\newcommand{\Ct}{{\color{gray}{?t}}}
+
+\begin{frame}{Patterns}
+\framesubtitle{Generalizing inference rules}
+
+\begin{align*}
+\text{LISA rule:} \qquad\qquad &\hphantom{\longrightarrow} \qquad\quad \text{Corresponding pattern:} \\
+\begin{prooftree}
+\hypo{\vphantom{\Gamma}}
+\infer1{\Gamma, \Cphi \vdash \Cphi, \Delta}
+\end{prooftree}
+\qquad
+&\longrightarrow
+\qquad
+\begin{prooftree}
+\hypo{\vphantom{\Gamma}}
+\infer1{..., \Ca \vdash \Ca, ...}
+\end{prooftree}
+\tag{Hypothesis}
+\\[0.5cm] %
+\begin{prooftree}
+\hypo{\Gamma, \Cphi \vdash \Delta}
+\hypo{\Sigma, \Cpsi \vdash \Pi}
+\infer2{\Gamma, \Sigma, \Cphi \lor \Cpsi \vdash \Delta, \Pi}
+\end{prooftree}
+\qquad
+&\longrightarrow
+\qquad
+\begin{prooftree}
+\hypo{..., \Ca \vdash ...}
+\hypo{..., \Cb \vdash ...}
+\infer2{..., \Ca \lor \Cb \vdash ...}
+\end{prooftree}
+\tag{Left $\lor$}
+\\[0.5cm] %
+\begin{prooftree}
+\hypo{\Gamma \vdash \exists \Cx. \Cphi, \Delta}
+\infer1{\Gamma \vdash \Cphi [\Cx \mapsto \Ct], \Delta}
+\end{prooftree}
+\qquad
+&\longrightarrow
+\qquad
+\begin{prooftree}
+\hypo{... \vdash \exists \Cx. \Cp(\Cx), ...}
+\infer1{... \vdash \Cp(\Ct), ...}
+\end{prooftree}
+\tag{Right $\exists$}
+\\[0.5cm] %
+\begin{prooftree}
+\hypo{\Gamma \vdash \Delta}
+\infer1{(\Gamma \vdash \Delta) [{?p} \mapsto \phi(\Psi)]}
+\end{prooftree}
+\qquad
+&\longrightarrow
+\qquad
+?
+\tag{Inst. Pred.}
+\end{align*}
+
+\note{
+\begin{itemize}
+\item The first contribution I am going to present is patterns. Patterns are a generalized representation of rules.
+\item On the left side is a LISA rule and on the right side is the corresponding pattern. The common symbols are highlighted in the same color for clarity. Notice that we represent the static formulas as schemas in our patterns. Therefore patterns do not need any extension to first order logic. I will come back to the actual meaning of the ellipsis.
+\item Unfortunately not all rules have a representation in our system, for examples rules that act on all the formulas of a sequent such as the predicate instantiation rule.
+\end{itemize}
+}
+
+\end{frame}
+
+\begin{frame}{Patterns}
+\framesubtitle{Motivations}
+
+\begin{itemize}
+\item Automatic inference of parameters
+\item Forward and backward reasoning
+\item Encapsulate multiple rules into a single pattern
+\end{itemize}
+
+\note{
+\begin{itemize}
+\item One may wonder the motivation behind the introduction of these rules. There are in fact several reasons.
+\item The first one is that by having unified the representation of the rules, it allows us to design algorithms that work on all rules by extension. One such algorithm is an inference procedure that can automatically deduce the value of the schemas in the pattern without having the need for the user to specify them.
+\item Another reason is that they can be used forward and backward without additional logic. We will see later what we mean by that.
+\item A chain of rules can also be represented by a single pattern.
+\end{itemize}
+}
+
+\end{frame}
+
+\begin{frame}{Patterns}
+\framesubtitle{Combining multiple rules together}
+
+Entire branches can be represented by a single pattern:
+
+\scriptsize
+\begin{align*}
+\begin{prooftree}
+\hypo{\Gamma \vdash \Cphi \lor \Cpsi, \Delta}
+\hypo{\vphantom{\Gamma}}
+\infer1[Hypothesis]{\Cphi \vdash \Cphi}
+\hypo{\vphantom{\Gamma}}
+\infer1[Hypothesis]{\Cpsi \vdash \Cpsi}
+\infer2[Left $\lor$]{\Cphi \lor \Cpsi \vdash \Cphi, \Cpsi}
+\infer2[Cut]{\Gamma \vdash \Cphi, \Cpsi, \Delta}
+\end{prooftree}
+&\longrightarrow
+\quad
+\begin{prooftree}
+\hypo{... \vdash \Ca \lor \Cb, ...}
+\infer1[Elim. R. $\lor$]{... \vdash \Ca, \Cb, ...}
+\end{prooftree}
+\end{align*}
+\normalsize
+
+\note{
+\begin{itemize}
+\item This representation makes is possible to factor out multiple branches into a single pattern application.
+\item For example, LISA only provides what we call introduction rules (rules where the bottom sequent introduces a new symbol). However it turns out there are instances where it is desirable to go the other way around. This is possible since most rules are conservative, meaning that the conclusion is not weaker that the hypotheses (and vice versa). We call these rules elimination, and the one presented here is such an example.
+\end{itemize}
+}
+
+\end{frame}
+
+% Direction
+
+\begin{frame}{Proof direction}
+
+
+
+\note{
+\begin{itemize}
+\item .
+\end{itemize}
+}
+
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{REPL}
+
+\begin{lstlisting}
+sbt> prompt
+\end{lstlisting}
+
+\note{}
+
+\end{frame}
