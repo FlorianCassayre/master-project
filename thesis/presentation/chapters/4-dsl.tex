@@ -1,4 +1,4 @@
-\section{DSL features}
+\section{Language features}
 
 \makesection{
 \begin{itemize}
@@ -7,7 +7,8 @@
 }
 
 \begin{frame}[fragile]
-\frametitle{DSL features}
+\frametitle{Domain specific language}
+\framesubtitle{Precise typing of labels}
 
 \onslide<1>
 
@@ -30,7 +31,7 @@ f(t): Term
 \begin{itemize}
 \item The framework I designed also defines its own domain specific language, that provides additional compile-time guarantees to that of LISA's making it safer at usage.
 \item For instance, the labels have their arity encoded as a singleton type. A singleton type has the special property that it can be translated into a value at compilation time: here "0" is a literal type, which is also singleton.
-\item The motivation for that is to enforce the correct number of arguments. "a" does not expect any argument here.
+\item The motivation for that is to enforce the correct number of arguments. "a" does not expect any argument here and so its usage in this context is legal.
 \end{itemize}
 }}
 
@@ -42,7 +43,7 @@ f(t): Term
 
 \only<3>{\note{
 \begin{itemize}
-\item Finally, 
+\item We also provide convenient constructors for lambda terms. They are represented as values at runtime, rather than Scala functions. They are used in substitutions.
 \end{itemize}
 }}
 
@@ -50,19 +51,29 @@ f(t): Term
 
 \begin{frame}[fragile]
 \frametitle{String interpolation}
-\framesubtitle{Thanks to multi-stage programming}
+\framesubtitle{Multi-stage programming (macros)}
+
+\onslide<1-2>
 
 \begin{lstlisting}
-val f1: Formula = formula"?a /\ (!?a => ?a)"
+val f1: Formula = formula"?a /\ (!?a => ?a)" (@\onslide<2>@)
 
-sequent"?a |- $f1; ?a"
+val p = SchematicPredicateLabel[1]("p")
+
+sequent"|- (@\lstid{\$f1}@); (@\lstid{\$p}@)(?t)" (@\onslide<3>@)
+
+val x = VariableLabel("x")
+
+formula"forall (@\lstid{\$x}@). ?p((@\lstid{\$x}@))"
 \end{lstlisting}
 
+\only<1>{
 \note{
 \begin{itemize}
 \item The framework also defines a language for sequents and formulas, which can be parsed and printed. Without entering into the details I will present an interesting language feature that is used; that is string interpolation.
 \item In Scala string interpolation is a syntactic sugar that allows us to translate a string into something else. The particularity is that the string can contain Scala expressions as well.
 \end{itemize}
+}
 }
 
 \end{frame}

@@ -38,10 +38,12 @@
 \usepackage{listings}
 \usepackage{ebproof}
 \usepackage{hyperref}
+\usepackage{transparent}
 \usepackage{tikz}
 \usetikzlibrary{positioning}
 \usetikzlibrary{shadows.blur}
 \usetikzlibrary{shapes.symbols}
+\usetikzlibrary{tikzmark}
 \usepackage[utf8]{inputenc}
 
 %\usefonttheme[onlymath]{serif} % Use the same font as article
@@ -54,6 +56,7 @@
 \definecolor{epfl-taupe}{RGB}{65,61,58}
 \definecolor{epfl-perle}{RGB}{200,199,199}
 
+
 \setbeamercolor*{palette primary}{bg=epfl-taupe, fg=white}
 \setbeamercolor*{palette secondary}{bg=epfl-perle, fg=black}
 \setbeamercolor*{palette tertiary}{bg=epfl-groseille, fg=white}
@@ -63,6 +66,8 @@
 \setbeamercolor{itemize subitem}{fg=epfl-leman}
 \setbeamercolor{itemize subsubitem}{fg=epfl-taupe}
 
+\setbeamercolor{titlelike}{bg=black!2}
+
 \setbeamertemplate{itemize item}[circle]
 \setbeamertemplate{itemize subitem}[square]
 \setbeamertemplate{itemize subsubitem}[triangle]
@@ -71,7 +76,7 @@
 \setbeamertemplate{subsection in toc}[subsections numbered] % (unused)
 
 % Section slide
-% Does not use \AtBeginSection
+% Does not rely on \AtBeginSection
 \newcommand{\makesection}[1]{
   \begin{frame}
   \vfill
@@ -111,10 +116,19 @@
   escapeinside={(@}{@)},
 }
 
+\newcommand{\lstid}[1]{{\color{epfl-taupe}{#1}}}
+
 \beamertemplatenavigationsymbolsempty % Remove navigation bar
 \setbeamercovered{transparent} % Make future content transparent
 
 \newcommand{\code}{\texttt}
+
+% Footnote with symbols rather than numbers
+\makeatother
+\renewcommand{\thefootnote}{\ifcase\value{footnote}\or{*}\or{**}\or{***}\fi}
+\makeatletter
+% Reset footnote numbering on each frame
+\AtBeginEnvironment{frame}{\setcounter{footnote}{0}}
 
 \let\oldemptyset\emptyset
 \let\emptyset\varnothing

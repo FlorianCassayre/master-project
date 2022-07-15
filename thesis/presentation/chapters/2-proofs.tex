@@ -2,7 +2,7 @@
 
 \makesection{
 \begin{itemize}
-\item .
+\item This is precisely what I will present in this second part. Namely how the proofs are would be written in the front-end layer.
 \end{itemize}
 }
 
@@ -139,7 +139,14 @@ Entire branches can be represented by a single pattern:
 
 % Direction
 
-\begin{frame}{Proof direction}
+\begin{frame}[fragile]
+\frametitle{Proof direction}
+\framesubtitle{Forward and backward styles}
+
+\begin{itemize}
+\item Forward (top-down): combining true statements together
+\item Backard (bottom-up): begin with the conclusion and close the branches
+\end{itemize}
 
 
 
@@ -152,12 +159,48 @@ Entire branches can be represented by a single pattern:
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{REPL}
+\frametitle{Mixed styles}
 
-\begin{lstlisting}
-sbt> prompt
-\end{lstlisting}
+\centering
 
-\note{}
+{\scriptsize\begin{lstlisting}
+(@\onslide<1,6>@)val theorem: Theorem = ProofMode(sequent"|- ({} in {}) => ?a")
+  .pipe { p =>
+    import p.* (@\onslide<1,2,6>@)
+    apply(introRImp) (@\onslide<1,3,6>@)
+    apply(elimRNot) (@\onslide<1,6>@)
+    (@\onslide<1,5,6>@)apply(justificationInst(
+      (@\onslide<1,4,5,6>@)elimRForall(AssignedFunction(t, s))(axiomEmpty)(@\onslide<1,5,6>@)
+    ))(@\onslide<1,6>@)
+    asTheorem()
+  }
+\end{lstlisting}}
+
+\onslide<1->
+
+\newcommand{\rw}[1]{\rewrite{#1\box\treebox}}
+\newcommand{\mkinvisible}[0]{\transparent{0.15}}
+\newcommand{\mkvisible}[0]{\transparent{1}}
+
+{\tiny\begin{prooftree}
+\hypo{\vdash \forall x. \neg(x \in \varnothing)}
+\rw{\only<4>{\mkinvisible}}
+\hypo{}
+\infer1[$\text{Hypo.}$]{\neg({?s} \in \varnothing) \vdash \neg({?s} \in \varnothing)}
+\infer1[$\text{Left}~{\forall}$]{\forall x. \neg(x \in \varnothing) \vdash \neg({?s} \in \varnothing)}
+\infer2[$\text{Cut}$]{\vdash \neg({?s} \in \varnothing)}
+\rw{\only<4>{\mkvisible}}
+\infer1[$\text{?Fun. Instantiation}$]{\vdash \neg(\varnothing \in \varnothing)}
+\infer1[$\text{Weakening}$]{\vdash \neg(\varnothing \in \varnothing); {?a}}
+\rw{\only<3>{\mkinvisible}}
+\rw{\only<5>{\mkvisible}}
+\hypo{}
+\infer1[$\text{Hypo.}$]{\varnothing \in \varnothing \vdash \varnothing \in \varnothing}
+\infer1[$\text{Left}~{\neg}$]{\neg(\varnothing \in \varnothing); \varnothing \in \varnothing \vdash}
+\infer2[$\text{Cut}$]{\varnothing \in \varnothing \vdash {?a}}
+\rw{\only<2>{\mkinvisible}\only<3>{\mkvisible}}
+\infer1[$\text{Right}~{\Rightarrow}$]{\vdash (\varnothing \in \varnothing) \Rightarrow {?a}}
+\rw{\only<3-5>{\mkinvisible}}
+\end{prooftree}}
 
 \end{frame}

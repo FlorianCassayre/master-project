@@ -2,27 +2,68 @@
 
 \makesection{
 \begin{itemize}
-\item .
+\item In this third part I will present the matching procedure I designed for this framework.
 \end{itemize}
 }
 
-\subsection{Examples}
+\subsection{Definition}
+
+% Definition
+
+\begin{frame}{Definition}
+\framesubtitle{What is a matching?}
+
+\setbeamercovered{invisible}
+
+Given $\phi$ and $\psi$, find a $\sigma$ such that:
+
+$$\tikzmarknode{phi}{\phi} [\tikzmarknode{sigma}{\sigma}] = \tikzmarknode{psi}{\psi}$$
+
+\onslide<2>{
+\begin{tikzpicture}[overlay, remember picture, light/.style={draw=epfl-groseille, text=epfl-groseille}, none/.style={draw=none}, short/.style={shorten >= 0.15cm}]
+\node[light, none] (l-phi) [left = of phi] {Pattern};
+\node[light, none] (l-sigma) [below = of sigma] {Substitution};
+\node[light, none] (l-psi) [right = of psi] {Value};
+\draw[->, light, short] (l-phi) -- (phi);
+\draw[->, light, short] (l-sigma) -- (sigma);
+\draw[->, light, short] (l-psi) -- (psi);
+\end{tikzpicture}
+}
+
+\only<1>{
+\note{
+\begin{itemize}
+\item Matching is a fundamental problem when working with symbolic expressions.
+\item This problem can be condensed in the following equation. Recall that the brackets represent the substitution operation, as a postfix operator.
+\end{itemize}
+}
+}
+
+\only<2>{
+\note{
+\begin{itemize}
+\item It consists of finding an assignment for a set of variables such that when instantiated the pattern equals the value. It can be seen as a special case of unification, where only one side contains variables.
+\item As part of my work I implemented an opinionated procedure to match sequents.
+\end{itemize}
+}
+}
+
+\end{frame}
+
+\subsection{Structural matching}
 
 % Matching 1
 
-\begin{frame}{Matching}
-\framesubtitle{Example 1: structural matching}
+\begin{frame}{Example 1}
+\framesubtitle{Structural matching}
 
-\setbeamercovered{} % This frame only
+\setbeamercovered{invisible} % This frame only
 
-Example: $({?a} \lor {?b})[\sigma] = a \lor (b \Rightarrow a)$
+\centering
 
-\vspace{0.5cm}
-
-(read: \textit{matching the pattern ${?a} \lor {?b}$ on the value $a \lor (b \Rightarrow a)$})
+$({?a} \lor {?b})[\sigma] = a \lor (b \Rightarrow a)$\footnote{Read: \textit{matching the pattern ${?a} \lor {?b}$ on the value $a \lor (b \Rightarrow a)$}}
 
 \vspace{0.25cm}
-\centering
 
 \begin{tikzpicture}[draw=none, node distance = 1cm and 0.5cm]
 
@@ -46,7 +87,7 @@ Example: $({?a} \lor {?b})[\sigma] = a \lor (b \Rightarrow a)$
 \draw (v-b) -- (v-ba);
 \draw (v-a2) -- (v-ba);
 
-\only<2> { % Dotted
+\onslide<2> { % Dotted
 \draw[dotted] (p-a) to [out=330,in=210] (v-a1);
 \draw[postaction={draw,dotted,line width=0.4pt,black}][line width=2mm,white] (p-b) to [out=330,in=210] (v-ba);
 }
@@ -55,13 +96,12 @@ Example: $({?a} \lor {?b})[\sigma] = a \lor (b \Rightarrow a)$
 
 \vspace{0.25cm}
 
-\only<2>{
+\onslide<2>{
 Result: $\{ {?a} \mapsto a, {?b} \mapsto {b \Rightarrow a} \}$
 }
 
 \only<1>{\note{
 \begin{itemize}
-\item The problem of matching consists of finding an assignment for a set of variables such that when instantiated the pattern equals the value. As part of my work I implemented an opinionated matcher for sequents.
 \item Here is a standard example with formulas. The pattern is as follows, "a" and "b" are pattern variables for which we are trying to find an assignment with respect to the right value.
 \end{itemize}
 }}
@@ -76,12 +116,12 @@ Result: $\{ {?a} \mapsto a, {?b} \mapsto {b \Rightarrow a} \}$
 
 % Matching 2
 
-\begin{frame}{Matching}
-\framesubtitle{Example 2: structural disagreement}
+\begin{frame}{Example 2}
+\framesubtitle{Structural matching (disagreement)}
 
-\setbeamercovered{}
+\setbeamercovered{invisible}
 
-Example: $\neg{?a}[\sigma] = a \lor b$.
+$$\neg{?a}[\sigma] = a \lor b$$
 
 \vspace{0.5cm}
 \centering
@@ -102,7 +142,7 @@ Example: $\neg{?a}[\sigma] = a \lor b$.
 \draw (v-a) -- (v-or);
 \draw (v-b) -- (v-or);
 
-\only<2>{ % Dotted
+\onslide<2>{ % Dotted
 \draw[dotted] (p-not) -- (v-or);
 \node[fill=white, inner sep=0,outer sep=0] (cross) at ($(p-not)!0.5!(v-or)$) {\Huge $\color{epfl-rouge}\times$};
 }
@@ -111,7 +151,7 @@ Example: $\neg{?a}[\sigma] = a \lor b$.
 
 \vspace{0.5cm}
 
-\only<2>{
+\onslide<2>{
 Result: $\bot$
 }
 
@@ -129,14 +169,72 @@ Result: $\bot$
 
 \end{frame}
 
+% OCBSL
+
+\subsection{Equivalence-aware matching}
+
+\begin{frame}{Equivalence checking}
+\framesubtitle{Checking if two formulas are equivalent}
+
+\begin{itemize}
+\item LISA possesses an equivalence checker based on orthocomplemented bisemilattices
+\item The equivalence checking operator is noted $\equiv$
+\end{itemize}
+
+\vspace{0.25cm}
+
+Examples (non exhaustive):
+\begin{align*}
+a \land b &\equiv b \land a \\
+a \land (b \land c) &\equiv (a \land b) \land c \\
+a \land a &\equiv a \\
+\neg\neg a &\equiv a
+\end{align*}
+
+\note{
+\begin{itemize}
+\item Let us put matching aside for a moment in order to introduce the problem of equivalence checking.
+\item An equivalence checker is a procedure that checks if two formulas are equivalent.
+\item Because this problem is known to be hard, it is useful to rely on an algorithm that does not cover all cases but is efficient.
+\item LISA has its own equivalence checker based on orthocomplemented bisemilattices. Here are some examples which LISA would treat as equivalent.
+\end{itemize}
+}
+
+\end{frame}
+
+% Equivalence
+
+\begin{frame}{Relaxation for non-linear patterns}
+\framesubtitle{Allowing repetition of pattern variables}
+
+It also has the following properties for all $a$, $b$ and $c$:
+\begin{gather*}
+(a \equiv b) \implies (a \Leftrightarrow b) \tag{Equivalence} \\[0.25cm]
+(a \equiv b) \land (b \equiv c) \implies (a \equiv c) \tag{Transitivity} \\[0.25cm]
+(a \equiv b) \implies (c[a \mapsto b] \equiv c) \tag{Substitution}
+\end{gather*}
+
+Claim: these properties allow us to perform non-linear matching modulo $\equiv$-equivalence:
+
+$$(\phi[\sigma] \equiv \psi) \land (\sigma \equiv \sigma') \implies (\phi[\sigma'] \equiv \psi)$$
+
+\note{
+\begin{itemize}
+\item This procedure has three interesting properties, which are listed here. The first one states that the procedure does not give us any false positives. The second enforces the equivalence to be transitive. The third one says that we can always replace a term by another equivalent one and preserve the property of the expression.
+\item Now an equivalence checking procedure satisfying these properties can be used when solving a matching problem. One such use case would be for non-linear patterns, namely patterns that contain several times the same variable. Normally such variable would be treated with respect to equality but in our case we relax the condition to the equivalence checker.
+\end{itemize}
+}
+
+\end{frame}
+
 % Matching 3
 
-\begin{frame}{Matching}
-\framesubtitle{Example 3: non-linear matching}
+\begin{frame}{Example 3}
+\framesubtitle{Non-linear matching}
 
-\setbeamercovered{}
+\setbeamercovered{invisible}
 
-Example: $({?a} \lor {?a})[\sigma] = (a \land b) \lor (b \land a)$.
+$$({?a} \lor {?a})[\sigma] = (a \land b) \lor (b \land a)$$
 
 \vspace{0.5cm}
 \centering
@@ -159,7 +257,7 @@ Example: $({?a} \lor {?a})[\sigma] = (a \land b) \lor (b \land a)$.
 \node (v-or) at (4.625, 0) {$\vphantom{?}\lor$};
 \node (v) at (4.625, 0.75) {Value};
 
-\only<2>{ % Dotted
+\onslide<2>{ % Dotted
 \draw[dotted] (v-ab) -- (v-ba);
 \draw[dotted] (p-a1) to [out=330,in=210] (v-ab);
 \draw[postaction={draw,dotted,line width=0.4pt,black}][line width=2mm,white] (p-a2) to [out=330,in=210] (v-ba);
@@ -179,7 +277,7 @@ Example: $({?a} \lor {?a})[\sigma] = (a \land b) \lor (b \land a)$.
 
 \vspace{0.5cm}
 
-\only<2>{
+\onslide<2>{
 Result: $\{ {?a} \mapsto a \land b \}$
 }
 
@@ -197,39 +295,12 @@ Result: $\{ {?a} \mapsto a \land b \}$
 
 \end{frame}
 
-% Equivalence
-
-\subsection{Equivalence aware matching}
-
-\begin{frame}{Non-linear matching}
-\framesubtitle{Allowing repetition of pattern variables}
-
-LISA uses an equivalence checker based on orthocomplemented bisemilattices.
-
-Equivalence-checking procedure, noted $\equiv$, with the following properties:
-\begin{gather*}
-(a \equiv b) \implies (a \Leftrightarrow b) \tag{Equivalence} \\[0.25cm]
-(a \equiv b) \land (b \equiv c) \implies (a \equiv c) \tag{Transitivity} \\[0.25cm]
-(a \equiv b) \implies (c[a \mapsto b] \equiv c) \tag{Substitution}
-\end{gather*}
-
-\vspace{0.5cm}
-
-Claim: these properties allow us to perform non-linear matching modulo $\equiv$-equivalence
-
-\note{
-\begin{itemize}
-\item Now the question arises as to what should happen in the case of pattern variable appearing multiple times. In our use case, such situation can happen so we must handle it.
-\item Because LISA relies on an equivalence checker
-\end{itemize}
-}
-
-\end{frame}
+% First-order
 
 \subsection{First-order matching}
 
-\begin{frame}{First-order matching}
-\framesubtitle{Pattern variables with arity $> 0$}
+\begin{frame}{Other examples}
+\framesubtitle{First-order matching}
 
 \centering
 
@@ -237,16 +308,28 @@ Claim: these properties allow us to perform non-linear matching modulo $\equiv$-
 Pattern & Value & Hint & Result \\[0.2cm]
 \hline\hline
 \rule{0pt}{1.25\normalbaselineskip}
-${?p}(t)$ & $t = u$ & $\emptyset$ & $\{ {?p} \mapsto \lambda x. x = u \}$ \\[0.25cm]
+\onslide<1>{${?p}(t)$ & $t = u$ & $\emptyset$ & $\{ {?p} \mapsto \lambda x. x = u \}$ \\[0.25cm]
 ${?p}({?t})$ & $t = u$ & $\emptyset$ & $\bot$ \\[0.25cm]
 ${?p}({?t})$ & $t = u$ & $\{ {?t} \mapsto t \}$ & $\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}$ \\[0.25cm]
-${?p}({?t})$ & $t = u$ & $\{ {?p} \mapsto \lambda x. x = u \}$ & $\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}$
+${?p}({?t})$ & $t = u$ & $\{ {?p} \mapsto \lambda x. x = u \}$ & $\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}$ \\[0.25cm]}
+\onslide<2>{$\forall x. {?a}$ & $\forall x. x = u$ & $\emptyset$ & $\bot$ \\[0.25cm]
+$\forall x. {?p}(x)$ & $\forall y. y = u$ & $\emptyset$ & $\{ x \mapsto y, {?p} \mapsto \lambda x. x = u \}$}
 \end{tabular}
 
+\only<1>{
 \note{
 \begin{itemize}
-\item . 
+\item A 
 \end{itemize}
+}
+}
+
+\only<2>{
+\note{
+\begin{itemize}
+\item B 
+\end{itemize}
+}
 }
 
 \end{frame}
