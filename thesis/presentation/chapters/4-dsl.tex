@@ -2,9 +2,11 @@
 
 \makesection{
 \begin{itemize}
-\item .
+\item In this fourth section, I will be discussing about the features related to the domain specific language, as well as the interoperability possibilities.
 \end{itemize}
 }
+
+\subsection{Type safe DSL}
 
 \begin{frame}[fragile]
 \frametitle{Domain specific language}
@@ -72,8 +74,47 @@ formula"forall (@\lstid{\$x}@). ?p((@\lstid{\$x}@))"
 \begin{itemize}
 \item The framework also defines a language for sequents and formulas, which can be parsed and printed. Without entering into the details I will present an interesting language feature that is used; that is string interpolation.
 \item In Scala string interpolation is a syntactic sugar that allows us to translate a string into something else. The particularity is that the string can contain Scala expressions as well.
+\item The "formula" interpolator allows the seamless conversion of a string to a formula. The parsing is done at compilation time making it safe at usage.
 \end{itemize}
 }
+}
+
+\only<2>{
+\note{
+\begin{itemize}
+\item This second examples shows how expressions can be inserted into the interpolator.
+\item For instance, a formula "f1" or a pattern "p". Again, the types and arities are checked at compilation time for correctness.
+\end{itemize}
+}
+}
+
+\only<3>{
+\note{
+\begin{itemize}
+\item Bound variables are also supported; the binding relation is detected thanks to singleton types.
+\end{itemize}
+}
+}
+
+\end{frame}
+
+\subsection{Interoperability}
+
+\begin{frame}{Interoperability}
+
+\begin{itemize}
+\item Proof compression routines
+\item Human-readable SerDes of proofs
+\item Export proofs and notations to {\rmfamily\LaTeX}
+\end{itemize}
+
+\note{
+\begin{itemize}
+\item Before I conclude, I want to shed light on the interoperability features offered by the framework.
+\item As we have seen, it is capable of converting a high-level proof into a LISA proof. Such process can sometimes create needless steps. To address that I implemented a set of procedures that can simplify a proof in length, depth and computational complexity.
+\item Such proofs can then be serialized into a human-readable language that I designed which can later be efficiently deserialized.
+\item Finally these proofs can also be typesetted thanks to a LaTeX printer.
+\end{itemize}
 }
 
 \end{frame}

@@ -234,7 +234,7 @@ $$(\phi[\sigma] \equiv \psi) \land (\sigma \equiv \sigma') \implies (\phi[\sigma
 
 \setbeamercovered{invisible}
 
-$$({?a} \lor {?a})[\sigma] = (a \land b) \lor (b \land a)$$
+$$({?a} \lor {?a})[\sigma] \equiv (a \land b) \lor (b \land a)$$
 
 \vspace{0.5cm}
 \centering
@@ -283,13 +283,15 @@ Result: $\{ {?a} \mapsto a \land b \}$
 
 \only<1>{\note{
 \begin{itemize}
-\item Here is a third example, this time observe that the pattern contains twice the same variable. This is known as a non-linear pattern.
+\item Here is a third example, this time the pattern is non-linear because it contains twice the same variable.
+\item Notice that the two branches are not structurally equal.
 \end{itemize}
 }}
 
 \only<2>{\note{
 \begin{itemize}
-\item .
+\item However, thanks to our relaxation there is in fact a solution and this is the one that will be found by the procedure.
+\item Because there can be multiple valid assignments, the one that is chosen is always the value that appears first if we traverse the tree in post-order.
 \end{itemize}
 }}
 
@@ -308,18 +310,21 @@ Result: $\{ {?a} \mapsto a \land b \}$
 Pattern & Value & Hint & Result \\[0.2cm]
 \hline\hline
 \rule{0pt}{1.25\normalbaselineskip}
-\onslide<1>{${?p}(t)$ & $t = u$ & $\emptyset$ & $\{ {?p} \mapsto \lambda x. x = u \}$ \\[0.25cm]
-${?p}({?t})$ & $t = u$ & $\emptyset$ & $\bot$ \\[0.25cm]
-${?p}({?t})$ & $t = u$ & $\{ {?t} \mapsto t \}$ & $\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}$ \\[0.25cm]
-${?p}({?t})$ & $t = u$ & $\{ {?p} \mapsto \lambda x. x = u \}$ & $\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}$ \\[0.25cm]}
-\onslide<2>{$\forall x. {?a}$ & $\forall x. x = u$ & $\emptyset$ & $\bot$ \\[0.25cm]
-$\forall x. {?p}(x)$ & $\forall y. y = u$ & $\emptyset$ & $\{ x \mapsto y, {?p} \mapsto \lambda x. x = u \}$}
+\onslide<1>{${?p}(t)$ & $t = u$ & $\emptyset$} & \onslide<1>{$\{ {?p} \mapsto \lambda x. x = u \}$ \\[0.25cm]}
+\onslide<1>{${?p}({?t})$ & $t = u$ & $\emptyset$} & \onslide<1>{$\bot$ \\[0.25cm]}
+\onslide<1>{${?p}({?t})$ & $t = u$ & $\{ {?t} \mapsto t \}$} & \onslide<1>{$\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}$ \\[0.25cm]}
+\onslide<1>{${?p}({?t})$ & $t = u$ & $\{ {?p} \mapsto \lambda x. x = u \}$} & \onslide<1>{$\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}$ \\[0.25cm]}
+\onslide<2>{$\forall x. {?a}$ & $\forall x. x = u$ & $\emptyset$} & \onslide<2>{$\bot$ \\[0.25cm]}
+\onslide<2>{$\forall x. {?p}(x)$ & $\forall y. y = u$ & $\emptyset$} & \onslide<2>{$\{ x \mapsto y, {?p} \mapsto \lambda x. x = u \}$}
 \end{tabular}
 
 \only<1>{
 \note{
 \begin{itemize}
-\item A 
+\item The matcher also supports pattern variables with non-zero arity.
+\item (1) In this first example we are looking for a predicate taking the term "t" as an argument. Since the value also contains a "t" in its tree, the behavior is to factor it out since. We then get the expected result.
+\item (2) In the second example, we have a variable taking another variable as an argument. Without any additional context this problem is considered ambiguous since there is an infinite number of solutions. The result is thus undefined.
+\item (3-4) The third and fourth examples do address this issue by specifying either variable as a "hint". This set is guaranteed to be a subset of the solution and the matcher will try to use when defined. There are other ways to address this issue, not shown here.
 \end{itemize}
 }
 }
@@ -327,7 +332,8 @@ $\forall x. {?p}(x)$ & $\forall y. y = u$ & $\emptyset$ & $\{ x \mapsto y, {?p} 
 \only<2>{
 \note{
 \begin{itemize}
-\item B 
+\item (5) This example demonstrates the fact that bound variables behave as one would expect. In this case there is no solution because the body of the quantifier contains a bound variable, while the pattern variable "a" is free of this variable.
+\item (6) This is solved in this second example, by passing the variable as an argument. Notice that this procedure can also to some extent be used to preserve the names of bound variables: here "x" is renamed to "y".
 \end{itemize}
 }
 }

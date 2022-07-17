@@ -2,7 +2,7 @@
 
 \makesection{
 \begin{itemize}
-\item Let's get started.
+\item Let us get started with the introduction.
 \end{itemize}
 }
 
@@ -32,9 +32,9 @@ none/.style={draw=none},
 
 \note{
 \begin{itemize}
-\item Before anything else, I will clarify the notion of proof assistants. One of the tasks in the area of automated reasoning is to formalize the notion of a proof such that it can be verified mechanically by a computerized program.
-\item A formal proof is therefore a precise model of a mathematical proof that one would write on paper.
-\item Then, as shown on this diagram we have this core element called a proof checker that takes as an input a formal proof and returns a binary result. Either the proof is accepted, which should imply that the proof is valid. Or it is rejected.
+\item Before anything else, I will clarify the notion of proof systems and proof assistants. One of the tasks in the area of automated reasoning is to formalize the notion of proof in mathematical sense, such that it can be verified mechanically by a computer program.
+\item A formal proof is therefore a precise model of a mathematical proof that one would normally write on paper.
+\item A proof system, as shown on this diagram boils down to this core element called a proof checker that takes as an input a formal proof and returns a binary result. Either the proof is accepted, which should imply that the proof is valid. Or it is rejected which means that the proof is either invalid or cannot be verified.
 \item It should be noted that proof checkers are not meant to be complex pieces of software. This leads me to the next slide.
 \end{itemize}
 }
@@ -70,8 +70,8 @@ none/.style={draw=none},
 
 \note{
 \begin{itemize}
-\item Proof assistants are conceptually more sophisticated than a bare proof checker. Nevertheless they rely on the same principle that ultimately a proof is considered valid if it is accepted by the proof checker. However the user is not required to write these low-level proofs themselves: the assistant generates these for them. The assistant instead provides a higher-level interface that is often compatible with interactivity. That way the user can write their proofs gradually.
-\item In this project I focused on the left side of this diagram, while the right part was already provided by LISA which I am going to present now.
+\item Proof assistants on the other hand are conceptually more sophisticated than a bare proof checker. Nevertheless they rely on the same principle that ultimately a proof is considered valid if it is accepted by the proof checker. The fundamental difference here is that the user is considered in the equation: after all we expect them to write proofs. However we do not require them to write the low-level proofs themselves, this will be the task of the assistant. The assistant instead provides a higher-level interface that makes it possible to construct a proof gradually and that abstracts away the uninteresting details.
+\item There are other possible models that the one shown here, nevertheless it is the one used in this project. The left part of this diagram corresponds to the framework I designed, while the right part corresponds to the existing LISA system which I am going to present now.
 \end{itemize}
 }
 
@@ -80,6 +80,7 @@ none/.style={draw=none},
 \subsection{LISA}
 
 \begin{frame}{LISA}
+\framesubtitle{An overview}
 
 \begin{itemize}
 \item LISA is a proof system designed at LARA\footnote{\href{http://github.com/epfl-lara/lisa}{github.com/epfl-lara/lisa}} (2021 $\rightarrow$ now)
@@ -91,7 +92,7 @@ none/.style={draw=none},
 \note{
 \begin{itemize}
 \item LISA is a proof assistant designed in this laboratory, which development started last year.
-\item It stands out from other existing software by using different foundations: in particular it relies on an adaptation of Gentzen's sequent calculus over first-order logic, and uses axioms of set theory. It is also written in Scala and is meant to be used within Scala.
+\item It stands out from other existing software by using different foundations: in particular it relies on an adaptation of Gentzen's sequent calculus over first-order logic, and uses axioms of set theory. It is also written in the Scala programming language and is currently meant to be within that same language.
 \end{itemize}
 }
 
@@ -139,11 +140,11 @@ $$
 \begin{itemize}
 \scriptsize
 \item In LISA statements are expressed as sequents. A sequent is basically characterized by a pair of sets of formulas, which can be interpreted as an implication in standard logic.
-\item Then, there is also a pre-defined set of inference rules which states how one can conclude logical tautologies.
-\item For instance, the hypothesis rule allows you to always conclude a sequent containing the same formula on either side.
-\item Or, to obtain a disjunction as an hypothesis you must prove two other propositions.
-\item Rules can also express substitutions of terms, for instance with the introduction of the existence quantifier.
-\item The question marks is a notation to express universally quantified variables which we call schemas. This rule basically says that we can always instantiate a predicate schema, so long as we do it across all formulas.
+\item Then, there is also a pre-defined set of inference rules which states how one can conclude logical tautologies, expressed as sequents.
+\item (1) For instance, the hypothesis rule allows you to always conclude a sequent containing the same formula on either side.
+\item (2) This second example shows that in order to obtain a disjunction as an hypothesis you must prove two other propositions.
+\item (3) Rules can also express substitutions of terms, for instance the introduction of the existential quantifier.
+\item (4) In this fourth example, the question mark is a notation to express universally quantified variables which we call schemas. This rule basically says that we can always instantiate a predicate schema, so long as we do it across all formulas.
 \end{itemize}
 }
 
@@ -164,7 +165,7 @@ Proof represented in LISA:\\[0.2cm]
 
 \note{
 \begin{itemize}
-\item The rules presented earlier can then be used to build an entire proof for some proposition. We obtain a tree where each branch is a rule and the bottom sequent is the conclusion of the proof.
+\item The rules presented earlier can then be combined together to build a proof for some proposition. We obtain a tree where each branch is a rule and the bottom sequent is the conclusion of the proof.
 \item The above figure depicts a simple proof for the proposition appearing at the bottom.
 \item In LISA the proof is represented as a directed acyclic graph, making it possible to reference the same branch multiple times (as opposed to a tree). It can be shown that such a proof has a linear representation, such as the one below.
 \end{itemize}
@@ -204,8 +205,9 @@ axiom/.style={block},
 
 \note{
 \begin{itemize}
-\item Then separate proofs can depend on other propositions, this is strictly controlled by a model of axioms and theorems. A theorem is a proposition with a proof, while axioms do not have an associated proof.
-\item The advantage is that we only need to check every proof once, rather than every time they are used as assumptions.
+\item The trees presented earlier can rely on external hypotheses. This is especially useful to introduce and make use of the concepts of axioms and proven theorems.
+\item Both represent sequents that can be used as hypotheses in a proof tree. The difference is that a theorem has an associated proof tree, while an axiom does not.
+\item The advantage of using such a model is that we only need to check every proof once, rather than every time they are used as assumptions which could lead to a combinatorial explosion.
 \end{itemize}
 }
 
@@ -227,8 +229,9 @@ Motivates the need of having a front-end framework
 
 \note{
 \begin{itemize}
-\item As we have seen, inference rules are low-level: a simple tautology required a few steps already. They are also tedious to apply because each parameter must specified explicitly.
-\item Also, proof trees can only be built forward. It is not immediately possible to start a proof from the bottom and build our way upwards.
+\item This was the gist of LISA.
+\item As we have seen, inference rules are relatively low-level: the proof for a simple tautology required a few steps already. Although not shown here they are also tedious to apply because each parameter must specified explicitly.
+\item Moreover, proof trees can only be built forward (from top to bottom). It is not immediately possible to start a proof from the bottom and build our way upwards.
 \item The goal of this project was to improve on these aspects. For that it was decided to interface LISA, that is to design a framework having its own dialect but capable of producing proofs in LISA.
 \end{itemize}
 }
