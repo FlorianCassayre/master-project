@@ -1,9 +1,16 @@
 \section{Matching}
 
 \makesection{
+\notes{
 \begin{itemize}
 \item In this third part I will present the matching procedure I designed for this framework.
 \end{itemize}
+}
+{
+\begin{itemize}
+\item third part: matching procedure I designed
+\end{itemize}
+}
 }
 
 \subsection{Definition}
@@ -31,19 +38,33 @@ $$\tikzmarknode{phi}{\phi} [\tikzmarknode{sigma}{\sigma}] = \tikzmarknode{psi}{\
 }
 
 \only<1>{
-\note{
+\notes{
 \begin{itemize}
 \item Matching is a fundamental problem when working with symbolic expressions.
 \item This problem can be condensed in the following equation. Recall that the brackets represent the substitution operation, as a postfix operator.
 \end{itemize}
 }
+{
+\begin{itemize}
+\item fundamental problem with symbolic expressions
+\item condensed to this equation
+\item brackets = substitution
+\end{itemize}
+}
 }
 
 \only<2>{
-\note{
+\notes{
 \begin{itemize}
 \item It consists of finding an assignment for a set of variables such that when instantiated the pattern equals the value. It can be seen as a special case of unification, where only one side contains variables.
 \item As part of my work I implemented an opinionated procedure to match sequents.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item consists
+\item special case of unification
+\item I implemented procedure match sequents
 \end{itemize}
 }
 }
@@ -100,17 +121,34 @@ $({?a} \lor {?b})[\sigma] = a \lor (b \Rightarrow a)$\footnote{Read: \textit{mat
 Result: $\{ {?a} \mapsto a, {?b} \mapsto {b \Rightarrow a} \}$
 }
 
-\only<1>{\note{
+\only<1>{
+\notes{
 \begin{itemize}
 \item Here is a standard example with formulas. The pattern is as follows, "a" and "b" are pattern variables for which we are trying to find an assignment with respect to the right value.
 \end{itemize}
-}}
+}
+{
+\begin{itemize}
+\item simple example, with formulas
+\item pattern left, value right
+\item assignment for "a" and "b"
+\end{itemize}
+}
+}
 
-\only<2>{\note{
+\only<2>{
+\notes{
 \begin{itemize}
 \item In that case, it is relatively straightforward because we only have to deconstruct the constant symbols, and we eventually obtain the following assignment.
 \end{itemize}
-}}
+}
+{
+\begin{itemize}
+\item straightforward: deconstruct constant connectors
+\item assignment below
+\end{itemize}
+}
+}
 
 \end{frame}
 
@@ -155,17 +193,31 @@ $$\neg{?a}[\sigma] = a \lor b$$
 Result: $\bot$
 }
 
-\only<1>{\note{
+\only<1>{
+\notes{
 \begin{itemize}
 \item Here is another simple example.
 \end{itemize}
-}}
+}
+{
+\begin{itemize}
+\item another simple example
+\end{itemize}
+}
+}
 
-\only<2>{\note{
+\only<2>{
+\notes{
 \begin{itemize}
 \item In that case there is no possible assignment because the constant symbols disagree.
 \end{itemize}
-}}
+}
+{
+\begin{itemize}
+\item no solution: constants do not match
+\end{itemize}
+}
+}
 
 \end{frame}
 
@@ -191,12 +243,21 @@ a \land a &\equiv a \\
 \neg\neg a &\equiv a
 \end{align*}
 
-\note{
+\notes{
 \begin{itemize}
 \item Let us put matching aside for a moment in order to introduce the problem of equivalence checking.
 \item An equivalence checker is a procedure that checks if two formulas are equivalent.
 \item Because this problem is known to be hard, it is useful to rely on an algorithm that does not cover all cases but is efficient.
 \item LISA has its own equivalence checker based on orthocomplemented bisemilattices. Here are some examples which LISA would treat as equivalent.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item put matching aside; introduce equivalence checking
+\item equivalence checker
+\item hard problem, useful algorithms are incomplete but efficient
+\item LISA OCBSL
+\item some examples (commut., assoc., indempot., involution)
 \end{itemize}
 }
 
@@ -218,10 +279,20 @@ Claim: these properties allow us to perform non-linear matching modulo $\equiv$-
 
 $$(\phi[\sigma] \equiv \psi) \land (\sigma \equiv \sigma') \implies (\phi[\sigma'] \equiv \psi)$$
 
-\note{
+\notes{
 \begin{itemize}
 \item This procedure has three interesting properties, which are listed here. The first one states that the procedure does not give us any false positives. The second enforces the equivalence to be transitive. The third one says that we can always replace a term by another equivalent one and preserve the property of the expression.
 \item Now an equivalence checking procedure satisfying these properties can be used when solving a matching problem. One such use case would be for non-linear patterns, namely patterns that contain several times the same variable. Normally such variable would be treated with respect to equality but in our case we relax the condition to the equivalence checker.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item three properties
+\item (1) no false positives
+\item (2) transitivity
+\item (3) equivalence is preserved wrt substitution
+\item procedure satisfying these properties: useful for matching
+\item use case: non-linear patterns, normally equality but relaxed
 \end{itemize}
 }
 
@@ -281,19 +352,35 @@ $$({?a} \lor {?a})[\sigma] \equiv (a \land b) \lor (b \land a)$$
 Result: $\{ {?a} \mapsto a \land b \}$
 }
 
-\only<1>{\note{
+\only<1>{
+\notes{
 \begin{itemize}
 \item Here is a third example, this time the pattern is non-linear because it contains twice the same variable.
 \item Notice that the two branches are not structurally equal.
 \end{itemize}
-}}
+}
+{
+\begin{itemize}
+\item third example: non-linear
+\item not structurally equal
+\end{itemize}
+}
+}
 
-\only<2>{\note{
+\only<2>{
+\notes{
 \begin{itemize}
 \item However, thanks to our relaxation there is in fact a solution and this is the one that will be found by the procedure.
 \item Because there can be multiple valid assignments, the one that is chosen is always the value that appears first if we traverse the tree in post-order.
 \end{itemize}
-}}
+}
+{
+\begin{itemize}
+\item however, solvable
+\item multiple possible solutions: first in post-order
+\end{itemize}
+}
+}
 
 \end{frame}
 
@@ -319,21 +406,35 @@ Pattern & Value & Hint & Result \\[0.2cm]
 \end{tabular}
 
 \only<1>{
-\note{
+\notes{
 \begin{itemize}
 \item The matcher also supports pattern variables with non-zero arity.
-\item (1) In this first example we are looking for a predicate taking the term "t" as an argument. Since the value also contains a "t" in its tree, the behavior is to factor it out since. We then get the expected result.
+\item (1) In this first example we are looking for a predicate taking the term "t" as an argument. Since the value also contains a "t" in its tree, the behavior is to factor it out to obtain a general solution. We then get the expected result.
 \item (2) In the second example, we have a variable taking another variable as an argument. Without any additional context this problem is considered ambiguous since there is an infinite number of solutions. The result is thus undefined.
 \item (3-4) The third and fourth examples do address this issue by specifying either variable as a "hint". This set is guaranteed to be a subset of the solution and the matcher will try to use when defined. There are other ways to address this issue, not shown here.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item support pattern variables non-zero arity
+\item (1) looking for a predicate taking "t" as argument; factor out
+\item (2) predicate variable taking another variable; without context, ambiguous; infinite solutions
+\item (3-4) address the issue; hint is guaranteed to be a subset; other ways of solving
 \end{itemize}
 }
 }
 
 \only<2>{
-\note{
+\notes{
 \begin{itemize}
 \item (5) This example demonstrates the fact that bound variables behave as one would expect. In this case there is no solution because the body of the quantifier contains a bound variable, while the pattern variable "a" is free of this variable.
 \item (6) This is solved in this second example, by passing the variable as an argument. Notice that this procedure can also to some extent be used to preserve the names of bound variables: here "x" is renamed to "y".
+\end{itemize}
+}
+{
+\begin{itemize}
+\item (5) bound variables handled; no solution because body depends
+\item (6) solved by passing as argument; names are preserved
 \end{itemize}
 }
 }

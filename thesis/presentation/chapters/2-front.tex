@@ -1,9 +1,16 @@
 \section{Front-end}
 
 \makesection{
+\notes{
 \begin{itemize}
 \item This is precisely what I will present in the second part of this presentation, namely how the proofs would be written in the front-end layer.
 \end{itemize}
+}
+{
+\begin{itemize}
+\item how proofs are written
+\end{itemize}
+}
 }
 
 \subsection{Patterns}
@@ -14,6 +21,7 @@
 \newcommand{\Cb}{{\color{epfl-leman!70}{?b}}}
 \newcommand{\Cx}{{\color{epfl-canard}x}}
 \newcommand{\Cp}{{\color{epfl-rouge!70}{?p}}}
+\newcommand{\Ctt}{{\color{gray}{t}}}
 \newcommand{\Ct}{{\color{gray}{?t}}}
 
 \begin{frame}{Patterns}
@@ -50,15 +58,15 @@
 \tag{Left $\lor$}
 \\[0.5cm] %
 \begin{prooftree}
-\hypo{\Gamma \vdash \exists \Cx. \Cphi, \Delta}
-\infer1{\Gamma \vdash \Cphi [\Cx \mapsto \Ct], \Delta}
+\hypo{\Gamma \vdash \Cphi [\Cx \mapsto \Ctt], \Delta}
+\infer1{\Gamma \vdash \exists \Cx. \Cphi, \Delta}
 \end{prooftree}
 \qquad
 &\longrightarrow
 \qquad
 \begin{prooftree}
-\hypo{... \vdash \exists \Cx. \Cp(\Cx), ...}
-\infer1{... \vdash \Cp(\Ct), ...}
+\hypo{... \vdash \Cp(\Ct), ...}
+\infer1{... \vdash \exists \Cx. \Cp(\Cx), ...}
 \end{prooftree}
 \tag{Right $\exists$}
 \\[0.5cm] %
@@ -73,13 +81,25 @@
 \tag{Inst. Pred.}
 \end{align*}
 
-\note{
+\notes{
 \scriptsize
 \begin{itemize}
 \item The first contribution I am going to present is patterns. Patterns are a generalized representation of rules.
-\item On the left side is a LISA rule and on the right side is the corresponding pattern in that framework. The common symbols are highlighted in the same color for clarity. Notice that we represent the static formulas as schemas in our patterns. Intuitively this matches the semantic of instantiation rules that allow schemas to be replaced by arbitrary terms. I will come back to the actual meaning of the ellipsis.
+\item On the left side is a LISA rule and on the right side is the corresponding pattern in that framework. The common symbols are highlighted in the same color for clarity. Notice that we represent the static formulas as schemas in our patterns. Intuitively this matches the semantic of instantiation rules that allows schemas to be replaced by arbitrary terms. I will come back to the actual meaning of the ellipsis.
 \item For most rules the correspondence is quite direct; the main difference is that substitutions are represented by a schematic predicate taking an argument.
 \item Unfortunately not all rules have a representation in our system, for examples rules that act on all the formulas of a sequent such as the predicate instantiation rule. This is however not a problem since the framework provides other means to use these rules.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item first contribution: patterns
+\item generalized representation of rules
+\item diagram
+\item pattern variables = schemas, matches the semantic
+\item ellipsis later
+\item direct for most rules, difference substitution
+\item not all rules have a representation, e.g.
+\item not an issue
 \end{itemize}
 }
 
@@ -95,13 +115,23 @@
 \item No extension to FOL required
 \end{itemize}
 
-\note{
+\notes{
 \begin{itemize}
-\item One may wonder the motivation behind the introduction of these rules. There are in fact several reasons.
+\item One may wonder about the motivation behind the introduction of these rules. There are in fact several reasons.
 \item The first one is that by having unified the representation of the rules, it allows us to design algorithms that work on all rules by extension. One such algorithm is an inference procedure that can automatically deduce the value of the schemas in the pattern without having the need for the user to specify them.
 \item Another reason is that they can be used forward and backward without additional logic. We will see later what we mean by that.
 \item A chain of rules can also be represented by a single pattern, as we will see in the next slide.
 \item And of course as shown earlier, this method theoretically does not require any extension to the existing language since pattern variables are represented as schemas.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item motivations, several reasons
+\item unified representation = common algorithms
+\item example 1: matcher, infer
+\item example 2: forward and backward
+\item chain of rules = single pattern
+\item no extension to FOL
 \end{itemize}
 }
 
@@ -132,10 +162,18 @@ Entire branches can be represented by a single pattern:
 \end{align*}
 \normalsize
 
-\note{
+\notes{
 \begin{itemize}
 \item This representation makes is possible to factor out multiple branches into a single pattern application.
 \item For example, LISA only provides what we call introduction rules (rules where the bottom sequent introduces a new symbol). However it turns out there are cases where it is desirable to go the other way around. This is possible since most rules are conservative, meaning that the conclusion is not weaker that the hypotheses (and vice versa). We call these rules elimination, and the one presented here is such an example.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item factor out
+\item LISA intro rules; desirable to go the other way
+\item possible conservative
+\item elimination, example
 \end{itemize}
 }
 
@@ -147,7 +185,7 @@ Entire branches can be represented by a single pattern:
 
 \begin{frame}[fragile]
 \frametitle{Proof direction}
-\framesubtitle{Forward and backward application of rules}
+\framesubtitle{Forward and backward application of patterns}
 
 \newcommand{\ca}[1]{{\color{epfl-rouge}#1}}
 \newcommand{\cb}[1]{{\color{epfl-leman}#1}}
@@ -174,11 +212,21 @@ Entire branches can be represented by a single pattern:
 {\footnotesize $(\cc{\Gamma}, \cb{\Sigma_0} \vdash \cb{\Pi_0}, \cc{\Delta}) \mapsto \{(\cc{\Gamma}, \ca{\Sigma_1} \vdash \ca{\Pi_1}, \cc{\Delta}), ..., (\cc{\Gamma}, \cb{\Sigma_n} \vdash \cb{\Pi_n}, \cc{\Delta})\}$}
 \end{itemize}
 
-\note{
+\notes{
 \begin{itemize}
 \item Rules make it possible to create proof of both forward and backward styles.
 \item In forward mode, we are always dealing with true statements and combining them together to form more complex true statements. The formula below states what theorem should be obtained when combining a sequence of justifications.
 \item In backward mode, we start by stating the conclusion and then we provide the proof for this conclusion. For longer proofs it is easier to reason that way since the goal is always obvious.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item framework: forward and backward
+\item patterns: an example
+\item forward: true statements, combine
+\item formula what theorem should be obtained
+\item backward: state conclusion, provide proof
+\item in practice mixing
 \end{itemize}
 }
 
@@ -231,7 +279,7 @@ Entire branches can be represented by a single pattern:
 \end{prooftree}}
 
 \only<1>{
-\note{
+\notes{
 \begin{itemize}
 \item In this slide I will show an example of how a proof is written in the front and how it will get translated to LISA below.
 \item We begin by stating the conclusion, here we want to show that if an empty set is contained within itself then we can prove anything.
@@ -239,44 +287,79 @@ Entire branches can be represented by a single pattern:
 \item Each instruction creates a feedback in the standard output, making it possible to write such a proof interactively in the Scala REPL.
 \end{itemize}
 }
+{
+\begin{itemize}
+\item example proof in the front, translation
+\item begin conclusion, here show
+\item "apply" = backward tactic, by extension a pattern
+\item feedback, REPL
+\end{itemize}
+}
 }
 
 \only<2>{
-\note{
+\notes{
 \begin{itemize}
 \item The first step goes backward, we use an introduction rule to get rid of the implication.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item first: backward, intro
 \end{itemize}
 }
 }
 
 \only<3>{
-\note{
+\notes{
 \begin{itemize}
 \item The second step is also backward, but this time it is an introduction rule, since we want to create a negation.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item second: also backward, elimination
 \end{itemize}
 }
 }
 
 \only<4>{
-\note{
+\notes{
 \begin{itemize}
 \item Now we are applying a rule forward, by passing arguments to it. We obtain a new local theorem and in our translation this theorem appears at the leaves.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item now: forward
+\item obtain a local theorem
 \end{itemize}
 }
 }
 
 \only<5>{
-\note{
+\notes{
 \begin{itemize}
-\item Finally we use the previously proven as a justification to complete the proof. The tactic "justificationInst" will automatically instantiate the schemas of the theorem to match the current branch. Here "s" becomes the empty set.
+\item Finally we use the previously proven theorem as a justification to complete the proof. The tactic "justificationInst" will automatically instantiate the schemas of the theorem to match the current branch. Here "s" becomes the empty set.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item finally, use previous fact as a justification
+\item "justificationInst" tactic auto inst: s $\rightarrow$ $\emptyset$
 \end{itemize}
 }
 }
 
 \only<6>{
-\note{
+\notes{
 \begin{itemize}
 \item The method "asTheorem" returns a theorem if all the branches have been closed, which is the case here.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item finally, "asTheorem" returns if all branches closed
 \end{itemize}
 }
 }

@@ -17,7 +17,7 @@
 }
 \ExplSyntaxOff
 
-% Available mode: slides-only, notes-only, slides-notes-interlaced, slides-notes-dual (default)
+% Available modes: slides-only, notes-only, slides-notes-interlaced, slides-notes-dual (default)
 \getenv[\BEAMERMODE]{BEAMERMODE}
 \ifstringsequalTF{\BEAMERMODE}{slides-only}
 {}
@@ -29,6 +29,16 @@
     {\setbeameroption{show notes}}
     {\setbeameroption{show notes on second screen=right}} % Default
   }
+}
+
+% Available modes: full, condensed
+\getenv[\NOTESMODE]{NOTESMODE}
+\newcommand{\notes}[2]{
+\note{
+\ifstringsequalTF{\NOTESMODE}{full}
+{#1}
+{#2}
+}
 }
 
 \usetheme{CambridgeUS}
@@ -85,7 +95,7 @@
     \usebeamerfont{title}\insertsectionnumber. \insertsectionhead\par%
   \end{beamercolorbox}
   \vfill
-  \note{#1}
+  #1
   \end{frame}
 }
 

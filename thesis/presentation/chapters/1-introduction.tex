@@ -1,9 +1,16 @@
 \section{Introduction}
 
 \makesection{
+\notes{
 \begin{itemize}
 \item Let us get started with the introduction.
 \end{itemize}
+}
+{
+\begin{itemize}
+\item start
+\end{itemize}
+}
 }
 
 \subsection{Proof assistants}
@@ -30,12 +37,22 @@ none/.style={draw=none},
 \draw[->] (verifier.south) |- (output-false);
 \end{tikzpicture}
 
-\note{
+\notes{
 \begin{itemize}
-\item Before anything else, I will clarify the notion of proof systems and proof assistants. One of the tasks in the area of automated reasoning is to formalize the notion of proof in mathematical sense, such that it can be verified mechanically by a computer program.
+\item Before anything else, I will clarify the notion of proof systems and proof assistants. One of the tasks in the area of automated reasoning is to formalize the notion of proof in a mathematical sense, such that it can be verified mechanically by a computer program.
 \item A formal proof is therefore a precise model of a mathematical proof that one would normally write on paper.
 \item A proof system, as shown on this diagram boils down to this core element called a proof checker that takes as an input a formal proof and returns a binary result. Either the proof is accepted, which should imply that the proof is valid. Or it is rejected which means that the proof is either invalid or cannot be verified.
 \item It should be noted that proof checkers are not meant to be complex pieces of software. This leads me to the next slide.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item before anything, clarify
+\item task automated reasoning
+\item formal proof model
+\item proof system boils down to proof checker
+\item accepted/rejected
+\item not complex, next slide
 \end{itemize}
 }
 
@@ -68,10 +85,21 @@ none/.style={draw=none},
 \draw[->, densely dotted] (verifier.south) |- (output-false);
 \end{tikzpicture}}
 
-\note{
+\notes{
 \begin{itemize}
 \item Proof assistants on the other hand are conceptually more sophisticated than a bare proof checker. Nevertheless they rely on the same principle that ultimately a proof is considered valid if it is accepted by the proof checker. The fundamental difference here is that the user is considered in the equation: after all we expect them to write proofs. However we do not require them to write the low-level proofs themselves, this will be the task of the assistant. The assistant instead provides a higher-level interface that makes it possible to construct a proof gradually and that abstracts away the uninteresting details.
-\item There are other possible models that the one shown here, nevertheless it is the one used in this project. The left part of this diagram corresponds to the framework I designed, while the right part corresponds to the existing LISA system which I am going to present now.
+\item There are other possible models than the one shown here, nevertheless it is the one that is accurate for this project. The left part of this diagram corresponds to the framework I designed, while the right part corresponds to the existing LISA system which I am going to present now.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item proof assistants: more sophisticated
+\item same principle: accepted
+\item difference: user in the equation
+\item don't write low-level proofs themselves
+\item higher-level interface; uninteresting details
+\item other possible models, but accurate
+\item left $\rightarrow$ framework, right $\rightarrow$ LISA: present now
 \end{itemize}
 }
 
@@ -89,10 +117,16 @@ none/.style={draw=none},
 \item Scala 2 and 3
 \end{itemize}
 
-\note{
+\notes{
 \begin{itemize}
 \item LISA is a proof assistant designed in this laboratory, which development started last year.
-\item It stands out from other existing software by using different foundations: in particular it relies on an adaptation of Gentzen's sequent calculus over first-order logic, and uses axioms of set theory. It is also written in the Scala programming language and is currently meant to be within that same language.
+\item It stands out from other existing software by using different foundations: in particular it relies on an adaptation of Gentzen's sequent calculus over first-order logic, and uses axioms of set theory. It is also written in the Scala programming language and is currently meant to be used within that same language.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item LISA designed here
+\item stands out, different foundations
 \end{itemize}
 }
 
@@ -136,7 +170,7 @@ $$
 
 \vspace{0.75cm} % Otherwise not vertically centered
 
-\note{
+\notes{
 \begin{itemize}
 \scriptsize
 \item In LISA statements are expressed as sequents. A sequent is basically characterized by a pair of sets of formulas, which can be interpreted as an implication in standard logic.
@@ -145,6 +179,15 @@ $$
 \item (2) This second example shows that in order to obtain a disjunction as an hypothesis you must prove two other propositions.
 \item (3) Rules can also express substitutions of terms, for instance the introduction of the existential quantifier.
 \item (4) In this fourth example, the question mark is a notation to express universally quantified variables which we call schemas. This rule basically says that we can always instantiate a predicate schema, so long as we do it across all formulas.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item statements expressed as sequents
+\item sequent is an implication
+\item inference rules, logical tautologies
+\item (1-3)
+\item (4) question mark universally quantified variables: schema
 \end{itemize}
 }
 
@@ -163,11 +206,20 @@ Proof represented in LISA:\\[0.2cm]
 {\centering \input{figures/proof.lisa} \par}
 \end{itemize}
 
-\note{
+\notes{
 \begin{itemize}
 \item The rules presented earlier can then be combined together to build a proof for some proposition. We obtain a tree where each branch is a rule and the bottom sequent is the conclusion of the proof.
 \item The above figure depicts a simple proof for the proposition appearing at the bottom.
 \item In LISA the proof is represented as a directed acyclic graph, making it possible to reference the same branch multiple times (as opposed to a tree). It can be shown that such a proof has a linear representation, such as the one below.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item combined together to build a proof
+\item proof is a tree, branch = rule, bottom = conclusion
+\item figure simple proof, below in LISA
+\item LISA acyclic graph, reference branch multiple times
+\item linear representation
 \end{itemize}
 }
 
@@ -203,11 +255,20 @@ axiom/.style={block},
 \draw[<-] (axiom1) to [out=360,in=160] (theorem3);
 \end{tikzpicture}}
 
-\note{
+\notes{
 \begin{itemize}
 \item The trees presented earlier can rely on external hypotheses. This is especially useful to introduce and make use of the concepts of axioms and proven theorems.
 \item Both represent sequents that can be used as hypotheses in a proof tree. The difference is that a theorem has an associated proof tree, while an axiom does not.
 \item The advantage of using such a model is that we only need to check every proof once, rather than every time they are used as assumptions which could lead to a combinatorial explosion.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item tree rely hypo
+\item introduce axioms and theorems
+\item both sequents, can be used as hypo
+\item difference theorem proof
+\item advantage: shorter, more efficient (combinatorial explosion)
 \end{itemize}
 }
 
@@ -227,12 +288,22 @@ axiom/.style={block},
 
 Motivates the need of having a front-end framework
 
-\note{
+\notes{
 \begin{itemize}
 \item This was the gist of LISA.
 \item As we have seen, inference rules are relatively low-level: the proof for a simple tautology required a few steps already. Although not shown here they are also tedious to apply because each parameter must specified explicitly.
 \item Moreover, proof trees can only be built forward (from top to bottom). It is not immediately possible to start a proof from the bottom and build our way upwards.
 \item The goal of this project was to improve on these aspects. For that it was decided to interface LISA, that is to design a framework having its own dialect but capable of producing proofs in LISA.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item gist of LISA, observations
+\item rules low-level, many steps, tedious parameters explicit
+\item forward only (top to bottom)
+\item limited interactivity
+\item goal of this project
+\item interface LISA, produce proofs
 \end{itemize}
 }
 

@@ -1,9 +1,16 @@
 \section{Language features}
 
 \makesection{
+\notes{
 \begin{itemize}
 \item In this fourth section, I will be discussing about the features related to the domain specific language, as well as the interoperability possibilities.
 \end{itemize}
+}
+{
+\begin{itemize}
+\item fourth section: features DSL, possibilities for interoperability
+\end{itemize}
+}
 }
 
 \subsection{Type safe DSL}
@@ -29,25 +36,52 @@ val f = LambdaFunction[1](t1 => t1)
 f(t): Term
 \end{lstlisting}
 
-\only<1>{\note{
+\only<1>{
+\notes{
 \begin{itemize}
-\item The framework I designed also defines its own domain specific language, that provides additional compile-time guarantees to that of LISA's making it safer at usage.
-\item For instance, the labels have their arity encoded as a singleton type. A singleton type has the special property that it can be translated into a value at compilation time: here "0" is a literal type, which is also singleton.
+\item The framework I designed also defines its own domain specific language, that provides additional compile-time safety guarantees to that of LISA's making it safer at usage.
+\item For instance, the labels have their arity encoded as a singleton type. A singleton type has the special property that it can be translated into a value at compilation time: here "0" is a literal type, which is by extension a singleton type.
 \item The motivation for that is to enforce the correct number of arguments. "a" does not expect any argument here and so its usage in this context is legal.
 \end{itemize}
-}}
+}
+{
+\begin{itemize}
+\item framework DSL, typesafety
+\item labels arity encoded singleton type; singleton type $\rightarrow$ value
+\item literal type (e.g. "0") are singleton
+\item allows to enforce correct number of args
+\item here "a" does not take any args
+\end{itemize}
+}
+}
 
-\only<2>{\note{
+\only<2>{
+\notes{
 \begin{itemize}
 \item This is illustrated in that second example. "p" expects one argument. Passing more than one argument will trigger a type error.
 \end{itemize}
-}}
+}
+{
+\begin{itemize}
+\item illustrated here, "p" expects 1
+\item error
+\end{itemize}
+}
+}
 
-\only<3>{\note{
+\only<3>{
+\notes{
 \begin{itemize}
 \item We also provide convenient constructors for lambda terms. They are represented as values at runtime, rather than Scala functions. They are used in substitutions.
 \end{itemize}
-}}
+}
+{
+\begin{itemize}
+\item also constructors for lambdas
+\item represented as value, instantiation = substitution
+\end{itemize}
+}
+}
 
 \end{frame}
 
@@ -70,28 +104,49 @@ formula"forall (@\lstid{\$x}@). ?p((@\lstid{\$x}@))"
 \end{lstlisting}
 
 \only<1>{
-\note{
+\notes{
 \begin{itemize}
 \item The framework also defines a language for sequents and formulas, which can be parsed and printed. Without entering into the details I will present an interesting language feature that is used; that is string interpolation.
 \item In Scala string interpolation is a syntactic sugar that allows us to translate a string into something else. The particularity is that the string can contain Scala expressions as well.
 \item The "formula" interpolator allows the seamless conversion of a string to a formula. The parsing is done at compilation time making it safe at usage.
 \end{itemize}
 }
+{
+\begin{itemize}
+\item language for sequents, parsed/printed
+\item interesting language feature: string interpolation
+\item syntactic sugar to translate a string
+\item particularity: expressions in between
+\item "formula" interpolator
+\item compilation time: typesafe, clear errors, no overhead
+\end{itemize}
+}
 }
 
 \only<2>{
-\note{
+\notes{
 \begin{itemize}
 \item This second examples shows how expressions can be inserted into the interpolator.
 \item For instance, a formula "f1" or a pattern "p". Again, the types and arities are checked at compilation time for correctness.
 \end{itemize}
 }
+{
+\begin{itemize}
+\item how expressions can be inserted
+\item types and arities checked for correctness
+\end{itemize}
+}
 }
 
 \only<3>{
-\note{
+\notes{
 \begin{itemize}
 \item Bound variables are also supported; the binding relation is detected thanks to singleton types.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item bound variables, singleton types
 \end{itemize}
 }
 }
@@ -108,12 +163,20 @@ formula"forall (@\lstid{\$x}@). ?p((@\lstid{\$x}@))"
 \item Export proofs and notations to {\rmfamily\LaTeX}
 \end{itemize}
 
-\note{
+\notes{
 \begin{itemize}
 \item Before I conclude, I want to shed light on the interoperability features offered by the framework.
 \item As we have seen, it is capable of converting a high-level proof into a LISA proof. Such process can sometimes create needless steps. To address that I implemented a set of procedures that can simplify a proof in length, depth and computational complexity.
 \item Such proofs can then be serialized into a human-readable language that I designed which can later be efficiently deserialized.
 \item Finally these proofs can also be typesetted thanks to a LaTeX printer.
+\end{itemize}
+}
+{
+\begin{itemize}
+\item before conclude, other features
+\item capable producing proofs, however needless steps; procedures to simplify
+\item serialized human-readable, deserialized back
+\item proof/notations typesetted to latex
 \end{itemize}
 }
 
