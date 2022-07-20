@@ -82,7 +82,7 @@ $$\tikzmarknode{phi}{\phi} [\tikzmarknode{sigma}{\sigma}] = \tikzmarknode{psi}{\
 
 \centering
 
-$({?a} \lor {?b})[\sigma] = a \lor (b \Rightarrow a)$\footnote{Read: \textit{matching the pattern ${?a} \lor {?b}$ on the value $a \lor (b \Rightarrow a)$}}
+$({?a} \lor {?b})[\sigma] = c \lor (d \Rightarrow c)$\footnote{Read: \textit{matching the pattern ${?a} \lor {?b}$ on the value $c \lor (d \Rightarrow c)$}}
 
 \vspace{0.25cm}
 
@@ -95,10 +95,10 @@ $({?a} \lor {?b})[\sigma] = a \lor (b \Rightarrow a)$\footnote{Read: \textit{mat
 
 \node (v-or) at (5, 0) {$\vphantom{?}\lor$};
 \node (v) at (5, 0.75) {Value};
-\node (v-a1) [below left = of v-or] {$\vphantom{?}a$};
+\node (v-a1) [below left = of v-or] {$\vphantom{?}c$};
 \node (v-ba) [below right = of v-or] {$\vphantom{?}\Rightarrow$};
-\node (v-b) [below left = of v-ba] {$\vphantom{?}b$};
-\node (v-a2) [below right = of v-ba] {$\vphantom{?}a$};
+\node (v-b) [below left = of v-ba] {$\vphantom{?}d$};
+\node (v-a2) [below right = of v-ba] {$\vphantom{?}c$};
 
 \draw (p-a) -- (p-or);
 \draw (p-b) -- (p-or);
@@ -118,7 +118,7 @@ $({?a} \lor {?b})[\sigma] = a \lor (b \Rightarrow a)$\footnote{Read: \textit{mat
 \vspace{0.25cm}
 
 \onslide<2>{
-Result: $\{ {?a} \mapsto a, {?b} \mapsto {b \Rightarrow a} \}$
+Result: $\{ {?a} \mapsto c, {?b} \mapsto {d \Rightarrow c} \}$
 }
 
 \only<1>{
@@ -159,7 +159,7 @@ Result: $\{ {?a} \mapsto a, {?b} \mapsto {b \Rightarrow a} \}$
 
 \setbeamercovered{invisible}
 
-$$\neg{?a}[\sigma] = a \lor b$$
+$$\neg{?a}[\sigma] = b \lor c$$
 
 \vspace{0.5cm}
 \centering
@@ -172,8 +172,8 @@ $$\neg{?a}[\sigma] = a \lor b$$
 
 \node (v-or) at (4, 0) {$\vphantom{?}\lor$};
 \node (v) at (4, 0.75) {Value};
-\node (v-a) [below left = of v-or] {$\vphantom{?}a$};
-\node (v-b) [below right = of v-or] {$\vphantom{?}b$};
+\node (v-a) [below left = of v-or] {$\vphantom{?}b$};
+\node (v-b) [below right = of v-or] {$\vphantom{?}c$};
 
 \draw (p-a) -- (p-or);
 
@@ -256,6 +256,7 @@ a \land a &\equiv a \\
 \item put matching aside; introduce equivalence checking
 \item equivalence checker
 \item hard problem, useful algorithms are incomplete but efficient
+\item allow false negatives, disallow false positives
 \item LISA OCBSL
 \item some examples (commut., assoc., indempot., involution)
 \end{itemize}
@@ -292,7 +293,8 @@ $$(\phi[\sigma] \equiv \psi) \land (\sigma \equiv \sigma') \implies (\phi[\sigma
 \item (2) transitivity
 \item (3) equivalence is preserved wrt substitution
 \item procedure satisfying these properties: useful for matching
-\item use case: non-linear patterns, normally equality but relaxed
+\item allows relax equality
+\item use case: non-linear patterns
 \end{itemize}
 }
 
@@ -305,7 +307,7 @@ $$(\phi[\sigma] \equiv \psi) \land (\sigma \equiv \sigma') \implies (\phi[\sigma
 
 \setbeamercovered{invisible}
 
-$$({?a} \lor {?a})[\sigma] \equiv (a \land b) \lor (b \land a)$$
+$$({?a} \lor {?a})[\sigma] \equiv (b \land c) \lor (c \land b)$$
 
 \vspace{0.5cm}
 \centering
@@ -317,12 +319,12 @@ $$({?a} \lor {?a})[\sigma] \equiv (a \land b) \lor (b \land a)$$
 \node (p-a1) [below left = of p-or] {${?a}$};
 \node (p-a2) [below right = of p-or] {${?a}$};
 
-\node (v-a1) [below right = of p-a2] {$\vphantom{?}a$};
+\node (v-a1) [below right = of p-a2] {$\vphantom{?}b$};
 \node (v-ab) [above right = of v-a1] {$\vphantom{?}\land$};
-\node (v-b1) [below right = of v-ab] {$\vphantom{?}b$};
-\node (v-b2) [right = of v-b1] {$\vphantom{?}b$};
+\node (v-b1) [below right = of v-ab] {$\vphantom{?}c$};
+\node (v-b2) [right = of v-b1] {$\vphantom{?}c$};
 \node (v-ba) [above right = of v-b2] {$\vphantom{?}\land$};
-\node (v-a2) [below right = of v-ba] {$\vphantom{?}a$};
+\node (v-a2) [below right = of v-ba] {$\vphantom{?}b$};
 
 
 \node (v-or) at (4.625, 0) {$\vphantom{?}\lor$};
@@ -349,7 +351,7 @@ $$({?a} \lor {?a})[\sigma] \equiv (a \land b) \lor (b \land a)$$
 \vspace{0.5cm}
 
 \onslide<2>{
-Result: $\{ {?a} \mapsto a \land b \}$
+Result: $\{ {?a} \mapsto b \land c \}$
 }
 
 \only<1>{
@@ -376,7 +378,7 @@ Result: $\{ {?a} \mapsto a \land b \}$
 }
 {
 \begin{itemize}
-\item however, solvable
+\item however, solvable under relaxed conditions
 \item multiple possible solutions: first in post-order
 \end{itemize}
 }
@@ -397,12 +399,12 @@ Result: $\{ {?a} \mapsto a \land b \}$
 Pattern & Value & Hint & Result \\[0.2cm]
 \hline\hline
 \rule{0pt}{1.25\normalbaselineskip}
-\onslide<1>{${?p}(t)$ & $t = u$ & $\emptyset$} & \onslide<1>{$\{ {?p} \mapsto \lambda x. x = u \}$ \\[0.25cm]}
-\onslide<1>{${?p}({?t})$ & $t = u$ & $\emptyset$} & \onslide<1>{$\bot$ \\[0.25cm]}
-\onslide<1>{${?p}({?t})$ & $t = u$ & $\{ {?t} \mapsto t \}$} & \onslide<1>{$\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}$ \\[0.25cm]}
-\onslide<1>{${?p}({?t})$ & $t = u$ & $\{ {?p} \mapsto \lambda x. x = u \}$} & \onslide<1>{$\{ {?p} \mapsto \lambda x. x = u, {?t} \mapsto t \}$ \\[0.25cm]}
-\onslide<2>{$\forall x. {?a}$ & $\forall x. x = u$ & $\emptyset$} & \onslide<2>{$\bot$ \\[0.25cm]}
-\onslide<2>{$\forall x. {?p}(x)$ & $\forall y. y = u$ & $\emptyset$} & \onslide<2>{$\{ x \mapsto y, {?p} \mapsto \lambda x. x = u \}$}
+\onslide<1>{${?p}(u)$ & $u = v$ & $\emptyset$} & \onslide<1>{$\{ {?p} \mapsto \lambda x. x = v \}$ \\[0.25cm]}
+\onslide<1>{${?p}({?t})$ & $u = v$ & $\emptyset$} & \onslide<1>{$\bot$ \\[0.25cm]}
+\onslide<1>{${?p}({?t})$ & $u = v$ & $\{ {?t} \mapsto u \}$} & \onslide<1>{$\{ {?p} \mapsto \lambda x. x = v, {?t} \mapsto u \}$ \\[0.25cm]}
+\onslide<1>{${?p}({?t})$ & $u = v$ & $\{ {?p} \mapsto \lambda x. x = v \}$} & \onslide<1>{$\{ {?p} \mapsto \lambda x. x = v, {?t} \mapsto u \}$ \\[0.25cm]}
+\onslide<2>{$\forall x. {?a}$ & $\forall x. x = v$ & $\emptyset$} & \onslide<2>{$\bot$ \\[0.25cm]}
+\onslide<2>{$\forall x. {?p}(x)$ & $\forall y. y = v$ & $\emptyset$} & \onslide<2>{$\{ x \mapsto y, {?p} \mapsto \lambda x. x = v \}$}
 \end{tabular}
 
 \only<1>{

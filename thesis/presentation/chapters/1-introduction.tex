@@ -249,10 +249,11 @@ axiom/.style={block},
 
 \draw[<-] (axiom1) to [out=350,in=140] (theorem1);
 \draw[<-] (axiom2) to [out=10,in=220] (theorem1);
-\draw[<-] (theorem1) to [out=360,in=140] (theorem2);
+\draw[<-] (theorem1) to [out=350,in=140] (theorem2);
 \draw[<-] (axiom2) -- (theorem2);
 \draw[<-] (theorem2) to [out=360,in=220] (theorem3);
 \draw[<-] (axiom1) to [out=360,in=160] (theorem3);
+\draw[<-] (theorem1) to (theorem3);
 \end{tikzpicture}}
 
 \notes{
@@ -303,7 +304,8 @@ Motivates the need of having a front-end framework
 \item forward only (top to bottom)
 \item limited interactivity
 \item goal of this project
-\item interface LISA, produce proofs
+\item interface LISA, own language and representations; but produce proofs
+\item very important, make strong about soundness
 \end{itemize}
 }
 
